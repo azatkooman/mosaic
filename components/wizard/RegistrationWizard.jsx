@@ -165,6 +165,32 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
 
   // ---- render ----
 
+  const STEP_ORDER = { counts: 1, person: 2, review: 3 }
+  const stepLabels = [t('stepWho'), t('stepDetails'), t('stepReview')]
+
+  function Progress() {
+    const current = STEP_ORDER[step]
+    return (
+      <ol className={styles.progress} aria-label={t('stepOf', { current, total: 3 })}>
+        {stepLabels.map((label, i) => {
+          const n = i + 1
+          const state = n < current ? 'done' : n === current ? 'current' : 'todo'
+          return (
+            <li
+              key={label}
+              className={styles.progressStep}
+              data-state={state}
+              aria-current={state === 'current' ? 'step' : undefined}
+            >
+              <span className={styles.progressDot}>{state === 'done' ? '✓' : n}</span>
+              <span className={styles.progressLabel}>{label}</span>
+            </li>
+          )
+        })}
+      </ol>
+    )
+  }
+
   if (step === 'done' && result) {
     return (
       <div className={styles.panel}>
@@ -190,6 +216,7 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
   if (step === 'counts') {
     return (
       <div className={styles.panel}>
+        <Progress />
         <h2>{t('whoIsComing')}</h2>
         <p className={styles.muted}>{t('typeCountHelp')}</p>
         {restored && <p className="alert alert-info">{t('draftRestored')}</p>}
@@ -222,10 +249,12 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
     const pt = typeByKey.get(p.participantTypeKey)
     return (
       <div className={styles.panel}>
+        <Progress />
         <p className="eyebrow">
           {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}
           {lt(pt.name, locale, event.default_locale)}
         </p>
+        <p className={styles.muted}>{t('personHelp')}</p>
         <div className={styles.nameGrid}>
           <Field label={t('firstName')} required error={errors._firstName ? tv('required') : undefined}>
             {({ id, invalid }) => (
@@ -286,6 +315,7 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
   // review
   return (
     <div className={styles.panel}>
+      <Progress />
       <h2>{t('review')}</h2>
       <p className={styles.muted}>{t('reviewHelp')}</p>
       <ul className={styles.reviewList}>

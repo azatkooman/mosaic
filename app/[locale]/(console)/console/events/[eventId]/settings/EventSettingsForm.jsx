@@ -239,23 +239,26 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       </section>
 
       <section className="card card-pad">
-        <h2 style={{ marginBottom: 'var(--s-4)' }}>{t('participantTypes')}</h2>
+        <h2 style={{ marginBottom: 'var(--s-2)' }}>{t('participantTypes')}</h2>
+        <p className={styles.sectionHelp}>{t('participantTypesHelp')}</p>
         <div className={styles.typeList}>
           {types.map((pt) => (
             <div key={pt.id} className={styles.typeRow}>
-              <Field label={t('typeKey')}>
-                {({ id }) => (
+              <Field label={t('typeKey')} hint={t('typeKeyHelp')}>
+                {({ id, describedBy }) => (
                   <Input
                     id={id}
+                    aria-describedby={describedBy}
                     value={pt.key}
                     onChange={(e) => updateType(pt.id, { key: e.target.value })}
                   />
                 )}
               </Field>
-              <Field label={`${t('typeName')} (${locale})`}>
-                {({ id }) => (
+              <Field label={`${t('typeName')} (${locale})`} hint={t('typeNameHelp')}>
+                {({ id, describedBy }) => (
                   <Input
                     id={id}
+                    aria-describedby={describedBy}
                     value={pt.name?.[locale] ?? pt.name?.en ?? ''}
                     onChange={(e) =>
                       updateType(pt.id, { name: { ...pt.name, [locale]: e.target.value } })
@@ -263,10 +266,11 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
                   />
                 )}
               </Field>
-              <Field label={t('capacity')}>
-                {({ id }) => (
+              <Field label={t('capacity')} hint={t('typeCapacityHelp')}>
+                {({ id, describedBy }) => (
                   <Input
                     id={id}
+                    aria-describedby={describedBy}
                     type="number"
                     min="1"
                     value={pt.capacity ?? ''}
@@ -278,14 +282,20 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
                   />
                 )}
               </Field>
-              <Field label={t('form')}>
-                {({ id }) => (
+              <Field
+                label={t('form')}
+                hint={t('typeFormHelp')}
+                error={pt.form_id ? undefined : t('typeFormMissing')}
+              >
+                {({ id, describedBy, invalid }) => (
                   <NativeSelect
                     id={id}
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid || undefined}
                     value={pt.form_id ?? ''}
                     onChange={(e) => updateType(pt.id, { form_id: e.target.value || null })}
                   >
-                    <option value="" />
+                    <option value="">{t('selectFormOption')}</option>
                     {forms.map((f) => (
                       <option key={f.id} value={f.id}>{f.title}</option>
                     ))}

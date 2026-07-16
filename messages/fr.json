@@ -54,7 +54,12 @@
   "wizard": {
     "title": "Inscription à {event}",
     "whoIsComing": "Qui participera ?",
-    "typeCountHelp": "Choisissez combien de personnes vous inscrivez dans chaque catégorie.",
+    "typeCountHelp": "Choisissez combien de personnes vous inscrivez dans chaque catégorie — vous pouvez en inscrire plusieurs à la fois, par exemple toute une famille.",
+    "stepOf": "Étape {current} sur {total}",
+    "stepWho": "Qui vient",
+    "stepDetails": "Détails",
+    "stepReview": "Vérifier et envoyer",
+    "personHelp": "Renseignez les informations de cette personne, puis cliquez sur Suivant.",
     "participantOf": "Participant {index} sur {total}",
     "firstName": "Prénom",
     "lastName": "Nom",
@@ -133,7 +138,7 @@
     "saved": "Enregistré",
     "participantTypes": "Types de participant",
     "addType": "Ajouter un type",
-    "typeKey": "Clé",
+    "typeKey": "Identifiant interne",
     "typeName": "Nom",
     "form": "Formulaire",
     "editForm": "Modifier le formulaire",
@@ -174,7 +179,14 @@
     "contactWebsite": "Site web",
     "selectType": "Sélectionner un type de participant",
     "selectTypeHelp": "Ajoutez un type de participant depuis la liste ou créez le vôtre.",
-    "customType": "Créer le mien"
+    "customType": "Créer le mien",
+    "participantTypesHelp": "Les catégories sous lesquelles on peut s'inscrire — par exemple Adulte, Enfant ou Étudiant. Chaque type peut avoir son propre formulaire d'inscription et son propre nombre de places.",
+    "typeKeyHelp": "Utilisé en interne — jamais visible par les inscrits. Lettres minuscules, chiffres et tirets bas uniquement.",
+    "typeNameHelp": "Le libellé que voient les inscrits lors de l'inscription.",
+    "typeCapacityHelp": "Nombre maximal d'inscriptions pour ce type. Laissez vide pour illimité.",
+    "typeFormHelp": "Les questions auxquelles répondent les personnes de ce type.",
+    "typeFormMissing": "Choisissez un formulaire — sans formulaire, ce type est masqué sur la page d'inscription.",
+    "selectFormOption": "Sélectionnez un formulaire…"
   },
   "questionTypes": {
     "text": "Texte court",

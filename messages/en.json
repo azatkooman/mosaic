@@ -54,7 +54,12 @@
   "wizard": {
     "title": "Register for {event}",
     "whoIsComing": "Who is coming?",
-    "typeCountHelp": "Choose how many people you are registering in each category.",
+    "typeCountHelp": "Choose how many people you are registering in each category — you can register several people at once, like a whole family.",
+    "stepOf": "Step {current} of {total}",
+    "stepWho": "Who's coming",
+    "stepDetails": "Details",
+    "stepReview": "Review & submit",
+    "personHelp": "Fill in this person's details, then press Next.",
     "participantOf": "Participant {index} of {total}",
     "firstName": "First name",
     "lastName": "Last name",
@@ -133,7 +138,7 @@
     "saved": "Saved",
     "participantTypes": "Participant types",
     "addType": "Add type",
-    "typeKey": "Key",
+    "typeKey": "Internal ID",
     "typeName": "Name",
     "form": "Form",
     "editForm": "Edit form",
@@ -174,7 +179,14 @@
     "contactWebsite": "Website",
     "selectType": "Select a participant type",
     "selectTypeHelp": "Add a participant type from the list below, or create your own.",
-    "customType": "Create my own"
+    "customType": "Create my own",
+    "participantTypesHelp": "The categories people can register as — for example Adult, Child or Student. Each type can have its own registration form and its own number of spots.",
+    "typeKeyHelp": "Used behind the scenes — registrants never see it. Lowercase letters, numbers and underscores only.",
+    "typeNameHelp": "The label registrants see when signing up.",
+    "typeCapacityHelp": "Max sign-ups for this type. Leave empty for unlimited.",
+    "typeFormHelp": "The questions people of this type answer.",
+    "typeFormMissing": "Choose a form — without one, this type is hidden from the registration page.",
+    "selectFormOption": "Select a form…"
   },
   "questionTypes": {
     "text": "Short text",

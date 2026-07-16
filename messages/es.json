@@ -54,7 +54,12 @@
   "wizard": {
     "title": "Inscripción a {event}",
     "whoIsComing": "¿Quiénes asistirán?",
-    "typeCountHelp": "Elige cuántas personas inscribes en cada categoría.",
+    "typeCountHelp": "Elige cuántas personas inscribes en cada categoría — puedes inscribir a varias a la vez, como una familia entera.",
+    "stepOf": "Paso {current} de {total}",
+    "stepWho": "Quién viene",
+    "stepDetails": "Datos",
+    "stepReview": "Revisar y enviar",
+    "personHelp": "Completa los datos de esta persona y pulsa Siguiente.",
     "participantOf": "Participante {index} de {total}",
     "firstName": "Nombre",
     "lastName": "Apellidos",
@@ -133,7 +138,7 @@
     "saved": "Guardado",
     "participantTypes": "Tipos de participante",
     "addType": "Añadir tipo",
-    "typeKey": "Clave",
+    "typeKey": "Identificador interno",
     "typeName": "Nombre",
     "form": "Formulario",
     "editForm": "Editar formulario",
@@ -174,7 +179,14 @@
     "contactWebsite": "Sitio web",
     "selectType": "Seleccionar tipo de participante",
     "selectTypeHelp": "Añade un tipo de participante de la lista o crea el tuyo propio.",
-    "customType": "Crear el mío propio"
+    "customType": "Crear el mío propio",
+    "participantTypesHelp": "Las categorías con las que la gente puede inscribirse — por ejemplo Adulto, Niño/a o Estudiante. Cada tipo puede tener su propio formulario de inscripción y su propio número de plazas.",
+    "typeKeyHelp": "Se usa internamente — los inscritos nunca lo ven. Solo minúsculas, números y guiones bajos.",
+    "typeNameHelp": "La etiqueta que ven los inscritos al registrarse.",
+    "typeCapacityHelp": "Máximo de inscripciones para este tipo. Déjalo vacío para ilimitado.",
+    "typeFormHelp": "Las preguntas que responden las personas de este tipo.",
+    "typeFormMissing": "Elige un formulario — sin uno, este tipo queda oculto en la página de inscripción.",
+    "selectFormOption": "Selecciona un formulario…"
   },
   "questionTypes": {
     "text": "Texto corto",
