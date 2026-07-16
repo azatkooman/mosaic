@@ -13,15 +13,6 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  let isOrganizer = false
-  if (user) {
-    const [{ data: roles }, { data: eventRoles }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', user.id),
-      supabase.from('event_organizers').select('event_id').eq('user_id', user.id).limit(1),
-    ])
-    isOrganizer = (roles?.length ?? 0) > 0 || (eventRoles?.length ?? 0) > 0
-  }
-
   return (
     <header className={styles.header}>
       <div className={`container ${styles.headerInner}`}>
@@ -32,7 +23,9 @@ export async function SiteHeader() {
         <nav className={styles.nav} aria-label="Main">
           <Link href="/">{t('nav.events')}</Link>
           {user && <Link href="/my/registrations">{t('nav.myRegistrations')}</Link>}
-          {isOrganizer && <Link href="/console">{t('nav.console')}</Link>}
+          {/* All signed-in users can open the console: those without access
+              get the request-access panel instead of the event list. */}
+          {user && <Link href="/console">{t('nav.console')}</Link>}
         </nav>
         <div className={styles.headerActions}>
           <LocaleSwitcher label={t('common.language')} />

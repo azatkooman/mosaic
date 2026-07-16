@@ -35,7 +35,7 @@ values
 on conflict do nothing;
 
 insert into user_roles (user_id, org_id, role)
-values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin')
+values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'super_admin')
 on conflict do nothing;
 
 -- Sample event
