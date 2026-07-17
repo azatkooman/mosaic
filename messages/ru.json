@@ -174,7 +174,8 @@
     "contactWebsite": "Веб-сайт",
     "selectType": "Выберите тип участника",
     "selectTypeHelp": "Добавьте тип участника из списка или создайте свой.",
-    "customType": "Создать свой"
+    "customType": "Создать свой",
+    "viewPublicSite": "Публичный сайт"
   },
   "questionTypes": {
     "text": "Короткий текст",

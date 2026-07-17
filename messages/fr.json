@@ -174,7 +174,8 @@
     "contactWebsite": "Site web",
     "selectType": "Sélectionner un type de participant",
     "selectTypeHelp": "Ajoutez un type de participant depuis la liste ou créez le vôtre.",
-    "customType": "Créer le mien"
+    "customType": "Créer le mien",
+    "viewPublicSite": "Site public"
   },
   "questionTypes": {
     "text": "Texte court",

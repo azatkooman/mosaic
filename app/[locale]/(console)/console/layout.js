@@ -48,7 +48,7 @@ export default async function ConsoleLayout({ children, params }) {
           </Link>
           <nav className={styles.topnav} aria-label="Console">
             <Link href="/console">{t('console.events')}</Link>
-            <Link href="/">{t('nav.events')} ↗</Link>
+            <Link href="/">{t('console.viewPublicSite')} ↗</Link>
           </nav>
           <div className={styles.actions}>
             <LocaleSwitcher label={t('common.language')} />
