@@ -12,7 +12,7 @@ export default async function FormsPage({ params }) {
   const supabase = await getSupabaseServerClient()
   const { data: forms } = await supabase
     .from('forms')
-    .select('id, title, current_version_id, form_versions ( id, version, published_at )')
+    .select('id, title, current_version_id, form_versions!form_versions_form_id_fkey ( id, version, published_at )')
     .eq('event_id', eventId)
 
   return (
