@@ -39,8 +39,20 @@ export default async function LocaleLayout({ children, params }) {
   setRequestLocale(locale)
 
   return (
-    <html lang={locale} dir="ltr" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang={locale}
+      dir="ltr"
+      className={`${display.variable} ${body.variable}`}
+      suppressHydrationWarning
+    >
       <body>
+        {/* Apply the saved theme before first paint to avoid a flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('mosaic-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}",
+          }}
+        />
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

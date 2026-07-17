@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SignOutButton } from './SignOutButton'
+import { ThemeToggle } from './ThemeToggle'
 import styles from './shell.module.css'
 
 export async function SiteHeader() {
@@ -39,6 +40,7 @@ export async function SiteHeader() {
           {isAdmin && <Link href="/console/admin">{t('nav.adminConsole')}</Link>}
         </nav>
         <div className={styles.headerActions}>
+          <ThemeToggle label={t('common.toggleTheme')} />
           <LocaleSwitcher label={t('common.language')} />
           {user && (
             <Link href="/my/profile" className="btn btn-ghost btn-sm">

@@ -53,6 +53,29 @@ export function PhoneIcon() {
   )
 }
 
+export function SunIcon() {
+  return (
+    <svg {...base}>
+      <circle cx="8" cy="8" r="3.2" {...stroke} />
+      <path
+        d="M8 1.2v1.8M8 13v1.8M1.2 8H3M13 8h1.8M3.2 3.2l1.3 1.3M11.5 11.5l1.3 1.3M12.8 3.2l-1.3 1.3M4.5 11.5l-1.3 1.3"
+        {...stroke}
+      />
+    </svg>
+  )
+}
+
+export function MoonIcon() {
+  return (
+    <svg {...base}>
+      <path
+        d="M13.4 9.7A5.9 5.9 0 0 1 6.3 2.6a5.9 5.9 0 1 0 7.1 7.1Z"
+        {...stroke}
+      />
+    </svg>
+  )
+}
+
 export function GlobeIcon() {
   return (
     <svg {...base}>
