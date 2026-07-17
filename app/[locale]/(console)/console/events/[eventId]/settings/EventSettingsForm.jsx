@@ -19,6 +19,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui'
+import { PhoneInput } from '@/components/form-runtime/PhoneField'
 import styles from './settings.module.css'
 
 export function EventSettingsForm({ event, initialTypes, forms }) {
@@ -215,12 +216,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             )}
           </Field>
           <Field label={t('contactPhone')}>
-            {({ id }) => (
-              <Input
+            {({ id, describedBy, invalid }) => (
+              <PhoneInput
                 id={id}
-                type="tel"
+                describedBy={describedBy}
+                invalid={invalid}
                 value={contact.phone ?? ''}
-                onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                onChange={(v) => setContact({ ...contact, phone: v })}
+                locale={locale}
               />
             )}
           </Field>

@@ -88,7 +88,7 @@ export default async function EventPage({ params }) {
                 )}
                 {event.contact.phone && (
                   <div>
-                    <a href={`tel:${event.contact.phone}`}>{event.contact.phone}</a>
+                    <a href={`tel:${event.contact.phone.replace(/[^+\d]/g, '')}`}>{event.contact.phone}</a>
                   </div>
                 )}
                 {event.contact.website && (
