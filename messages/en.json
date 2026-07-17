@@ -41,7 +41,9 @@
     "heroTitle": "Every registration, one picture",
     "heroSubtitle": "Conferences, camps and gatherings — find your event and register in your language.",
     "upcomingEvents": "Upcoming events",
-    "noEvents": "No published events yet. Check back soon."
+    "noEvents": "No published events yet. Check back soon.",
+    "browseEvents": "Browse events",
+    "viewDetails": "View details"
   },
   "event": {
     "register": "Register",

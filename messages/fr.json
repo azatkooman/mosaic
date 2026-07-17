@@ -41,7 +41,9 @@
     "heroTitle": "Chaque inscription, une seule image",
     "heroSubtitle": "Conférences, camps et rassemblements : trouvez votre événement et inscrivez-vous dans votre langue.",
     "upcomingEvents": "Événements à venir",
-    "noEvents": "Aucun événement publié pour le moment. Revenez bientôt."
+    "noEvents": "Aucun événement publié pour le moment. Revenez bientôt.",
+    "browseEvents": "Voir les événements",
+    "viewDetails": "Voir les détails"
   },
   "event": {
     "register": "S'inscrire",
