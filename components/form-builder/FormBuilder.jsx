@@ -18,7 +18,8 @@ import {
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
-import { Button } from '@/components/ui'
+import { Button, NativeSelect } from '@/components/ui'
+import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
 import { QuestionInspector } from './QuestionInspector'
@@ -45,6 +46,9 @@ export function FormBuilder({
   const store = useBuilderStore()
   const { definition, selectedId, dirty } = store
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | published
+  const [previewing, setPreviewing] = useState(false)
+  const [previewAnswers, setPreviewAnswers] = useState({})
+  const [previewTypeKey, setPreviewTypeKey] = useState(participantTypes[0]?.key ?? '')
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -108,6 +112,47 @@ export function FormBuilder({
 
   const selected = definition.questions.find((q) => q.id === selectedId)
 
+  if (previewing) {
+    return (
+      <div className={styles.preview}>
+        <div className={styles.previewHead}>
+          <Button variant="ghost" size="sm" onClick={() => setPreviewing(false)}>
+            ← {t('backToEditor')}
+          </Button>
+          <span className={styles.previewHint}>{t('previewHint')}</span>
+          {participantTypes.length > 1 && (
+            <label className={styles.previewTypePick}>
+              <span>{t('previewAs')}</span>
+              <NativeSelect
+                value={previewTypeKey}
+                onChange={(e) => setPreviewTypeKey(e.target.value)}
+              >
+                {participantTypes.map((pt) => (
+                  <option key={pt.key} value={pt.key}>
+                    {lt(pt.name, locale, defaultLocale) || pt.key}
+                  </option>
+                ))}
+              </NativeSelect>
+            </label>
+          )}
+        </div>
+        <div className={styles.previewForm}>
+          <FormRenderer
+            definition={definition}
+            participantTypeKey={previewTypeKey}
+            locale={locale}
+            defaultLocale={defaultLocale}
+            answers={previewAnswers}
+            onChange={(questionId, value) =>
+              setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
+            }
+            preview
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.builder}>
       {/* Palette */}
@@ -147,6 +192,16 @@ export function FormBuilder({
           </Button>
           <Button variant="ghost" size="sm" onClick={store.redo} aria-label="Redo">
             ↪
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setPreviewAnswers({})
+              setPreviewing(true)
+            }}
+          >
+            {t('previewForm')}
           </Button>
           <Button size="sm" onClick={publish}>
             {t('publishForm')}
