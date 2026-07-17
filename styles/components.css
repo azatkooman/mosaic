@@ -168,6 +168,24 @@
   resize: vertical;
 }
 
+/* --- Phone field (country code + number) --- */
+.phone-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.phone-row .phone-dial {
+  width: auto;
+  max-width: 9.5rem;
+  flex: none;
+  text-overflow: ellipsis;
+}
+
+.phone-row .phone-number {
+  flex: 1;
+  min-width: 0;
+}
+
 /* --- Choice rows (radio / checkbox groups) --- */
 .choice-row {
   display: flex;

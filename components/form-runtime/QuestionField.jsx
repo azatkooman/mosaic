@@ -12,6 +12,7 @@ import {
   RadioRow,
 } from '@/components/ui'
 import { FileUploadField } from './FileUploadField'
+import { PhoneInput } from './PhoneField'
 
 /** Renders one question of any type. Value semantics per type:
  *  text/textarea/email/phone/date: string · number: string|number ·
@@ -37,18 +38,34 @@ export function QuestionField({
   switch (q.type) {
     case 'text':
     case 'email':
-    case 'phone':
       return (
         <Field {...common}>
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
-              type={q.type === 'text' ? 'text' : q.type === 'email' ? 'email' : 'tel'}
+              type={q.type === 'text' ? 'text' : 'email'}
               value={value ?? ''}
               aria-describedby={describedBy}
               aria-invalid={invalid}
               maxLength={q.validation?.maxLength}
               onChange={(e) => onChange(e.target.value)}
+            />
+          )}
+        </Field>
+      )
+
+    case 'phone':
+      return (
+        <Field {...common}>
+          {({ id, describedBy, invalid }) => (
+            <PhoneInput
+              id={id}
+              describedBy={describedBy}
+              invalid={invalid}
+              value={value}
+              onChange={onChange}
+              maxLength={q.validation?.maxLength}
+              locale={locale}
             />
           )}
         </Field>
