@@ -18,6 +18,8 @@ import styles from './builder.module.css'
 
 const OPERATORS = ['eq', 'neq', 'in', 'notIn', 'gt', 'gte', 'lt', 'lte', 'isEmpty', 'isNotEmpty', 'contains']
 const NO_VALUE_OPERATORS = ['isEmpty', 'isNotEmpty']
+// The rule engine requires an ARRAY value for these operators.
+const ARRAY_OPERATORS = ['in', 'notIn']
 
 export function QuestionInspector({
   question: q,
@@ -43,7 +45,18 @@ export function QuestionInspector({
   }
 
   function setRule(index, patch) {
-    const next = rules.map((r, i) => (i === index ? { ...r, ...patch } : r))
+    const next = rules.map((r, i) => {
+      if (i !== index) return r
+      const merged = { ...r, ...patch }
+      // Keep the value's shape in sync with the operator: in/notIn need
+      // arrays, everything else needs a scalar.
+      if (ARRAY_OPERATORS.includes(merged.operator) && !Array.isArray(merged.value)) {
+        merged.value = merged.value === '' || merged.value == null ? [] : [merged.value]
+      } else if (!ARRAY_OPERATORS.includes(merged.operator) && Array.isArray(merged.value)) {
+        merged.value = merged.value[0] ?? ''
+      }
+      return merged
+    })
     onChange({ visibleIf: { op: q.visibleIf?.op ?? 'and', rules: next } })
   }
 
@@ -229,7 +242,41 @@ export function QuestionInspector({
                   ))}
                 </NativeSelect>
                 {!NO_VALUE_OPERATORS.includes(rule.operator) &&
-                  (refHasOptions ? (
+                  (ARRAY_OPERATORS.includes(rule.operator) ? (
+                    refHasOptions ? (
+                      <NativeSelect
+                        aria-label="Value"
+                        multiple
+                        size={Math.min(4, (refQ.options ?? []).length || 1)}
+                        value={Array.isArray(rule.value) ? rule.value : []}
+                        onChange={(e) =>
+                          setRule(i, {
+                            value: [...e.target.selectedOptions].map((o) => o.value),
+                          })
+                        }
+                      >
+                        {(refQ.options ?? []).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {lt(o.label, editLocale, defaultLocale) || o.value}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    ) : (
+                      // Free-text lists: comma-separated, stored as an array.
+                      <Input
+                        aria-label="Value"
+                        value={Array.isArray(rule.value) ? rule.value.join(', ') : ''}
+                        onChange={(e) =>
+                          setRule(i, {
+                            value: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    )
+                  ) : refHasOptions ? (
                     <NativeSelect
                       aria-label="Value"
                       value={rule.value ?? ''}

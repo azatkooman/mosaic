@@ -42,23 +42,32 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
     [participantTypes]
   )
 
-  // Restore draft once on mount.
+  // Restore draft once on mount — but only when it still matches the event's
+  // CURRENT participant types. A draft saved before an organizer removed a
+  // type (or unpublished its form) would otherwise crash every render.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey)
-      if (raw) {
-        const draft = JSON.parse(raw)
-        if (draft.people?.length) {
-          setCounts(draft.counts ?? {})
-          setPeople(draft.people)
-          setStep(draft.step ?? 'counts')
-          setPersonIndex(draft.personIndex ?? 0)
-          setRestored(true)
-        }
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      const validTypes = new Set(participantTypes.map((pt) => pt.key))
+      const usable =
+        draft.people?.length > 0 &&
+        draft.people.every((p) => p && validTypes.has(p.participantTypeKey)) &&
+        Object.keys(draft.counts ?? {}).every((k) => validTypes.has(k))
+      if (!usable) {
+        localStorage.removeItem(storageKey)
+        return
       }
+      setCounts(draft.counts ?? {})
+      setPeople(draft.people)
+      setStep(draft.step ?? 'counts')
+      setPersonIndex(Math.min(draft.personIndex ?? 0, draft.people.length - 1))
+      setRestored(true)
     } catch {
       // corrupted draft — start fresh
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey])
 
   // Persist draft on every change (until submitted).
@@ -76,29 +85,39 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
   }, [counts, people, step, personIndex, storageKey])
 
   function startForms() {
-    const list = []
-    for (const pt of participantTypes) {
-      const n = counts[pt.key] ?? 0
-      for (let i = 0; i < n; i++) {
-        list.push({
-          participantTypeKey: pt.key,
-          firstName: '',
-          lastName: '',
-          email: '',
-          answers: {},
-        })
-      }
-    }
-    if (list.length === 0) {
+    const total = participantTypes.reduce((sum, pt) => sum + (counts[pt.key] ?? 0), 0)
+    if (total === 0) {
       setErrors({ _counts: t('noTypesSelected') })
       return
     }
-    // Keep already-entered people when counts didn't change.
-    setPeople((prev) =>
-      list.map((slot, i) =>
-        prev[i]?.participantTypeKey === slot.participantTypeKey ? prev[i] : slot
-      )
-    )
+    // Preserve already-entered people PER TYPE: changing the count of one
+    // type must never discard or shuffle another type's entries (positional
+    // matching lost data when an earlier type's count changed).
+    setPeople((prev) => {
+      const byType = new Map()
+      for (const person of prev) {
+        const bucket = byType.get(person.participantTypeKey) ?? []
+        bucket.push(person)
+        byType.set(person.participantTypeKey, bucket)
+      }
+      const list = []
+      for (const pt of participantTypes) {
+        const existing = byType.get(pt.key) ?? []
+        const n = counts[pt.key] ?? 0
+        for (let i = 0; i < n; i++) {
+          list.push(
+            existing[i] ?? {
+              participantTypeKey: pt.key,
+              firstName: '',
+              lastName: '',
+              email: '',
+              answers: {},
+            }
+          )
+        }
+      }
+      return list
+    })
     setErrors({})
     setPersonIndex(0)
     setStep('person')
@@ -106,6 +125,17 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
 
   function updatePerson(index, patch) {
     setPeople((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))
+  }
+
+  // Answer updates must merge against the LATEST state: async callbacks
+  // (file uploads finishing) would otherwise overwrite answers typed while
+  // they were in flight with a stale snapshot.
+  function setAnswer(index, questionId, value) {
+    setPeople((prev) =>
+      prev.map((p, i) =>
+        i === index ? { ...p, answers: { ...p.answers, [questionId]: value } } : p
+      )
+    )
   }
 
   function validatePerson(index) {
@@ -297,9 +327,7 @@ export function RegistrationWizard({ event, participantTypes, userId }) {
           defaultLocale={event.default_locale}
           answers={p.answers}
           errors={errors}
-          onChange={(qid, value) =>
-            updatePerson(personIndex, { answers: { ...p.answers, [qid]: value } })
-          }
+          onChange={(qid, value) => setAnswer(personIndex, qid, value)}
           uploadContext={{ eventId: event.id, userId }}
         />
         <div className={styles.nav}>

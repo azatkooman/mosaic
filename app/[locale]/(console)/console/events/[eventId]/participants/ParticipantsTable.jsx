@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
 import { Badge, Button, Field, Input, NativeSelect } from '@/components/ui'
@@ -38,7 +38,7 @@ export function ParticipantsTable({ eventId, participantTypes, questions }) {
   )
 
   const filters = { search, statusFilter, typeFilter, answerFilters, page }
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['participants', eventId, filters],
     queryFn: async () => {
       let q = supabase
@@ -51,7 +51,10 @@ export function ParticipantsTable({ eventId, participantTypes, questions }) {
       if (statusFilter) q = q.eq('status', statusFilter)
       if (typeFilter) q = q.eq('participant_type_id', typeFilter)
       if (search.trim()) {
-        const s = search.trim().replaceAll(',', ' ')
+        // .or() takes raw PostgREST syntax: commas separate clauses and
+        // parentheses group them, so both must be stripped from user input
+        // or a search like "Smith (guest)" breaks the whole query.
+        const s = search.trim().replace(/[(),]/g, ' ').replace(/\s+/g, ' ')
         q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%`)
       }
       for (const [qid, value] of Object.entries(answerFilters)) {
@@ -72,7 +75,9 @@ export function ParticipantsTable({ eventId, participantTypes, questions }) {
       if (error) throw error
       return { rows: data ?? [], count: count ?? 0 }
     },
-    keepPreviousData: true,
+    // v5 API — the old `keepPreviousData: true` option was removed and
+    // silently ignored, which made every filter/page change flash empty.
+    placeholderData: keepPreviousData,
   })
 
   async function changeStatus(participantId, status) {
@@ -156,7 +161,15 @@ export function ParticipantsTable({ eventId, participantTypes, questions }) {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {error ? (
+              <tr>
+                <td colSpan={99}>
+                  <span className="alert alert-error" role="alert">
+                    {t('console.loadError')}
+                  </span>
+                </td>
+              </tr>
+            ) : isLoading ? (
               <tr><td colSpan={99}>{t('common.loading')}</td></tr>
             ) : rows.length === 0 ? (
               <tr><td colSpan={99}>{t('console.noParticipants')}</td></tr>

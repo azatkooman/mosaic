@@ -6,6 +6,7 @@ import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { SignOutButton } from '@/components/shell/SignOutButton'
 import { QueryProvider } from './QueryProvider'
+import { RequestAccess } from './RequestAccess'
 import styles from './console.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -24,16 +25,39 @@ export default async function ConsoleLayout({ children, params }) {
   }
 
   // UX gate only — RLS is the real enforcement on every query.
+  // A pending 'requested' row grants nothing.
   const [{ data: globalRoles }, { data: eventRoles }] = await Promise.all([
     supabase.from('user_roles').select('role').eq('user_id', user.id),
-    supabase.from('event_organizers').select('event_id').eq('user_id', user.id).limit(1),
+    supabase
+      .from('event_organizers')
+      .select('event_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1),
   ])
+  const isAdmin = (globalRoles ?? []).some(
+    (r) => r.role === 'admin' || r.role === 'super_admin'
+  )
   const hasAccess = (globalRoles?.length ?? 0) > 0 || (eventRoles?.length ?? 0) > 0
 
   if (!hasAccess) {
+    const [{ data: events }, { data: requests }, { data: roleRequest }] = await Promise.all([
+      supabase
+        .from('events')
+        .select('id, name, default_locale, starts_at, ends_at, timezone')
+        .eq('status', 'published')
+        .order('starts_at', { ascending: true }),
+      supabase.from('event_organizers').select('event_id').eq('user_id', user.id),
+      supabase.from('role_requests').select('user_id').eq('user_id', user.id).maybeSingle(),
+    ])
     return (
       <div className="container" style={{ paddingBlock: 'var(--s-8)' }}>
-        <p className="alert alert-info">{t('console.noAccess')}</p>
+        <RequestAccess
+          events={events ?? []}
+          requestedEventIds={(requests ?? []).map((r) => r.event_id)}
+          userId={user.id}
+          roleRequested={Boolean(roleRequest)}
+        />
       </div>
     )
   }
@@ -47,11 +71,15 @@ export default async function ConsoleLayout({ children, params }) {
             <span>{t('console.title')}</span>
           </Link>
           <nav className={styles.topnav} aria-label="Console">
-            <Link href="/console">{t('console.events')}</Link>
-            <Link href="/">{t('nav.home')} ↗</Link>
+            <Link href="/">{t('console.navHome')} ↗</Link>
+            <Link href="/console">{t('console.navMyEvents')}</Link>
+            {isAdmin && <Link href="/console/admin">{t('console.admin')}</Link>}
           </nav>
           <div className={styles.actions}>
             <LocaleSwitcher label={t('common.language')} />
+            <Link href="/my/profile" className="btn btn-ghost btn-sm">
+              {t('nav.profile')}
+            </Link>
             <SignOutButton label={t('common.signOut')} />
           </div>
         </header>

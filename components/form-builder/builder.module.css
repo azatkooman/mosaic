@@ -93,20 +93,34 @@
 
 .questionBody {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  border: none;
-  background: none;
+  align-items: stretch;
+  gap: var(--s-2);
   cursor: pointer;
   text-align: start;
   padding: var(--s-3) var(--s-2);
 }
 
-.questionLabel {
-  font-weight: 600;
+.questionBody:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+
+.questionPreview {
+  min-width: 0;
+}
+
+.sectionPreview h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.sectionPreview p {
+  margin: var(--s-1) 0 0;
   font-size: var(--text-sm);
+  color: var(--ink-soft);
 }
 
 .unlabeled {

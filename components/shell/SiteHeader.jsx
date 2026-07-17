@@ -13,13 +13,14 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  let isOrganizer = false
+  let isAdmin = false
   if (user) {
-    const [{ data: roles }, { data: eventRoles }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', user.id),
-      supabase.from('event_organizers').select('event_id').eq('user_id', user.id).limit(1),
-    ])
-    isOrganizer = (roles?.length ?? 0) > 0 || (eventRoles?.length ?? 0) > 0
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin'])
+    isAdmin = (roles?.length ?? 0) > 0
   }
 
   return (
@@ -30,12 +31,20 @@ export async function SiteHeader() {
           <span>{t('common.appName')}</span>
         </Link>
         <nav className={styles.nav} aria-label="Main">
-          <Link href="/">{t('nav.events')}</Link>
+          <Link href="/">{t('nav.home')}</Link>
           {user && <Link href="/my/registrations">{t('nav.myRegistrations')}</Link>}
-          {isOrganizer && <Link href="/console">{t('nav.console')}</Link>}
+          {/* All signed-in users can open the console: those without access
+              get the request-access panel instead of the event list. */}
+          {user && <Link href="/console">{t('nav.console')}</Link>}
+          {isAdmin && <Link href="/console/admin">{t('nav.adminConsole')}</Link>}
         </nav>
         <div className={styles.headerActions}>
           <LocaleSwitcher label={t('common.language')} />
+          {user && (
+            <Link href="/my/profile" className="btn btn-ghost btn-sm">
+              {t('nav.profile')}
+            </Link>
+          )}
           {user ? (
             <SignOutButton label={t('common.signOut')} />
           ) : (

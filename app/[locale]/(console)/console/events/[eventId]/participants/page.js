@@ -15,10 +15,11 @@ export default async function ParticipantsPage({ params }) {
       .select('id, key, name')
       .eq('event_id', eventId)
       .order('sort_order'),
-    // All form versions ever used by this event's participants → union of questions.
+    // All form versions ever used by this event's participants → union of
+    // questions. FK hint required: forms↔form_versions has two relationships.
     supabase
       .from('form_versions')
-      .select('id, definition, forms!inner ( event_id )')
+      .select('id, definition, forms!form_versions_form_id_fkey!inner ( event_id )')
       .eq('forms.event_id', eventId),
   ])
 

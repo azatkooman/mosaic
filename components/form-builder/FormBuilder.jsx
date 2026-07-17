@@ -68,7 +68,9 @@ export function FormBuilder({
         store.markSaved()
         setSaveState('saved')
       } else {
-        setSaveState('idle')
+        // Losing edits silently (expired session, viewer role, network) is
+        // the worst failure mode a builder can have — say so, loudly.
+        setSaveState('saveFailed')
       }
     }, 1200)
     return () => clearTimeout(handle)
@@ -81,13 +83,27 @@ export function FormBuilder({
   )
 
   async function publish() {
-    // Flush any pending edits first.
-    await supabase.from('form_versions').update({ definition }).eq('id', versionId)
-    const { error } = await supabase.rpc('publish_form_version', { p_version_id: versionId })
-    if (!error) {
-      setSaveState('published')
-      router.refresh()
+    // Flush pending edits and REQUIRE the flush to succeed — publishing
+    // after a failed flush would publish the stale server-side definition.
+    const { error: flushError } = await supabase
+      .from('form_versions')
+      .update({ definition })
+      .eq('id', versionId)
+    if (flushError) {
+      setSaveState('saveFailed')
+      return
     }
+    // Clearing dirty also cancels any pending autosave timer (the autosave
+    // effect re-runs and its cleanup clears the timeout), so a late
+    // autosave can never fire against the just-published version.
+    store.markSaved()
+    const { error } = await supabase.rpc('publish_form_version', { p_version_id: versionId })
+    if (error) {
+      setSaveState('publishFailed')
+      return
+    }
+    setSaveState('published')
+    router.refresh()
   }
 
   const selected = definition.questions.find((q) => q.id === selectedId)
@@ -118,6 +134,12 @@ export function FormBuilder({
             {saveState === 'saving' && t('draftSaving')}
             {saveState === 'saved' && t('draftSaved')}
             {saveState === 'published' && t('formPublished')}
+            {saveState === 'saveFailed' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+            )}
+            {saveState === 'publishFailed' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
+            )}
           </span>
           <span style={{ flex: 1 }} />
           <Button variant="ghost" size="sm" onClick={store.undo} aria-label="Undo">

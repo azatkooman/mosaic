@@ -49,10 +49,18 @@ export const useBuilderStore = create((set, get) => ({
 
   removeQuestion(id) {
     const def = get().definition
-    get()._commit(
-      { ...def, questions: def.questions.filter((q) => q.id !== id) },
-      { selectedId: null }
-    )
+    // Also strip visibility rules that reference the deleted question —
+    // an orphaned rule evaluates false forever and permanently hides the
+    // dependent question for every registrant.
+    const questions = def.questions
+      .filter((q) => q.id !== id)
+      .map((q) => {
+        if (!q.visibleIf?.rules?.some((r) => r.questionId === id)) return q
+        const rules = q.visibleIf.rules.filter((r) => r.questionId !== id)
+        const { visibleIf, ...rest } = q
+        return rules.length ? { ...rest, visibleIf: { ...visibleIf, rules } } : rest
+      })
+    get()._commit({ ...def, questions }, { selectedId: null })
   },
 
   moveQuestion(activeId, overId) {

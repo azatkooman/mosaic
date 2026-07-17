@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 
 /**
- * Authoritative registration endpoint. Re-runs the same validation the
- * browser ran (shared lib/form-engine module), prunes hidden answers, then
- * calls the atomic submit_registration RPC as the signed-in user.
+ * Authoritative registration endpoint — the ONLY caller of the
+ * submit_registration RPC (which is service-role-only, so this validation
+ * cannot be bypassed by calling PostgREST directly). Re-runs the same
+ * shared validation the browser ran, prunes hidden answers, verifies
+ * file-answer ownership, then submits atomically.
  *
  * Body: { eventId, locale, participants: [{ participantTypeKey,
  *   firstName, lastName, email, answers }] }
@@ -27,7 +30,12 @@ export async function POST(request) {
   }
 
   const { eventId, locale, participants } = body ?? {}
-  if (!eventId || !Array.isArray(participants) || participants.length === 0) {
+  if (
+    typeof eventId !== 'string' ||
+    !Array.isArray(participants) ||
+    participants.length === 0 ||
+    participants.length > 25
+  ) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
@@ -35,7 +43,7 @@ export async function POST(request) {
   // anyone read these for published events).
   const { data: types, error: typesError } = await supabase
     .from('participant_types')
-    .select('id, key, form_id, forms:form_id ( id, current_version_id )')
+    .select('id, key, max_per_registration, form_id, forms:form_id ( id, current_version_id )')
     .eq('event_id', eventId)
   if (typesError || !types?.length) {
     return NextResponse.json({ error: 'event_not_found' }, { status: 404 })
@@ -51,54 +59,110 @@ export async function POST(request) {
   const versionById = new Map((versions ?? []).map((v) => [v.id, v]))
   const typeByKey = new Map(types.map((t) => [t.key, t]))
 
+  const asString = (v) => (typeof v === 'string' ? v.trim() : '')
+
   // Validate every participant against their type's form definition.
   const rpcParticipants = []
   const validationErrors = []
+  const countByType = new Map()
   for (let i = 0; i < participants.length; i++) {
-    const p = participants[i]
+    const p = participants[i] ?? {}
     const type = typeByKey.get(p.participantTypeKey)
     const versionId = type?.forms?.current_version_id
     const version = versionId ? versionById.get(versionId) : null
     if (!type || !version) {
       return NextResponse.json({ error: 'invalid_participant_type' }, { status: 400 })
     }
-    if (!p.firstName?.trim() || !p.lastName?.trim()) {
+    countByType.set(type.key, (countByType.get(type.key) ?? 0) + 1)
+
+    const firstName = asString(p.firstName)
+    const lastName = asString(p.lastName)
+    if (!firstName || !lastName) {
       validationErrors.push({ index: i, errors: { _name: 'required' } })
       continue
     }
+
+    const answersInput =
+      p.answers && typeof p.answers === 'object' && !Array.isArray(p.answers)
+        ? p.answers
+        : {}
     const { valid, errors, cleaned } = validateParticipantAnswers(
       version.definition,
       type.key,
-      p.answers ?? {}
+      answersInput
     )
     if (!valid) {
       validationErrors.push({ index: i, errors })
       continue
     }
+
+    // File answers must point at objects the caller uploaded for THIS event:
+    // registration-files paths are {event_id}/{user_id}/{uuid}-{name}.
+    const fileErrors = {}
+    for (const q of version.definition?.questions ?? []) {
+      if (q.type === 'file' && cleaned[q.id] != null) {
+        if (!String(cleaned[q.id]).startsWith(`${eventId}/${user.id}/`)) {
+          fileErrors[q.id] = 'invalid'
+        }
+      }
+    }
+    if (Object.keys(fileErrors).length > 0) {
+      validationErrors.push({ index: i, errors: fileErrors })
+      continue
+    }
+
     rpcParticipants.push({
       participant_type_id: type.id,
       form_version_id: version.id,
-      first_name: p.firstName.trim(),
-      last_name: p.lastName.trim(),
-      email: p.email?.trim() || null,
+      first_name: firstName,
+      last_name: lastName,
+      email: asString(p.email) || null,
       answers: cleaned,
     })
+  }
+
+  // Per-type limits (the RPC re-checks; failing early gives a clean 422).
+  for (const [key, n] of countByType) {
+    const type = typeByKey.get(key)
+    if (type.max_per_registration != null && n > type.max_per_registration) {
+      return NextResponse.json(
+        { error: 'too_many_of_type', typeKey: key },
+        { status: 422 }
+      )
+    }
   }
 
   if (validationErrors.length > 0) {
     return NextResponse.json({ error: 'validation', details: validationErrors }, { status: 422 })
   }
 
-  // Atomic insert with capacity enforcement — runs as the signed-in user.
-  const { data, error } = await supabase.rpc('submit_registration', {
+  // Atomic insert with capacity enforcement. Service role is required (the
+  // RPC accepts no other caller); the registrant id is passed explicitly
+  // after cookie-verified authentication above.
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+  const { data, error } = await admin.rpc('submit_registration', {
     p_event_id: eventId,
-    p_locale: locale ?? 'en',
+    p_locale: typeof locale === 'string' ? locale : 'en',
     p_participants: rpcParticipants,
+    p_registered_by: user.id,
   })
   if (error) {
-    const known = ['registration is closed', 'registration has not opened yet', 'event not open for registration']
-    const status = known.some((m) => error.message?.includes(m)) ? 409 : 500
-    return NextResponse.json({ error: error.message }, { status })
+    const businessErrors = [
+      'registration is closed',
+      'registration has not opened yet',
+      'event not open for registration',
+      'too many participants',
+      'too few participants',
+    ]
+    const known = businessErrors.some((m) => error.message?.includes(m))
+    if (known) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    console.error('submit_registration failed:', error.message)
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
   }
 
   return NextResponse.json(data)

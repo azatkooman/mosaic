@@ -45,7 +45,8 @@ export async function GET(request) {
     admin.from('participant_types').select('id, name').eq('event_id', eventId),
     admin
       .from('form_versions')
-      .select('id, definition, forms!inner ( event_id )')
+      // FK hint required: forms↔form_versions has two relationships.
+      .select('id, definition, forms!form_versions_form_id_fkey!inner ( event_id )')
       .eq('forms.event_id', eventId),
   ])
 

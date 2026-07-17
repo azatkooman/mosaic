@@ -9,10 +9,41 @@ export default async function TeamPage({ params }) {
   setRequestLocale(locale)
 
   const supabase = await getSupabaseServerClient()
-  const { data: members } = await supabase
-    .from('event_organizers')
-    .select('user_id, role, profiles:user_id ( full_name, email )')
-    .eq('event_id', eventId)
+  const [{ data: members }, { data: roles }, { data: event }] = await Promise.all([
+    supabase
+      .from('event_organizers')
+      .select('user_id, role_id, status')
+      .eq('event_id', eventId),
+    // presets + global custom roles + this event's custom roles
+    supabase
+      .from('event_roles')
+      .select('*')
+      .or(`event_id.is.null,event_id.eq.${eventId}`),
+    supabase.from('events').select('org_id').eq('id', eventId).maybeSingle(),
+  ])
 
-  return <TeamManager eventId={eventId} initialMembers={members ?? []} />
+  // No FK between event_organizers.user_id and profiles (both reference
+  // auth.users), so PostgREST can't embed — fetch and join in two steps.
+  let profileById = new Map()
+  if (members?.length) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', members.map((m) => m.user_id))
+    profileById = new Map((profiles ?? []).map((p) => [p.id, p]))
+  }
+
+  const withProfiles = (members ?? []).map((m) => ({
+    ...m,
+    profiles: profileById.get(m.user_id) ?? null,
+  }))
+
+  return (
+    <TeamManager
+      eventId={eventId}
+      orgId={event?.org_id ?? null}
+      initialMembers={withProfiles}
+      roles={roles ?? []}
+    />
+  )
 }
