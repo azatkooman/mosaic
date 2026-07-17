@@ -74,10 +74,12 @@ export default async function ConsoleLayout({ children, params }) {
             <Link href="/console">{t('console.events')}</Link>
             {isAdmin && <Link href="/console/admin">{t('console.admin')}</Link>}
             <Link href="/">{t('nav.home')} ↗</Link>
-            <Link href="/my/profile">{t('nav.profile')} ↗</Link>
           </nav>
           <div className={styles.actions}>
             <LocaleSwitcher label={t('common.language')} />
+            <Link href="/my/profile" className="btn btn-ghost btn-sm">
+              {t('nav.profile')}
+            </Link>
             <SignOutButton label={t('common.signOut')} />
           </div>
         </header>
