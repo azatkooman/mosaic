@@ -3,7 +3,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { lt } from '@/lib/i18n/locales'
+import { QuestionField } from '@/components/form-runtime/QuestionField'
 import styles from './builder.module.css'
+
+const noop = () => {}
 
 export function SortableQuestionCard({
   question: q,
@@ -18,6 +21,8 @@ export function SortableQuestionCard({
     useSortable({ id: q.id })
 
   const label = lt(q.label, locale, defaultLocale)
+  // Unlabeled questions still need something visible to click on.
+  const previewQuestion = label ? q : { ...q, label: { [locale]: '…' } }
 
   return (
     <li
@@ -39,17 +44,43 @@ export function SortableQuestionCard({
       >
         ⋮⋮
       </button>
-      <button className={styles.questionBody} onClick={onSelect}>
-        <span className={styles.questionLabel}>
-          {label || <em className={styles.unlabeled}>…</em>}
-          {q.required && <span className={styles.req}> *</span>}
-        </span>
+      <div
+        role="button"
+        tabIndex={0}
+        className={styles.questionBody}
+        aria-label={label || typeLabel}
+        onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect()
+          }
+        }}
+      >
         <span className={styles.questionMeta}>
           {typeLabel}
           {q.visibleIf?.rules?.length ? ' · ⑂' : ''}
           {q.participantTypes?.length ? ` · ${q.participantTypes.join(', ')}` : ''}
         </span>
-      </button>
+        {/* Live preview of what a respondent sees; inert so clicks select the card. */}
+        <div className={styles.questionPreview} inert>
+          {q.type === 'section' ? (
+            <div className={styles.sectionPreview}>
+              <h3>{label || <em className={styles.unlabeled}>…</em>}</h3>
+              {q.help && <p>{lt(q.help, locale, defaultLocale)}</p>}
+            </div>
+          ) : (
+            <QuestionField
+              question={previewQuestion}
+              locale={locale}
+              defaultLocale={defaultLocale}
+              value={undefined}
+              onChange={noop}
+              preview
+            />
+          )}
+        </div>
+      </div>
       <button className={styles.removeBtn} aria-label="Delete" onClick={onRemove}>
         ×
       </button>
