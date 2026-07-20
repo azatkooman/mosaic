@@ -20,7 +20,7 @@ export default async function ProfilePage({ params }) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, preferred_locale')
+    .select('id, full_name, email, preferred_locale, theme')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -35,6 +35,7 @@ export default async function ProfilePage({ params }) {
           full_name: profile?.full_name ?? '',
           email: profile?.email ?? user.email ?? '',
           preferred_locale: profile?.preferred_locale ?? locale,
+          theme: profile?.theme ?? 'system',
         }}
       />
     </div>

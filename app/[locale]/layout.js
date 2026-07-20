@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { Unbounded, IBM_Plex_Sans } from 'next/font/google'
 import { routing } from '@/lib/i18n/routing'
+import { THEME_COOKIE } from '@/lib/theme'
 import '@/styles/globals.css'
 
 const display = Unbounded({
@@ -38,8 +40,19 @@ export default async function LocaleLayout({ children, params }) {
   }
   setRequestLocale(locale)
 
+  // Explicit theme choice (from the profile) is mirrored to a cookie so the
+  // right theme is in the very first HTML — no flash of the wrong palette.
+  // Absent/'system' → no attribute, so prefers-color-scheme decides.
+  const themeCookie = (await cookies()).get(THEME_COOKIE)?.value
+  const theme = themeCookie === 'light' || themeCookie === 'dark' ? themeCookie : undefined
+
   return (
-    <html lang={locale} dir="ltr" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang={locale}
+      dir="ltr"
+      data-theme={theme}
+      className={`${display.variable} ${body.variable}`}
+    >
       <body>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>

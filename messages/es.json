@@ -279,6 +279,11 @@
     "firstName": "Nombre",
     "lastName": "Apellidos",
     "namePromptSkip": "Omitir por ahora",
-    "namePromptRequired": "Introduce tu nombre y apellidos."
+    "namePromptRequired": "Introduce tu nombre y apellidos.",
+    "theme": "Apariencia",
+    "themeHelp": "Elige claro u oscuro, o sigue tu dispositivo.",
+    "theme_system": "Sistema",
+    "theme_light": "Claro",
+    "theme_dark": "Oscuro"
   }
 }

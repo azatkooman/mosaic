@@ -279,6 +279,11 @@
     "firstName": "Prénom",
     "lastName": "Nom",
     "namePromptSkip": "Passer pour l'instant",
-    "namePromptRequired": "Veuillez saisir votre prénom et votre nom."
+    "namePromptRequired": "Veuillez saisir votre prénom et votre nom.",
+    "theme": "Apparence",
+    "themeHelp": "Choisissez clair ou sombre, ou suivez votre appareil.",
+    "theme_system": "Système",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre"
   }
 }

@@ -279,6 +279,11 @@
     "firstName": "First name",
     "lastName": "Last name",
     "namePromptSkip": "Skip for now",
-    "namePromptRequired": "Please enter your first and last name."
+    "namePromptRequired": "Please enter your first and last name.",
+    "theme": "Appearance",
+    "themeHelp": "Choose light or dark, or follow your device.",
+    "theme_system": "System",
+    "theme_light": "Light",
+    "theme_dark": "Dark"
   }
 }
