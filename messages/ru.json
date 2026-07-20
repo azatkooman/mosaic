@@ -252,7 +252,14 @@
     "font_default": "Шрифт сайта",
     "font_sans": "Без засечек",
     "font_serif": "С засечками",
-    "font_mono": "Моноширинный"
+    "font_mono": "Моноширинный",
+    "uploadPhoto": "Добавить фото",
+    "changePhoto": "Изменить",
+    "removePhoto": "Удалить фото",
+    "uploading": "Загрузка изображения…",
+    "uploadBadType": "Неподдерживаемый тип файла. Используйте JPG, PNG, WebP или AVIF.",
+    "uploadTooLarge": "Изображение слишком большое. Максимальный размер — 5 МБ.",
+    "uploadFailed": "Не удалось загрузить. Попробуйте ещё раз."
   },
   "questionTypes": {
     "text": "Короткий текст",

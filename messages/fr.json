@@ -252,7 +252,14 @@
     "font_default": "Police du site",
     "font_sans": "Sans serif",
     "font_serif": "Serif",
-    "font_mono": "Monospace"
+    "font_mono": "Monospace",
+    "uploadPhoto": "Ajouter une photo",
+    "changePhoto": "Changer",
+    "removePhoto": "Retirer la photo",
+    "uploading": "Téléversement de l'image…",
+    "uploadBadType": "Type de fichier non pris en charge. Utilisez JPG, PNG, WebP ou AVIF.",
+    "uploadTooLarge": "L'image est trop volumineuse. Taille maximale : 5 Mo.",
+    "uploadFailed": "Échec du téléversement. Veuillez réessayer."
   },
   "questionTypes": {
     "text": "Texte court",

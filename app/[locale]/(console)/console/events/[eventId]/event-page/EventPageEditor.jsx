@@ -33,6 +33,8 @@ export function EventPageEditor({ initialEvent }) {
   const [saveState, setSaveState] = useState('idle')
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
+  const [uploading, setUploading] = useState(0)
+  const [uploadError, setUploadError] = useState('')
   const coverInputRef = useRef(null)
   const aboutImgInputRef = useRef(null)
   const agendaImgInputRef = useRef(null)
@@ -116,15 +118,32 @@ export function EventPageEditor({ initialEvent }) {
     }
   }
 
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+
   async function upload(file, prefix) {
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `${event.id}/${prefix}-${Date.now().toString(36)}.${ext}`
-    const { error } = await supabase.storage.from('event-covers').upload(path, file)
-    if (error) {
-      setSaveState('error')
+    setUploadError('')
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setUploadError(t('uploadBadType'))
       return null
     }
-    return path
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError(t('uploadTooLarge'))
+      return null
+    }
+    setUploading((n) => n + 1)
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `${event.id}/${prefix}-${Date.now().toString(36)}.${ext}`
+      const { error } = await supabase.storage.from('event-covers').upload(path, file)
+      if (error) {
+        setUploadError(error.message || t('uploadFailed'))
+        return null
+      }
+      return path
+    } finally {
+      setUploading((n) => n - 1)
+    }
   }
 
   async function onCoverFile(e) {
@@ -451,22 +470,40 @@ export function EventPageEditor({ initialEvent }) {
         {items.map((sp) => (
           <div key={sp.id} className={styles.panelItem}>
             <div className={styles.panelItemMedia}>
-              {sp.photo_path ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={eventMediaUrl(sp.photo_path)} alt="" />
-              ) : (
-                <span aria-hidden="true">{sp.name?.charAt(0) || '?'}</span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                type="button"
+                className={styles.photoDrop}
+                data-has-photo={sp.photo_path ? '' : undefined}
                 onClick={() => {
                   speakerUploadTarget.current = sp.id
                   speakerInputRef.current?.click()
                 }}
               >
-                {t('photo')}
-              </Button>
+                {sp.photo_path ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={eventMediaUrl(sp.photo_path)} alt="" />
+                    <span className={styles.photoOverlay}>{t('changePhoto')}</span>
+                  </>
+                ) : (
+                  <span className={styles.photoPrompt}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                      <path d="M12 16V5m0 0L8 9m4-4 4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    {t('uploadPhoto')}
+                  </span>
+                )}
+              </button>
+              {sp.photo_path && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => patchItem('speakers', sp.id, { photo_path: null })}
+                >
+                  {t('removePhoto')}
+                </Button>
+              )}
             </div>
             <div className={styles.panelItemFields}>
               <Input
@@ -752,7 +789,15 @@ export function EventPageEditor({ initialEvent }) {
                 </button>
               ))}
             </nav>
-            <div className={styles.panelBody}>{sectionRenderers[panelSection]?.()}</div>
+            <div className={styles.panelBody}>
+              {uploading > 0 && (
+                <p className={`alert alert-info ${styles.uploadNote}`}>{t('uploading')}</p>
+              )}
+              {uploadError && (
+                <p className={`alert alert-error ${styles.uploadNote}`}>{uploadError}</p>
+              )}
+              {sectionRenderers[panelSection]?.()}
+            </div>
             <div className={styles.panelFoot}>
               <Button onClick={save} disabled={saveState === 'saving' || !dirty}>
                 {t('savePage')}

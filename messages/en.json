@@ -252,7 +252,14 @@
     "font_default": "Site font",
     "font_sans": "Sans serif",
     "font_serif": "Serif",
-    "font_mono": "Monospace"
+    "font_mono": "Monospace",
+    "uploadPhoto": "Add photo",
+    "changePhoto": "Change",
+    "removePhoto": "Remove photo",
+    "uploading": "Uploading image…",
+    "uploadBadType": "Unsupported file type. Use JPG, PNG, WebP or AVIF.",
+    "uploadTooLarge": "Image is too large. Maximum size is 5 MB.",
+    "uploadFailed": "Upload failed. Please try again."
   },
   "questionTypes": {
     "text": "Short text",
