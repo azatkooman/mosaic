@@ -189,7 +189,7 @@
     "globalRoleLabel": "Глобальная роль",
     "roleSuperAdmin": "Суперадминистратор",
     "roleAdmin": "Администратор",
-    "roleGlobalOrganizer": "Организатор",
+    "roleGlobalOrganizer": "Глобальный организатор",
     "roleNone": "Без роли",
     "makeSuperAdmin": "Назначить суперадминистратором",
     "transferConfirm": "Передать права суперадминистратора {name}? Вы станете обычным администратором.",

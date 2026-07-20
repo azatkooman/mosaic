@@ -189,7 +189,7 @@
     "globalRoleLabel": "Global role",
     "roleSuperAdmin": "Super admin",
     "roleAdmin": "Admin",
-    "roleGlobalOrganizer": "Organizer",
+    "roleGlobalOrganizer": "Global Organizer",
     "roleNone": "No role",
     "makeSuperAdmin": "Make super admin",
     "transferConfirm": "Transfer super admin to {name}? You will become a regular admin.",

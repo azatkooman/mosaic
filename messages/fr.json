@@ -189,7 +189,7 @@
     "globalRoleLabel": "Rôle global",
     "roleSuperAdmin": "Super administrateur",
     "roleAdmin": "Administrateur",
-    "roleGlobalOrganizer": "Organisateur",
+    "roleGlobalOrganizer": "Organisateur global",
     "roleNone": "Aucun rôle",
     "makeSuperAdmin": "Nommer super administrateur",
     "transferConfirm": "Transférer le rôle de super administrateur à {name} ? Vous deviendrez un administrateur ordinaire.",
