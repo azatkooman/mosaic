@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
+import { extractIdentity } from '@/lib/form-engine/identity'
 
 /**
  * Authoritative registration endpoint — the ONLY caller of the
@@ -98,13 +99,6 @@ export async function POST(request) {
     }
     countByType.set(type.key, (countByType.get(type.key) ?? 0) + 1)
 
-    const firstName = asString(p.firstName)
-    const lastName = asString(p.lastName)
-    if (!firstName || !lastName) {
-      validationErrors.push({ index: i, errors: { _name: 'required' } })
-      continue
-    }
-
     const answersInput =
       p.answers && typeof p.answers === 'object' && !Array.isArray(p.answers)
         ? p.answers
@@ -134,12 +128,16 @@ export async function POST(request) {
       continue
     }
 
+    // Identity comes from the name/email questions (organizers may remove
+    // them, so blanks are legal). Legacy clients that still send top-level
+    // firstName/lastName/email are honored as a fallback.
+    const identity = extractIdentity(version.definition, type.key, cleaned)
     rpcParticipants.push({
       participant_type_id: type.id,
       form_version_id: version.id,
-      first_name: firstName,
-      last_name: lastName,
-      email: asString(p.email) || null,
+      first_name: identity.firstName || asString(p.firstName),
+      last_name: identity.lastName || asString(p.lastName),
+      email: identity.email || asString(p.email) || null,
       answers: cleaned,
     })
   }

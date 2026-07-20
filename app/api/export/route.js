@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
+import { formatStructuredAnswer } from '@/lib/form-engine/format'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -130,6 +131,8 @@ export async function GET(request) {
 
 function plainAnswer(value, question, locale) {
   if (value == null) return ''
+  const structured = formatStructuredAnswer(question, value)
+  if (structured !== null) return structured
   if (question.type === 'checkbox') return value ? 'yes' : 'no'
   if (Array.isArray(value)) {
     return value

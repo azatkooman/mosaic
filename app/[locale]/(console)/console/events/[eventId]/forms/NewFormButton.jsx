@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { defaultFormQuestions } from '@/lib/form-defaults'
 import { Button, Dialog, Field, NativeSelect, RadioGroup, RadioRow } from '@/components/ui'
 import styles from '../../../console.module.css'
 
@@ -76,6 +77,12 @@ export function NewFormButton({ eventId, existingForms }) {
           .update({ definition: source.definition })
           .eq('id', versionId)
       }
+    } else {
+      // Blank forms start with the default name + email questions.
+      await supabase
+        .from('form_versions')
+        .update({ definition: { questions: defaultFormQuestions() } })
+        .eq('id', versionId)
     }
 
     router.push(`/console/events/${eventId}/forms/${form.id}`)

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
+import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { Badge, Button, Field, Input, NativeSelect } from '@/components/ui'
 import styles from './participants.module.css'
 
@@ -220,6 +221,8 @@ export function ParticipantsTable({ eventId, participantTypes, questions }) {
 
 function formatAnswer(value, question, locale) {
   if (value == null) return ''
+  const structured = formatStructuredAnswer(question, value)
+  if (structured !== null) return structured
   if (question.type === 'checkbox') return value ? '✓' : ''
   if (Array.isArray(value)) {
     return value

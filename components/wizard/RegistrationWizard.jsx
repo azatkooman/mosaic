@@ -5,8 +5,9 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
+import { extractIdentity } from '@/lib/form-engine/identity'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
-import { Button, Field, Input, Badge, RadioGroup, RadioRow } from '@/components/ui'
+import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
 import styles from './wizard.module.css'
 
 /**
@@ -22,7 +23,6 @@ import styles from './wizard.module.css'
 export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
-  const tv = useTranslations('validation')
   const tMyRegs = useTranslations('myRegs')
   const locale = useLocale()
   const storageKey = `mosaic-draft-${event.slug}`
@@ -120,15 +120,7 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
     // Keep an already-entered person of the same type on back-and-forth.
     setPeople((prev) => {
       const existing = prev.find((p) => p.participantTypeKey === singleTypeKey)
-      return [
-        existing ?? {
-          participantTypeKey: singleTypeKey,
-          firstName: '',
-          lastName: '',
-          email: '',
-          answers: {},
-        },
-      ]
+      return [existing ?? { participantTypeKey: singleTypeKey, answers: {} }]
     })
     setErrors({})
     setPersonIndex(0)
@@ -157,15 +149,7 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
         const existing = byType.get(pt.key) ?? []
         const n = counts[pt.key] ?? 0
         for (let i = 0; i < n; i++) {
-          list.push(
-            existing[i] ?? {
-              participantTypeKey: pt.key,
-              firstName: '',
-              lastName: '',
-              email: '',
-              answers: {},
-            }
-          )
+          list.push(existing[i] ?? { participantTypeKey: pt.key, answers: {} })
         }
       }
       return list
@@ -173,10 +157,6 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
     setErrors({})
     setPersonIndex(0)
     setStep('person')
-  }
-
-  function updatePerson(index, patch) {
-    setPeople((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))
   }
 
   // Answer updates must merge against the LATEST state: async callbacks
@@ -194,11 +174,16 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
     const p = people[index]
     const pt = typeByKey.get(p.participantTypeKey)
     const res = validateParticipantAnswers(definitionFor(pt), pt.key, p.answers)
-    const personErrors = { ...res.errors }
-    if (!p.firstName.trim()) personErrors._firstName = 'required'
-    if (!p.lastName.trim()) personErrors._lastName = 'required'
-    setErrors(personErrors)
-    return Object.keys(personErrors).length === 0
+    setErrors(res.errors)
+    return Object.keys(res.errors).length === 0
+  }
+
+  // Name/email are ordinary questions now; a person's display name comes
+  // from their answers (blank when the organizer removed the name question).
+  function displayName(p) {
+    const pt = typeByKey.get(p.participantTypeKey)
+    const { firstName, lastName } = extractIdentity(definitionFor(pt), pt.key, p.answers)
+    return `${firstName} ${lastName}`.trim()
   }
 
   function nextPerson() {
@@ -254,9 +239,11 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
         <h2 className="page-title">{t('successTitle')}</h2>
         <p className={styles.muted}>{t('successBody')}</p>
         <ul className={styles.resultList}>
-          {result.participants.map((p) => (
+          {result.participants.map((p, i) => (
             <li key={p.participant_id}>
-              <span>{p.first_name}</span>
+              <span>
+                {p.first_name || t('participantOf', { index: i + 1, total: result.participants.length })}
+              </span>
               <Badge tone={p.status}>
                 {p.status === 'confirmed' ? t('statusConfirmed') : t('statusWaitlisted')}
               </Badge>
@@ -400,41 +387,6 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
           {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}
           {lt(pt.name, locale, event.default_locale)}
         </p>
-        <div className={styles.nameGrid}>
-          <Field label={t('firstName')} required error={errors._firstName ? tv('required') : undefined}>
-            {({ id, invalid }) => (
-              <Input
-                id={id}
-                value={p.firstName}
-                aria-invalid={invalid}
-                autoComplete="off"
-                onChange={(e) => updatePerson(personIndex, { firstName: e.target.value })}
-              />
-            )}
-          </Field>
-          <Field label={t('lastName')} required error={errors._lastName ? tv('required') : undefined}>
-            {({ id, invalid }) => (
-              <Input
-                id={id}
-                value={p.lastName}
-                aria-invalid={invalid}
-                autoComplete="off"
-                onChange={(e) => updatePerson(personIndex, { lastName: e.target.value })}
-              />
-            )}
-          </Field>
-          <Field label={`${t('email')} (${tCommon('optional')})`}>
-            {({ id }) => (
-              <Input
-                id={id}
-                type="email"
-                value={p.email}
-                autoComplete="off"
-                onChange={(e) => updatePerson(personIndex, { email: e.target.value })}
-              />
-            )}
-          </Field>
-        </div>
         <FormRenderer
           definition={definitionFor(pt)}
           participantTypeKey={pt.key}
@@ -467,7 +419,8 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
             <li key={i} className="card card-pad">
               <div className={styles.reviewHead}>
                 <strong>
-                  {p.firstName} {p.lastName}
+                  {displayName(p) ||
+                    t('participantOf', { index: i + 1, total: people.length })}
                 </strong>
                 <span className={styles.muted}>
                   {lt(pt.name, locale, event.default_locale)}

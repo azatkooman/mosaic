@@ -90,7 +90,8 @@
     "tooLong": "Слишком длинно",
     "tooSmall": "Слишком маленькое значение",
     "tooBig": "Слишком большое значение",
-    "notAnOption": "Выберите один из предложенных вариантов"
+    "notAnOption": "Выберите один из предложенных вариантов",
+    "phoneCode": "Выберите код страны"
   },
   "status": {
     "pending": "Ожидает",
@@ -273,7 +274,13 @@
     "formModeFamilyHelp": "Показывается, когда человек регистрирует семью или группу.",
     "copyQuestionsFrom": "Скопировать вопросы из",
     "copyQuestionsHelp": "Используйте вопросы существующей формы, чтобы не создавать их заново.",
-    "startBlank": "Начать с пустой формы"
+    "startBlank": "Начать с пустой формы",
+    "publishNeedsQuestion": "Форма должна содержать хотя бы один вопрос",
+    "nameFormat": "Формат имени",
+    "nameFormatFirstLast": "Имя + фамилия",
+    "nameFormatFull": "Полное имя (одно поле)",
+    "nameFormatFirstMiddleLast": "Имя + среднее имя + фамилия",
+    "addressParts": "Поля адреса"
   },
   "questionTypes": {
     "text": "Короткий текст",
@@ -287,7 +294,9 @@
     "email": "Эл. почта",
     "phone": "Телефон",
     "file": "Загрузка файла",
-    "section": "Заголовок раздела"
+    "section": "Заголовок раздела",
+    "name": "Имя",
+    "address": "Адрес"
   },
   "profile": {
     "title": "Мой профиль",
@@ -297,5 +306,18 @@
     "language": "Предпочитаемый язык",
     "saved": "Сохранено",
     "updateError": "Что-то пошло не так. Попробуйте ещё раз."
+  },
+  "runtime": {
+    "firstName": "Имя",
+    "middleName": "Среднее имя",
+    "lastName": "Фамилия",
+    "fullName": "Полное имя",
+    "phoneCountryCode": "Код страны",
+    "address_line1": "Адрес, строка 1",
+    "address_line2": "Адрес, строка 2",
+    "address_city": "Город",
+    "address_state": "Штат / область",
+    "address_postalCode": "Почтовый индекс",
+    "address_country": "Страна"
   }
 }

@@ -90,7 +90,8 @@
     "tooLong": "Too long",
     "tooSmall": "Too small",
     "tooBig": "Too big",
-    "notAnOption": "Choose one of the listed options"
+    "notAnOption": "Choose one of the listed options",
+    "phoneCode": "Select a country code"
   },
   "status": {
     "pending": "Pending",
@@ -273,7 +274,13 @@
     "formModeFamilyHelp": "Shown when a respondent registers a family or group.",
     "copyQuestionsFrom": "Copy questions from",
     "copyQuestionsHelp": "Reuse the questions of an existing form so you don't have to rebuild them.",
-    "startBlank": "Start blank"
+    "startBlank": "Start blank",
+    "publishNeedsQuestion": "A form must include at least one question",
+    "nameFormat": "Name format",
+    "nameFormatFirstLast": "First + last name",
+    "nameFormatFull": "Full name (one field)",
+    "nameFormatFirstMiddleLast": "First + middle + last name",
+    "addressParts": "Address fields"
   },
   "questionTypes": {
     "text": "Short text",
@@ -287,7 +294,9 @@
     "email": "Email",
     "phone": "Phone",
     "file": "File upload",
-    "section": "Section header"
+    "section": "Section header",
+    "name": "Name",
+    "address": "Address"
   },
   "profile": {
     "title": "My profile",
@@ -297,5 +306,18 @@
     "language": "Preferred language",
     "saved": "Saved",
     "updateError": "Something went wrong. Please try again."
+  },
+  "runtime": {
+    "firstName": "First name",
+    "middleName": "Middle name",
+    "lastName": "Last name",
+    "fullName": "Full name",
+    "phoneCountryCode": "Country code",
+    "address_line1": "Address line 1",
+    "address_line2": "Address line 2",
+    "address_city": "City",
+    "address_state": "State / Province",
+    "address_postalCode": "Postal code",
+    "address_country": "Country"
   }
 }

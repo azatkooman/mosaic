@@ -90,7 +90,8 @@
     "tooLong": "Занадто довго",
     "tooSmall": "Занадто мале значення",
     "tooBig": "Занадто велике значення",
-    "notAnOption": "Виберіть один із запропонованих варіантів"
+    "notAnOption": "Виберіть один із запропонованих варіантів",
+    "phoneCode": "Виберіть код країни"
   },
   "status": {
     "pending": "Очікує",
@@ -273,7 +274,13 @@
     "formModeFamilyHelp": "Показується, коли особа реєструє сім'ю або групу.",
     "copyQuestionsFrom": "Скопіювати запитання з",
     "copyQuestionsHelp": "Використайте запитання наявної форми, щоб не створювати їх заново.",
-    "startBlank": "Почати з порожньої форми"
+    "startBlank": "Почати з порожньої форми",
+    "publishNeedsQuestion": "Форма має містити принаймні одне запитання",
+    "nameFormat": "Формат імені",
+    "nameFormatFirstLast": "Ім'я + прізвище",
+    "nameFormatFull": "Повне ім'я (одне поле)",
+    "nameFormatFirstMiddleLast": "Ім'я + середнє ім'я + прізвище",
+    "addressParts": "Поля адреси"
   },
   "questionTypes": {
     "text": "Короткий текст",
@@ -287,7 +294,9 @@
     "email": "Ел. пошта",
     "phone": "Телефон",
     "file": "Завантаження файлу",
-    "section": "Заголовок розділу"
+    "section": "Заголовок розділу",
+    "name": "Ім'я",
+    "address": "Адреса"
   },
   "profile": {
     "title": "Мій профіль",
@@ -297,5 +306,18 @@
     "language": "Бажана мова",
     "saved": "Збережено",
     "updateError": "Щось пішло не так. Спробуйте ще раз."
+  },
+  "runtime": {
+    "firstName": "Ім'я",
+    "middleName": "Середнє ім'я",
+    "lastName": "Прізвище",
+    "fullName": "Повне ім'я",
+    "phoneCountryCode": "Код країни",
+    "address_line1": "Адреса, рядок 1",
+    "address_line2": "Адреса, рядок 2",
+    "address_city": "Місто",
+    "address_state": "Штат / область",
+    "address_postalCode": "Поштовий індекс",
+    "address_country": "Країна"
   }
 }

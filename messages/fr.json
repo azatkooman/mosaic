@@ -90,7 +90,8 @@
     "tooLong": "Trop long",
     "tooSmall": "Trop petit",
     "tooBig": "Trop grand",
-    "notAnOption": "Choisissez une des options proposées"
+    "notAnOption": "Choisissez une des options proposées",
+    "phoneCode": "Sélectionnez un indicatif de pays"
   },
   "status": {
     "pending": "En attente",
@@ -273,7 +274,13 @@
     "formModeFamilyHelp": "Affiché lorsqu'une personne inscrit une famille ou un groupe.",
     "copyQuestionsFrom": "Copier les questions de",
     "copyQuestionsHelp": "Réutilisez les questions d'un formulaire existant pour ne pas les recréer.",
-    "startBlank": "Commencer à vide"
+    "startBlank": "Commencer à vide",
+    "publishNeedsQuestion": "Le formulaire doit contenir au moins une question",
+    "nameFormat": "Format du nom",
+    "nameFormatFirstLast": "Prénom + nom",
+    "nameFormatFull": "Nom complet (un seul champ)",
+    "nameFormatFirstMiddleLast": "Prénom + deuxième prénom + nom",
+    "addressParts": "Champs d'adresse"
   },
   "questionTypes": {
     "text": "Texte court",
@@ -287,7 +294,9 @@
     "email": "E-mail",
     "phone": "Téléphone",
     "file": "Fichier",
-    "section": "En-tête de section"
+    "section": "En-tête de section",
+    "name": "Nom",
+    "address": "Adresse"
   },
   "profile": {
     "title": "Mon profil",
@@ -297,5 +306,18 @@
     "language": "Langue préférée",
     "saved": "Enregistré",
     "updateError": "Une erreur est survenue. Veuillez réessayer."
+  },
+  "runtime": {
+    "firstName": "Prénom",
+    "middleName": "Deuxième prénom",
+    "lastName": "Nom",
+    "fullName": "Nom complet",
+    "phoneCountryCode": "Indicatif du pays",
+    "address_line1": "Adresse, ligne 1",
+    "address_line2": "Adresse, ligne 2",
+    "address_city": "Ville",
+    "address_state": "État / Province",
+    "address_postalCode": "Code postal",
+    "address_country": "Pays"
   }
 }

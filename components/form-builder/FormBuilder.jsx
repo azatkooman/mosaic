@@ -26,8 +26,8 @@ import { QuestionInspector } from './QuestionInspector'
 import styles from './builder.module.css'
 
 const QUESTION_TYPES = [
-  'text', 'textarea', 'select', 'multiselect', 'radio', 'checkbox',
-  'date', 'number', 'email', 'phone', 'file', 'section',
+  'name', 'text', 'textarea', 'select', 'multiselect', 'radio', 'checkbox',
+  'date', 'number', 'email', 'phone', 'address', 'file', 'section',
 ]
 
 export function FormBuilder({
@@ -87,6 +87,15 @@ export function FormBuilder({
   )
 
   async function publish() {
+    // An empty form would render a blank registration step — refuse to
+    // publish until it has at least one real question.
+    const realQuestions = definition.questions.filter(
+      (q) => q.type !== 'section' && !q.archived
+    )
+    if (realQuestions.length === 0) {
+      setSaveState('publishEmpty')
+      return
+    }
     // Flush pending edits and REQUIRE the flush to succeed — publishing
     // after a failed flush would publish the stale server-side definition.
     const { error: flushError } = await supabase
@@ -184,6 +193,9 @@ export function FormBuilder({
             )}
             {saveState === 'publishFailed' && (
               <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
+            )}
+            {saveState === 'publishEmpty' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
             )}
           </span>
           <span style={{ flex: 1 }} />
