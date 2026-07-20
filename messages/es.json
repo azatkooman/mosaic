@@ -277,7 +277,7 @@
     "nameFormatFirstLast": "Nombre + apellido",
     "nameFormatFull": "Nombre completo (un campo)",
     "nameFormatFirstMiddleLast": "Nombre + segundo nombre + apellido",
-    "addressParts": "Campos de dirección"
+    "addressParts": "Campos de dirección",
     "viewDetail": "Ver",
     "participantDetail": "Detalles del participante"
   },
@@ -314,7 +314,7 @@
     "themeHelp": "Elige claro u oscuro, o sigue tu dispositivo.",
     "theme_system": "Sistema",
     "theme_light": "Claro",
-    "theme_dark": "Oscuro"
+    "theme_dark": "Oscuro",
     "updateError": "Algo salió mal. Inténtalo de nuevo."
   },
   "runtime": {

@@ -277,7 +277,7 @@
     "nameFormatFirstLast": "Ім'я + прізвище",
     "nameFormatFull": "Повне ім'я (одне поле)",
     "nameFormatFirstMiddleLast": "Ім'я + середнє ім'я + прізвище",
-    "addressParts": "Поля адреси"
+    "addressParts": "Поля адреси",
     "viewDetail": "Відкрити",
     "participantDetail": "Дані учасника"
   },
@@ -314,7 +314,7 @@
     "themeHelp": "Виберіть світлу чи темну тему або дотримуйтесь налаштувань пристрою.",
     "theme_system": "Системна",
     "theme_light": "Світла",
-    "theme_dark": "Темна"
+    "theme_dark": "Темна",
     "updateError": "Щось пішло не так. Спробуйте ще раз."
   },
   "runtime": {

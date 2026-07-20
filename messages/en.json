@@ -277,7 +277,7 @@
     "nameFormatFirstLast": "First + last name",
     "nameFormatFull": "Full name (one field)",
     "nameFormatFirstMiddleLast": "First + middle + last name",
-    "addressParts": "Address fields"
+    "addressParts": "Address fields",
     "viewDetail": "View",
     "participantDetail": "Participant details"
   },
@@ -314,7 +314,7 @@
     "themeHelp": "Choose light or dark, or follow your device.",
     "theme_system": "System",
     "theme_light": "Light",
-    "theme_dark": "Dark"
+    "theme_dark": "Dark",
     "updateError": "Something went wrong. Please try again."
   },
   "runtime": {

@@ -277,7 +277,7 @@
     "nameFormatFirstLast": "Имя + фамилия",
     "nameFormatFull": "Полное имя (одно поле)",
     "nameFormatFirstMiddleLast": "Имя + среднее имя + фамилия",
-    "addressParts": "Поля адреса"
+    "addressParts": "Поля адреса",
     "viewDetail": "Открыть",
     "participantDetail": "Данные участника"
   },
@@ -314,7 +314,7 @@
     "themeHelp": "Выберите светлую или тёмную тему или следуйте настройке устройства.",
     "theme_system": "Системная",
     "theme_light": "Светлая",
-    "theme_dark": "Тёмная"
+    "theme_dark": "Тёмная",
     "updateError": "Что-то пошло не так. Попробуйте ещё раз."
   },
   "runtime": {
