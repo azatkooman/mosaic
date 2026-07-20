@@ -461,6 +461,25 @@ export function EventPageEditor({ initialEvent }) {
             <option value="right">{t('alignRight')}</option>
           </NativeSelect>
         </div>
+        <h4 className={styles.panelSubhead}>{t('registerButtonStyle')}</h4>
+        <div className={styles.colorPair}>
+          <ColorField
+            label={t('buttonBackground')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.btn_bg}
+            defaultValue={isDark ? '#000000' : '#ffffff'}
+            onChange={(c) => setTheme({ btn_bg: c ?? undefined })}
+          />
+          <ColorField
+            label={t('buttonTextColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.btn_text}
+            defaultValue={isDark ? '#ffffff' : '#000000'}
+            onChange={(c) => setTheme({ btn_text: c ?? undefined })}
+          />
+        </div>
       </>
     )
   }

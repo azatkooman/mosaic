@@ -272,7 +272,10 @@
     "titleAlign": "Alineación del título",
     "alignLeft": "Izquierda",
     "alignCenter": "Centro",
-    "alignRight": "Derecha"
+    "alignRight": "Derecha",
+    "registerButtonStyle": "Botón \"Registrarse\"",
+    "buttonBackground": "Color de fondo del botón",
+    "buttonTextColor": "Color del texto del botón"
   },
   "questionTypes": {
     "text": "Texto corto",

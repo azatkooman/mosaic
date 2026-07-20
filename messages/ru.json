@@ -270,9 +270,12 @@
     "heroBackground": "Цвет фона шапки",
     "heroOpacity": "Прозрачность фона",
     "titleAlign": "Выравнивание заголовка",
-    "alignLeft": "Слева",
+    "alignLeft": "По левому краю",
     "alignCenter": "По центру",
-    "alignRight": "Справа"
+    "alignRight": "По правому краю",
+    "registerButtonStyle": "Кнопка «Регистрация»",
+    "buttonBackground": "Цвет фона кнопки",
+    "buttonTextColor": "Цвет текста кнопки"
   },
   "questionTypes": {
     "text": "Короткий текст",

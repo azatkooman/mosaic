@@ -272,7 +272,10 @@
     "titleAlign": "Alignement du titre",
     "alignLeft": "Gauche",
     "alignCenter": "Centré",
-    "alignRight": "Droite"
+    "alignRight": "Droite",
+    "registerButtonStyle": "Bouton \"S'inscrire\"",
+    "buttonBackground": "Couleur de fond du bouton",
+    "buttonTextColor": "Couleur du texte du bouton"
   },
   "questionTypes": {
     "text": "Texte court",

@@ -272,7 +272,10 @@
     "titleAlign": "Вирівнювання заголовка",
     "alignLeft": "Ліворуч",
     "alignCenter": "По центру",
-    "alignRight": "Праворуч"
+    "alignRight": "Праворуч",
+    "registerButtonStyle": "Кнопка «Реєстрація»",
+    "buttonBackground": "Колір фону кнопки",
+    "buttonTextColor": "Колір тексту кнопки"
   },
   "questionTypes": {
     "text": "Короткий текст",

@@ -166,6 +166,8 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const pageStyle = {}
   if (theme.page_bg) pageStyle['--ep-bg'] = theme.page_bg
   if (theme.text_color) pageStyle['--ep-text'] = theme.text_color
+  if (theme.btn_bg) pageStyle['--ep-btn-bg'] = theme.btn_bg
+  if (theme.btn_text) pageStyle['--ep-btn-text'] = theme.btn_text
   if (theme.body_font && FONT_FAMILIES[theme.body_font]) {
     pageStyle.fontFamily = FONT_FAMILIES[theme.body_font]
   }

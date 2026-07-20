@@ -177,14 +177,16 @@
 }
 
 .registerBtn {
-  background: #fff;
-  color: #111;
-  border: 1px solid #111;
+  background: var(--ep-btn-bg, #fff);
+  color: var(--ep-btn-text, #111);
+  border: 1px solid var(--ep-btn-bg, #111);
 }
 
 .registerBtn:hover {
-  background: #111;
-  color: #fff;
+  background: var(--ep-btn-text, #111);
+  color: var(--ep-btn-bg, #fff);
+  border-color: var(--ep-btn-text, #111);
+  filter: brightness(0.9);
 }
 
 .heroGhostBtn {
