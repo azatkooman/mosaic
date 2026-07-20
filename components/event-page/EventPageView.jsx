@@ -320,7 +320,14 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
                   )}
                   <div className={styles.speakerInfo}>
                     <strong>{sp.name}</strong>
-                    {L(sp.role) && <span className={styles.speakerRole}>{L(sp.role)}</span>}
+                    {L(sp.role) && (
+                      <span
+                        className={styles.speakerRole}
+                        style={speakers.role_color ? { color: speakers.role_color } : undefined}
+                      >
+                        {L(sp.role)}
+                      </span>
+                    )}
                     {sp.org && <span className={styles.speakerOrg}>{sp.org}</span>}
                   </div>
                 </div>

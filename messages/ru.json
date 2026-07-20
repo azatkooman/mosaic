@@ -275,7 +275,8 @@
     "alignRight": "По правому краю",
     "registerButtonStyle": "Кнопка «Регистрация»",
     "buttonBackground": "Цвет фона кнопки",
-    "buttonTextColor": "Цвет текста кнопки"
+    "buttonTextColor": "Цвет текста кнопки",
+    "roleColor": "Цвет роли"
   },
   "questionTypes": {
     "text": "Короткий текст",

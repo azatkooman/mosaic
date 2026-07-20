@@ -654,11 +654,20 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   function renderSpeakers() {
-    const items = content.speakers?.items ?? []
+    const speakers = content.speakers ?? {}
+    const items = speakers.items ?? []
     return (
       <>
         {sectionHeader('speakers')}
         {headingEditor('speakers')}
+        <ColorField
+          label={t('roleColor')}
+          addLabel={t('addColor')}
+          resetLabel={t('resetColor')}
+          value={speakers.role_color}
+          defaultValue={isDark ? '#ffffff' : '#000000'}
+          onChange={(c) => patchContent('speakers', { role_color: c ?? undefined })}
+        />
         <input ref={speakerInputRef} type="file" accept="image/*" hidden onChange={onSpeakerFile} />
         {items.map((sp) => (
           <div key={sp.id} className={styles.panelItem}>

@@ -275,7 +275,8 @@
     "alignRight": "Derecha",
     "registerButtonStyle": "Botón \"Registrarse\"",
     "buttonBackground": "Color de fondo del botón",
-    "buttonTextColor": "Color del texto del botón"
+    "buttonTextColor": "Color del texto del botón",
+    "roleColor": "Color del cargo"
   },
   "questionTypes": {
     "text": "Texto corto",

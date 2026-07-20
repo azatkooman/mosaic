@@ -275,7 +275,8 @@
     "alignRight": "Right",
     "registerButtonStyle": "\"Register\" Button",
     "buttonBackground": "Button Background Color",
-    "buttonTextColor": "Button Text Color"
+    "buttonTextColor": "Button Text Color",
+    "roleColor": "Role Color"
   },
   "questionTypes": {
     "text": "Short text",
