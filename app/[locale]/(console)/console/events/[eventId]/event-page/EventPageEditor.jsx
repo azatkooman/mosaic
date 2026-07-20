@@ -332,7 +332,7 @@ export function EventPageEditor({ initialEvent }) {
     const file = e.target.files?.[0]
     if (file) {
       const path = await upload(file, 'about')
-      if (path) patchContent('about', { image_path: path })
+      if (path) patchContent('about', { enabled: true, image_path: path })
     }
     e.target.value = ''
   }
@@ -341,7 +341,7 @@ export function EventPageEditor({ initialEvent }) {
     const file = e.target.files?.[0]
     if (file) {
       const path = await upload(file, 'agenda')
-      if (path) patchContent('agenda', { image_path: path })
+      if (path) patchContent('agenda', { enabled: true, image_path: path })
     }
     e.target.value = ''
   }

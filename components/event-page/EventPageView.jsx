@@ -312,8 +312,10 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
                             )}
                           </span>
                         )}
-                        <strong>{s.value}</strong>
-                        <span>{L(s.label)}</span>
+                        <span className={styles.statText}>
+                          <strong>{s.value}</strong>
+                          <span>{L(s.label)}</span>
+                        </span>
                       </div>
                     )
                   })}
