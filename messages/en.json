@@ -235,8 +235,8 @@
     "section_tickets": "Tickets",
     "section_contact": "Contact",
     "section_theme": "Style",
-    "pageBackground": "Page background color",
-    "textColor": "Text color",
+    "pageBackground": "Page Background Color",
+    "textColor": "Text Color",
     "heroTitleStyle": "Event title (hero)",
     "titleColor": "Title color",
     "headingColor": "Heading color",
@@ -260,7 +260,13 @@
     "uploadBadType": "Unsupported file type. Use JPG, PNG, WebP or AVIF.",
     "uploadTooLarge": "Image is too large. Maximum size is 5 MB.",
     "uploadFailed": "Upload failed. Please try again.",
-    "pageFont": "Whole-page font"
+    "pageFont": "Whole-page font",
+    "addColor": "Add color",
+    "fontType": "Font Type",
+    "dateLocationChip": "Date & location",
+    "showDateLocation": "Show date & location",
+    "chipBackground": "Chip background color",
+    "chipTextColor": "Chip text color"
   },
   "questionTypes": {
     "text": "Short text",

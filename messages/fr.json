@@ -260,7 +260,13 @@
     "uploadBadType": "Type de fichier non pris en charge. Utilisez JPG, PNG, WebP ou AVIF.",
     "uploadTooLarge": "L'image est trop volumineuse. Taille maximale : 5 Mo.",
     "uploadFailed": "Échec du téléversement. Veuillez réessayer.",
-    "pageFont": "Police de toute la page"
+    "pageFont": "Police de toute la page",
+    "addColor": "Appliquer la couleur",
+    "fontType": "Type de police",
+    "dateLocationChip": "Date et lieu",
+    "showDateLocation": "Afficher la date et le lieu",
+    "chipBackground": "Couleur de fond de l'étiquette",
+    "chipTextColor": "Couleur du texte de l'étiquette"
   },
   "questionTypes": {
     "text": "Texte court",

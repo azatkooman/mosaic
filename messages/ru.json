@@ -260,7 +260,13 @@
     "uploadBadType": "Неподдерживаемый тип файла. Используйте JPG, PNG, WebP или AVIF.",
     "uploadTooLarge": "Изображение слишком большое. Максимальный размер — 5 МБ.",
     "uploadFailed": "Не удалось загрузить. Попробуйте ещё раз.",
-    "pageFont": "Шрифт всей страницы"
+    "pageFont": "Шрифт всей страницы",
+    "addColor": "Применить цвет",
+    "fontType": "Тип шрифта",
+    "dateLocationChip": "Дата и место",
+    "showDateLocation": "Показывать дату и место",
+    "chipBackground": "Цвет фона плашки",
+    "chipTextColor": "Цвет текста плашки"
   },
   "questionTypes": {
     "text": "Короткий текст",

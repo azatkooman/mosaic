@@ -210,6 +210,19 @@
 .colorField {
   display: grid;
   gap: var(--s-2);
+  align-content: start;
+}
+
+/* Two color pickers side by side (page bg + text color, chip bg + text). */
+.colorPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  align-items: start;
+}
+
+.colorPair .panelRow {
+  flex-wrap: wrap;
 }
 
 .colorField .panelRow > :first-child {

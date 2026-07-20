@@ -22,7 +22,13 @@ function newId() {
 // makes React remount them — and any focused input loses focus after each
 // keystroke.
 
-function ColorField({ label, resetLabel, value, defaultValue, onChange }) {
+// The swatch stages a pending color; "Add color" applies it to the page.
+function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
+  const [pending, setPending] = useState(value ?? defaultValue)
+  useEffect(() => {
+    setPending(value ?? defaultValue)
+  }, [value, defaultValue])
+  const applied = (value ?? defaultValue) === pending && value != null
   return (
     <div className={styles.colorField}>
       <span className="field-label">{label}</span>
@@ -30,9 +36,12 @@ function ColorField({ label, resetLabel, value, defaultValue, onChange }) {
         <input
           type="color"
           className={styles.colorInput}
-          value={value || defaultValue}
-          onChange={(e) => onChange(e.target.value)}
+          value={pending}
+          onChange={(e) => setPending(e.target.value)}
         />
+        <Button size="sm" onClick={() => onChange(pending)} disabled={applied}>
+          {addLabel}
+        </Button>
         {value && (
           <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
             {resetLabel}
@@ -52,7 +61,7 @@ function FontSelect({ t, value, onChange }) {
     >
       {FONT_CHOICES.map((c) => (
         <option key={c.key} value={c.key} style={c.family ? { fontFamily: c.family } : undefined}>
-          {c.label ?? t('font_default')}
+          {c.label ?? t('fontType')}
         </option>
       ))}
     </NativeSelect>
@@ -69,7 +78,7 @@ function StyleSelects({ t, style = {}, onChange }) {
       >
         {SIZE_OPTIONS.map((s) => (
           <option key={s} value={s}>
-            {s === '' ? t('sizeDefault') : t(`size_${s}`)}
+            {s === '' ? t('fontSize') : t(`size_${s}`)}
           </option>
         ))}
       </NativeSelect>
@@ -102,6 +111,7 @@ function HeadingStyleEditor({ t, previewLocale, data = {}, defaultHeading, onPat
       <StyleSelects t={t} style={hs} onChange={setStyle} />
       <ColorField
         label={t('headingColor')}
+        addLabel={t('addColor')}
         resetLabel={t('resetColor')}
         value={hs.color}
         defaultValue="#20242b"
@@ -362,20 +372,24 @@ export function EventPageEditor({ initialEvent }) {
     const setTheme = (patch) => patchContent('theme', patch)
     return (
       <>
-        <ColorField
-          label={t('pageBackground')}
-          resetLabel={t('resetColor')}
-          value={theme.page_bg}
-          defaultValue="#faf9f6"
-          onChange={(c) => setTheme({ page_bg: c ?? undefined })}
-        />
-        <ColorField
-          label={t('textColor')}
-          resetLabel={t('resetColor')}
-          value={theme.text_color}
-          defaultValue="#20242b"
-          onChange={(c) => setTheme({ text_color: c ?? undefined })}
-        />
+        <div className={styles.colorPair}>
+          <ColorField
+            label={t('pageBackground')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.page_bg}
+            defaultValue="#faf9f6"
+            onChange={(c) => setTheme({ page_bg: c ?? undefined })}
+          />
+          <ColorField
+            label={t('textColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.text_color}
+            defaultValue="#20242b"
+            onChange={(c) => setTheme({ text_color: c ?? undefined })}
+          />
+        </div>
         <div className={styles.colorField}>
           <span className="field-label">{t('pageFont')}</span>
           <FontSelect t={t} value={theme.body_font} onChange={(f) => setTheme({ body_font: f })} />
@@ -383,6 +397,7 @@ export function EventPageEditor({ initialEvent }) {
         <h4 className={styles.panelSubhead}>{t('heroTitleStyle')}</h4>
         <ColorField
           label={t('titleColor')}
+          addLabel={t('addColor')}
           resetLabel={t('resetColor')}
           value={theme.title_color}
           defaultValue="#ffffff"
@@ -433,6 +448,7 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   function renderHero() {
+    const hero = content.hero ?? {}
     return (
       <>
         <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={onCoverFile} />
@@ -455,6 +471,33 @@ export function EventPageEditor({ initialEvent }) {
           )}
         </div>
         <p className="field-help">{t('coverHelp')}</p>
+
+        <h4 className={styles.panelSubhead}>{t('dateLocationChip')}</h4>
+        <CheckboxRow
+          label={t('showDateLocation')}
+          checked={hero.show_chip !== false}
+          onCheckedChange={(checked) => patchContent('hero', { show_chip: !!checked })}
+        />
+        {hero.show_chip !== false && (
+          <div className={styles.colorPair}>
+            <ColorField
+              label={t('chipBackground')}
+              addLabel={t('addColor')}
+              resetLabel={t('resetColor')}
+              value={hero.chip_bg}
+              defaultValue="#e8a33d"
+              onChange={(c) => patchContent('hero', { chip_bg: c ?? undefined })}
+            />
+            <ColorField
+              label={t('chipTextColor')}
+              addLabel={t('addColor')}
+              resetLabel={t('resetColor')}
+              value={hero.chip_text}
+              defaultValue="#faf9f6"
+              onChange={(c) => patchContent('hero', { chip_text: c ?? undefined })}
+            />
+          </div>
+        )}
       </>
     )
   }
@@ -681,6 +724,7 @@ export function EventPageEditor({ initialEvent }) {
         {headingEditor('tickets')}
         <ColorField
           label={t('highlightColor')}
+          addLabel={t('addColor')}
           resetLabel={t('resetColor')}
           value={tickets.highlight_color}
           defaultValue="#0e5044"

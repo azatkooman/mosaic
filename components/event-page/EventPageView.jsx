@@ -127,6 +127,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const L = (map) => lt(map, locale, dl)
 
   const theme = content.theme ?? {}
+  const hero = content.hero ?? {}
   const about = content.about ?? {}
   const speakers = content.speakers ?? {}
   const agenda = content.agenda ?? {}
@@ -206,10 +207,18 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
           </div>
         )}
         <div className={`container ${styles.heroInner}`}>
-          <span className={styles.heroChip}>
-            {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale)}
-            {location ? ` · ${location}` : ''}
-          </span>
+          {hero.show_chip !== false && (
+            <span
+              className={styles.heroChip}
+              style={{
+                ...(hero.chip_bg ? { background: hero.chip_bg, borderColor: hero.chip_bg } : {}),
+                ...(hero.chip_text ? { color: hero.chip_text } : {}),
+              }}
+            >
+              {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale)}
+              {location ? ` · ${location}` : ''}
+            </span>
+          )}
           <h1 className={styles.heroTitle} style={titleStyle}>
             {name}
           </h1>
