@@ -59,8 +59,10 @@
   --container-narrow: 44rem;
 }
 
+/* Dark palette, defined once and reused by both triggers below. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  /* System preference — applies only when the user hasn't forced a theme. */
+  :root:not([data-theme='light']):not([data-theme='dark']) {
     --paper: #17191e;
     --surface: #1f232a;
     --surface-sunken: #14161b;
@@ -89,3 +91,36 @@
     --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.55);
   }
 }
+
+/* Explicit "Dark" choice — wins regardless of the device setting. */
+:root[data-theme='dark'] {
+  --paper: #17191e;
+  --surface: #1f232a;
+  --surface-sunken: #14161b;
+  --ink: #eceae4;
+  --ink-soft: #b4b0a6;
+  --ink-faint: #7e7a71;
+  --line: #33373f;
+  --line-strong: #4a4f59;
+
+  --pine: #3ba58f;
+  --pine-deep: #52bda6;
+  --pine-tint: #1c2f2b;
+  --gold: #e8a33d;
+  --gold-deep: #f0b95f;
+  --gold-tint: #322a1a;
+
+  --danger: #d9756c;
+  --danger-tint: #35211f;
+  --success: #5cae7f;
+  --success-tint: #1d2f24;
+  --warn: #d3a944;
+  --warn-tint: #322b18;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* Explicit "Light" needs no overrides — the :root defaults are light, and the
+   media query above is guarded against [data-theme='light']. */

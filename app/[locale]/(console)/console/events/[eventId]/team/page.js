@@ -19,7 +19,7 @@ export default async function TeamPage({ params }) {
       .from('event_roles')
       .select('*')
       .or(`event_id.is.null,event_id.eq.${eventId}`),
-    supabase.from('events').select('org_id').eq('id', eventId).maybeSingle(),
+    supabase.from('events').select('org_id, slug').eq('id', eventId).maybeSingle(),
   ])
 
   // No FK between event_organizers.user_id and profiles (both reference
@@ -41,6 +41,7 @@ export default async function TeamPage({ params }) {
   return (
     <TeamManager
       eventId={eventId}
+      eventSlug={event?.slug ?? null}
       orgId={event?.org_id ?? null}
       initialMembers={withProfiles}
       roles={roles ?? []}

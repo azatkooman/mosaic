@@ -194,7 +194,7 @@
     "admin": "Administración",
     "adminTitle": "Consola de administración",
     "adminUsers": "Usuarios y roles",
-    "adminUsersHelp": "Los administradores gestionan todos los eventos y esta consola. Los organizadores pueden crear sus propios eventos.",
+    "adminUsersHelp": "Los administradores lo gestionan todo, incluida esta consola. Los organizadores globales pueden gestionar todos los eventos. Cualquiera puede crear sus propios eventos.",
     "adminUser": "Usuario",
     "globalRoleLabel": "Rol global",
     "roleSuperAdmin": "Superadministrador",
@@ -220,14 +220,11 @@
     "levelCheckinDesc": "Becas, además de añadir inscritos y editar, añadir o eliminar pagos.",
     "levelUpdateDesc": "Check-in, además de modificar el evento y sus preguntas, y eliminar inscritos.",
     "levelFullDesc": "Puede hacerlo todo, incluida la gestión del equipo.",
-    "requestAccessTitle": "Solicitar acceso de organizador",
-    "requestAccessIntro": "Aún no tienes acceso de organizador. Solicita acceso a un evento y un administrador u organizador del evento revisará tu solicitud.",
     "requestAccess": "Solicitar acceso",
     "accessRequested": "Solicitado",
     "cancelRequest": "Cancelar solicitud",
-    "noPublishedEvents": "No hay eventos publicados a los que solicitar acceso.",
-    "requestRoleTitle": "¿Quieres organizar tus propios eventos?",
-    "requestRoleIntro": "Solicita acceso de organizador y un administrador revisará tu solicitud.",
+    "requestRoleTitle": "¿Quieres ayudar a gestionar todos los eventos?",
+    "requestRoleIntro": "Los organizadores globales pueden ver y gestionar todos los eventos. Solicita el rol y un administrador revisará tu solicitud.",
     "requestRoleMessage": "Mensaje para los administradores (opcional)",
     "requestRole": "Solicitar acceso de organizador",
     "roleRequestPending": "Acceso de organizador solicitado",
@@ -281,6 +278,8 @@
     "nameFormatFull": "Nombre completo (un campo)",
     "nameFormatFirstMiddleLast": "Nombre + segundo nombre + apellido",
     "addressParts": "Campos de dirección"
+    "viewDetail": "Ver",
+    "participantDetail": "Detalles del participante"
   },
   "questionTypes": {
     "text": "Texto corto",
@@ -305,6 +304,17 @@
     "fullName": "Nombre completo",
     "language": "Idioma preferido",
     "saved": "Guardado",
+    "namePromptTitle": "¿Cómo te llamas?",
+    "namePromptIntro": "Añade tu nombre para que los organizadores sepan quién eres. Puedes cambiarlo más tarde en tu perfil.",
+    "firstName": "Nombre",
+    "lastName": "Apellidos",
+    "namePromptSkip": "Omitir por ahora",
+    "namePromptRequired": "Introduce tu nombre y apellidos.",
+    "theme": "Apariencia",
+    "themeHelp": "Elige claro u oscuro, o sigue tu dispositivo.",
+    "theme_system": "Sistema",
+    "theme_light": "Claro",
+    "theme_dark": "Oscuro"
     "updateError": "Algo salió mal. Inténtalo de nuevo."
   },
   "runtime": {

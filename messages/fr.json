@@ -194,7 +194,7 @@
     "admin": "Administration",
     "adminTitle": "Console d'administration",
     "adminUsers": "Utilisateurs et rôles",
-    "adminUsersHelp": "Les administrateurs gèrent tous les événements et cette console. Les organisateurs peuvent créer leurs propres événements.",
+    "adminUsersHelp": "Les administrateurs gèrent tout, y compris cette console. Les organisateurs globaux peuvent gérer tous les événements. Chacun peut créer ses propres événements.",
     "adminUser": "Utilisateur",
     "globalRoleLabel": "Rôle global",
     "roleSuperAdmin": "Super administrateur",
@@ -220,14 +220,11 @@
     "levelCheckinDesc": "Bourses, plus l'ajout d'inscrits et la modification, l'ajout ou la suppression de paiements.",
     "levelUpdateDesc": "Enregistrement, plus la modification de l'événement et de ses questions, et la suppression d'inscrits.",
     "levelFullDesc": "Peut tout faire, y compris gérer l'équipe.",
-    "requestAccessTitle": "Demander un accès organisateur",
-    "requestAccessIntro": "Vous n'avez pas encore d'accès organisateur. Demandez l'accès à un événement ci-dessous et un administrateur ou un organisateur de l'événement examinera votre demande.",
     "requestAccess": "Demander l'accès",
     "accessRequested": "Demandé",
     "cancelRequest": "Annuler la demande",
-    "noPublishedEvents": "Aucun événement publié pour lequel demander un accès.",
-    "requestRoleTitle": "Vous souhaitez organiser vos propres événements ?",
-    "requestRoleIntro": "Demandez un accès organisateur et un administrateur examinera votre demande.",
+    "requestRoleTitle": "Envie d'aider à gérer tous les événements ?",
+    "requestRoleIntro": "Les organisateurs globaux peuvent consulter et gérer tous les événements. Demandez le rôle et un administrateur examinera votre demande.",
     "requestRoleMessage": "Message aux administrateurs (facultatif)",
     "requestRole": "Demander un accès organisateur",
     "roleRequestPending": "Accès organisateur demandé",
@@ -281,6 +278,8 @@
     "nameFormatFull": "Nom complet (un seul champ)",
     "nameFormatFirstMiddleLast": "Prénom + deuxième prénom + nom",
     "addressParts": "Champs d'adresse"
+    "viewDetail": "Voir",
+    "participantDetail": "Détails du participant"
   },
   "questionTypes": {
     "text": "Texte court",
@@ -305,6 +304,17 @@
     "fullName": "Nom complet",
     "language": "Langue préférée",
     "saved": "Enregistré",
+    "namePromptTitle": "Comment vous appelez-vous ?",
+    "namePromptIntro": "Ajoutez votre nom pour que les organisateurs sachent qui vous êtes. Vous pourrez le modifier plus tard dans votre profil.",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "namePromptSkip": "Passer pour l'instant",
+    "namePromptRequired": "Veuillez saisir votre prénom et votre nom.",
+    "theme": "Apparence",
+    "themeHelp": "Choisissez clair ou sombre, ou suivez votre appareil.",
+    "theme_system": "Système",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre"
     "updateError": "Une erreur est survenue. Veuillez réessayer."
   },
   "runtime": {

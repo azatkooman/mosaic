@@ -194,7 +194,7 @@
     "admin": "Admin",
     "adminTitle": "Admin console",
     "adminUsers": "Users & roles",
-    "adminUsersHelp": "Admins manage all events and this console. Organizers can create their own events.",
+    "adminUsersHelp": "Admins manage everything, including this console. Global organizers can manage every event. Anyone can create their own events.",
     "adminUser": "User",
     "globalRoleLabel": "Global role",
     "roleSuperAdmin": "Super admin",
@@ -220,14 +220,11 @@
     "levelCheckinDesc": "Scholarship, plus add registrants and edit, add or delete payments.",
     "levelUpdateDesc": "Check-in, plus change the event and its questions, and delete registrants.",
     "levelFullDesc": "Can do everything, including managing the team.",
-    "requestAccessTitle": "Request organizer access",
-    "requestAccessIntro": "You don't have organizer access yet. Request access to an event below and an administrator or event organizer will review it.",
     "requestAccess": "Request access",
     "accessRequested": "Requested",
     "cancelRequest": "Cancel request",
-    "noPublishedEvents": "There are no published events to request access to.",
-    "requestRoleTitle": "Want to run your own events?",
-    "requestRoleIntro": "Request organizer access and an administrator will review your request.",
+    "requestRoleTitle": "Want to help manage all events?",
+    "requestRoleIntro": "Global organizers can view and manage every event. Request the role and an administrator will review it.",
     "requestRoleMessage": "Message to the administrators (optional)",
     "requestRole": "Request organizer access",
     "roleRequestPending": "Organizer access requested",
@@ -281,6 +278,8 @@
     "nameFormatFull": "Full name (one field)",
     "nameFormatFirstMiddleLast": "First + middle + last name",
     "addressParts": "Address fields"
+    "viewDetail": "View",
+    "participantDetail": "Participant details"
   },
   "questionTypes": {
     "text": "Short text",
@@ -305,6 +304,17 @@
     "fullName": "Full name",
     "language": "Preferred language",
     "saved": "Saved",
+    "namePromptTitle": "What's your name?",
+    "namePromptIntro": "Add your name so organizers know who you are. You can change it later in your profile.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "namePromptSkip": "Skip for now",
+    "namePromptRequired": "Please enter your first and last name.",
+    "theme": "Appearance",
+    "themeHelp": "Choose light or dark, or follow your device.",
+    "theme_system": "System",
+    "theme_light": "Light",
+    "theme_dark": "Dark"
     "updateError": "Something went wrong. Please try again."
   },
   "runtime": {
