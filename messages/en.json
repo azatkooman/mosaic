@@ -288,6 +288,9 @@
     "emailHelp": "Managed by your sign-in provider.",
     "fullName": "Full name",
     "language": "Preferred language",
+    "timezone": "Date & time zone",
+    "timezoneHelp": "Event dates and times are shown in this zone across your registrations.",
+    "timezoneAuto": "Use each event's local time",
     "saved": "Saved",
     "updateError": "Something went wrong. Please try again."
   }

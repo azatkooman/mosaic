@@ -288,6 +288,9 @@
     "emailHelp": "Gestionado por tu proveedor de inicio de sesión.",
     "fullName": "Nombre completo",
     "language": "Idioma preferido",
+    "timezone": "Zona horaria",
+    "timezoneHelp": "Las fechas y horas de los eventos se muestran en esta zona en tus inscripciones.",
+    "timezoneAuto": "Usar la hora local de cada evento",
     "saved": "Guardado",
     "updateError": "Algo salió mal. Inténtalo de nuevo."
   }

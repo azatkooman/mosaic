@@ -288,6 +288,9 @@
     "emailHelp": "Géré par votre fournisseur de connexion.",
     "fullName": "Nom complet",
     "language": "Langue préférée",
+    "timezone": "Fuseau horaire",
+    "timezoneHelp": "Les dates et heures des événements s'affichent dans ce fuseau dans vos inscriptions.",
+    "timezoneAuto": "Utiliser l'heure locale de chaque événement",
     "saved": "Enregistré",
     "updateError": "Une erreur est survenue. Veuillez réessayer."
   }

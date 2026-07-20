@@ -17,9 +17,12 @@ export function ProfileForm({ userId, initialProfile }) {
 
   const [fullName, setFullName] = useState(initialProfile.full_name)
   const [preferredLocale, setPreferredLocale] = useState(initialProfile.preferred_locale)
+  const [preferredTimezone, setPreferredTimezone] = useState(initialProfile.preferred_timezone)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
+
+  const timezones = Intl.supportedValuesOf?.('timeZone') ?? []
 
   async function save(e) {
     e.preventDefault()
@@ -28,7 +31,11 @@ export function ProfileForm({ userId, initialProfile }) {
     setSaving(true)
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName.trim() || null, preferred_locale: preferredLocale })
+      .update({
+        full_name: fullName.trim() || null,
+        preferred_locale: preferredLocale,
+        preferred_timezone: preferredTimezone || null,
+      })
       .eq('id', userId)
     setSaving(false)
     if (error) {
@@ -71,6 +78,23 @@ export function ProfileForm({ userId, initialProfile }) {
             {LOCALES.map((l) => (
               <option key={l} value={l}>
                 {LOCALE_NAMES[l]}
+              </option>
+            ))}
+          </NativeSelect>
+        )}
+      </Field>
+      <Field label={t('timezone')} help={t('timezoneHelp')}>
+        {({ id, describedBy }) => (
+          <NativeSelect
+            id={id}
+            aria-describedby={describedBy}
+            value={preferredTimezone}
+            onChange={(e) => setPreferredTimezone(e.target.value)}
+          >
+            <option value="">{t('timezoneAuto')}</option>
+            {timezones.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz.replace(/_/g, ' ')}
               </option>
             ))}
           </NativeSelect>

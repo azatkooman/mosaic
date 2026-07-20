@@ -3,7 +3,7 @@ import { redirect } from '@/lib/i18n/navigation'
 import { Link } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
-import { formatEventDateRange } from '@/lib/dates'
+import { formatEventDateRange, timeZoneLabel } from '@/lib/dates'
 import { Badge } from '@/components/ui'
 import { CancelParticipantButton } from './CancelParticipantButton'
 import styles from './myregs.module.css'
@@ -23,16 +23,23 @@ export default async function MyRegistrationsPage({ params }) {
     redirect({ href: `/login?next=${encodeURIComponent(`/${locale}/my/registrations`)}`, locale })
   }
 
-  const { data: registrations } = await supabase
-    .from('registrations')
-    .select(`
-      id, created_at,
-      events ( id, slug, name, default_locale, timezone, starts_at, ends_at ),
-      participants ( id, first_name, last_name, status,
-        participant_types ( name ) )
-    `)
-    .eq('registered_by', user.id)
-    .order('created_at', { ascending: false })
+  const [{ data: registrations }, { data: profile }] = await Promise.all([
+    supabase
+      .from('registrations')
+      .select(`
+        id, created_at,
+        events ( id, slug, name, default_locale, timezone, starts_at, ends_at ),
+        participants ( id, first_name, last_name, status,
+          participant_types ( name ) )
+      `)
+      .eq('registered_by', user.id)
+      .order('created_at', { ascending: false }),
+    supabase.from('profiles').select('preferred_timezone').eq('id', user.id).maybeSingle(),
+  ])
+
+  // When the user picked a display timezone, show every event's dates in it
+  // (with a zone label); otherwise fall back to each event's own timezone.
+  const userTz = profile?.preferred_timezone || null
 
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
@@ -65,7 +72,19 @@ export default async function MyRegistrationsPage({ params }) {
                 )}
                 <span className={styles.muted}>
                   {reg.events
-                    ? formatEventDateRange(reg.events.starts_at, reg.events.ends_at, reg.events.timezone, locale)
+                    ? (() => {
+                        const tz = userTz || reg.events.timezone
+                        const range = formatEventDateRange(
+                          reg.events.starts_at,
+                          reg.events.ends_at,
+                          tz,
+                          locale
+                        )
+                        const label = userTz
+                          ? timeZoneLabel(reg.events.starts_at, tz, locale)
+                          : ''
+                        return label ? `${range} (${label})` : range
+                      })()
                     : ''}
                 </span>
               </div>
