@@ -290,6 +290,23 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Video in the About media column: fixed 16:9, centered vertically. */
+.aboutMedia[data-video] {
+  display: grid;
+  align-content: center;
+}
+
+.aboutMedia iframe,
+.aboutMedia video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  display: block;
+  background: #000;
+}
+
 .stats {
   display: flex;
   gap: var(--s-3);

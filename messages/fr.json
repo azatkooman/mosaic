@@ -327,7 +327,7 @@
     "addFaq": "Ajouter une question",
     "mapAddress": "Adresse",
     "mapEmbedUrl": "URL d'intégration Google Maps",
-    "mapEmbedHelp": "Dans Google Maps : Partager → Intégrer une carte → copiez l'URL src=\"...\".",
+    "mapEmbedHelp": "Collez n'importe quel lien Google Maps, ou laissez vide pour utiliser l'adresse ci-dessus.",
     "sectionOrder": "Ordre des sections",
     "sectionOrderHelp": "Réorganisez l'ordre des sections sur la page. L'en-tête reste toujours en haut.",
     "moveUp": "Monter",
@@ -354,7 +354,9 @@
     "imagePosition": "Position de l'image",
     "posTop": "Haut",
     "posBottom": "Bas",
-    "imageHeight": "Hauteur de l'image"
+    "imageHeight": "Hauteur de l'image",
+    "videoUrl": "URL de la vidéo (YouTube, Vimeo ou .mp4)",
+    "videoHelp": "Collez un lien vidéo — il s'affiche à la place de l'image."
   },
   "questionTypes": {
     "text": "Texte court",

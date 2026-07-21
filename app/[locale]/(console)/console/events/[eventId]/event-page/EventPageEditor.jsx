@@ -950,6 +950,17 @@ export function EventPageEditor({ initialEvent }) {
             }
           />
         )}
+        <Field label={t('videoUrl')} help={t('videoHelp')}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={about.video_url ?? ''}
+              onChange={(e) => patchContent('about', { video_url: e.target.value || undefined })}
+            />
+          )}
+        </Field>
 
         <h4 className={styles.panelSubhead}>{t('stats')}</h4>
         <p className="field-help">{t('statsHelp')}</p>
@@ -1460,6 +1471,14 @@ export function EventPageEditor({ initialEvent }) {
                   <span className={styles.photoPrompt}>{t('uploadImage')}</span>
                 )}
               </button>
+            </div>
+            <div className={styles.panelItemFields}>
+              <Input
+                type="url"
+                placeholder={t('videoUrl')}
+                value={it.video_url ?? ''}
+                onChange={(e) => patchItem('gallery', it.id, { video_url: e.target.value || undefined })}
+              />
             </div>
             <Button variant="ghost" size="sm" aria-label={t('remove')} onClick={() => removeItem('gallery', it.id)}>
               ✕

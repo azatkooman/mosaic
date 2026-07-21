@@ -8,6 +8,7 @@ import { eventMediaUrl } from '@/lib/storage'
 import { StatIcon } from './stat-icons'
 import { Countdown } from './Countdown'
 import { textStyle, TITLE_SIZES, FONT_FAMILIES } from './text-style'
+import { videoEmbedSrc } from './video'
 import {
   TracksSection,
   TestimonialsSection,
@@ -144,16 +145,24 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
 
   const theme = content.theme ?? {}
   const hero = content.hero ?? {}
-  const about = content.about ?? {}
-  const speakers = content.speakers ?? {}
-  const agenda = content.agenda ?? {}
-  const tickets = content.tickets ?? {}
-  const contactSection = content.contact ?? {}
-  const tracks = content.tracks ?? {}
-  const testimonials = content.testimonials ?? {}
-  const gallery = content.gallery ?? {}
-  const faq = content.faq ?? {}
-  const mapSection = content.map ?? {}
+
+  // The hero title font doubles as the default font for every section
+  // heading; a section's own heading font (if set) still wins.
+  const inheritTitleFont = (s = {}) =>
+    theme.title_font && !s.heading_style?.font
+      ? { ...s, heading_style: { ...(s.heading_style ?? {}), font: theme.title_font } }
+      : s
+
+  const about = inheritTitleFont(content.about ?? {})
+  const speakers = inheritTitleFont(content.speakers ?? {})
+  const agenda = inheritTitleFont(content.agenda ?? {})
+  const tickets = inheritTitleFont(content.tickets ?? {})
+  const contactSection = inheritTitleFont(content.contact ?? {})
+  const tracks = inheritTitleFont(content.tracks ?? {})
+  const testimonials = inheritTitleFont(content.testimonials ?? {})
+  const gallery = inheritTitleFont(content.gallery ?? {})
+  const faq = inheritTitleFont(content.faq ?? {})
+  const mapSection = inheritTitleFont(content.map ?? {})
   const chipBg = hexToRgba(hero.chip_bg, hero.chip_bg_opacity)
   const sectionBg = (s) => (s?.bg ? { background: s.bg } : undefined)
 
@@ -180,7 +189,9 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
     }
     return s
   }
-  const showAbout = about.enabled && (L(about.body) || about.image_path || about.stats?.length)
+  const aboutVideo = videoEmbedSrc(about.video_url)
+  const showAbout =
+    about.enabled && (L(about.body) || about.image_path || aboutVideo || about.stats?.length)
   const showSpeakers = speakers.enabled && speakers.items?.length > 0
   const showAgenda = agenda.enabled && (agenda.items?.length > 0 || agenda.image_path)
   const showTickets = tickets.enabled && tickets.items?.length > 0
@@ -351,10 +362,23 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
               </div>
             )}
           </div>
-          {about.image_path && (
-            <div className={styles.aboutMedia}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={eventMediaUrl(about.image_path)} alt="" style={imgAdjust(about)} />
+          {(aboutVideo || about.image_path) && (
+            <div className={styles.aboutMedia} data-video={aboutVideo ? '' : undefined}>
+              {aboutVideo?.type === 'iframe' ? (
+                <iframe
+                  src={aboutVideo.src}
+                  title="video"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : aboutVideo?.type === 'video' ? (
+                /* eslint-disable-next-line jsx-a11y/media-has-caption */
+                <video src={aboutVideo.src} controls playsInline />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={eventMediaUrl(about.image_path)} alt="" style={imgAdjust(about)} />
+              )}
             </div>
           )}
         </div>

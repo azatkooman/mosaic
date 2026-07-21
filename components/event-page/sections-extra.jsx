@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { lt } from '@/lib/i18n/locales'
 import { eventMediaUrl } from '@/lib/storage'
 import { textStyle } from './text-style'
+import { videoEmbedSrc, mapEmbedSrc } from './video'
 import styles from './sections-extra.module.css'
 
 /*
@@ -176,7 +177,7 @@ export function GallerySection({ content = {}, locale, defaultLocale, editable, 
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
-  const items = (content.items ?? []).filter((it) => it.image_path)
+  const items = (content.items ?? []).filter((it) => it.image_path || videoEmbedSrc(it.video_url))
   if (!content.enabled || items.length === 0) return null
 
   return (
@@ -189,12 +190,28 @@ export function GallerySection({ content = {}, locale, defaultLocale, editable, 
       <div className="container">
         <Heading text={L(content.heading) || t('galleryDefault')} style={headingStyle(content.heading_style)} />
         <div className={styles.galleryGrid}>
-          {items.map((it, i) => (
-            <div key={it.id} className={styles.galleryItem} data-feature={i === 0 ? '' : undefined}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={eventMediaUrl(it.image_path)} alt="" loading="lazy" />
-            </div>
-          ))}
+          {items.map((it, i) => {
+            const video = videoEmbedSrc(it.video_url)
+            return (
+              <div key={it.id} className={styles.galleryItem} data-feature={i === 0 ? '' : undefined}>
+                {video?.type === 'iframe' ? (
+                  <iframe
+                    src={video.src}
+                    title="video"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : video?.type === 'video' ? (
+                  /* eslint-disable-next-line jsx-a11y/media-has-caption */
+                  <video src={video.src} controls playsInline />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={eventMediaUrl(it.image_path)} alt="" loading="lazy" />
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </Editable>
@@ -246,7 +263,9 @@ export function MapSection({ content = {}, locale, defaultLocale, editable, onEd
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
   const address = L(content.address)
-  const hasMedia = content.embed_url || content.image_path
+  // Any pasted maps link (or just the address) becomes an iframe-safe embed.
+  const embedSrc = mapEmbedSrc(content.embed_url, address)
+  const hasMedia = embedSrc || content.image_path
   if (!content.enabled || (!address && !hasMedia)) return null
 
   return (
@@ -263,10 +282,10 @@ export function MapSection({ content = {}, locale, defaultLocale, editable, onEd
             {address && <p className={styles.mapAddress}>{address}</p>}
           </div>
           <div className={styles.mapMedia}>
-            {content.embed_url ? (
+            {embedSrc ? (
               <iframe
                 title={t('mapDefault')}
-                src={content.embed_url}
+                src={embedSrc}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen

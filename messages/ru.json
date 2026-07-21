@@ -327,7 +327,7 @@
     "addFaq": "Добавить вопрос",
     "mapAddress": "Адрес",
     "mapEmbedUrl": "URL встраивания Google Maps",
-    "mapEmbedHelp": "В Google Maps: Поделиться → Встроить карту → скопируйте URL из src=\"...\".",
+    "mapEmbedHelp": "Вставьте любую ссылку Google Maps или оставьте пустым, чтобы использовать адрес выше.",
     "sectionOrder": "Порядок разделов",
     "sectionOrderHelp": "Измените порядок разделов на странице. Шапка всегда остаётся сверху.",
     "moveUp": "Вверх",
@@ -354,7 +354,9 @@
     "imagePosition": "Положение изображения",
     "posTop": "Сверху",
     "posBottom": "Снизу",
-    "imageHeight": "Высота изображения"
+    "imageHeight": "Высота изображения",
+    "videoUrl": "URL видео (YouTube, Vimeo или .mp4)",
+    "videoHelp": "Вставьте ссылку на видео — оно показывается вместо изображения."
   },
   "questionTypes": {
     "text": "Короткий текст",

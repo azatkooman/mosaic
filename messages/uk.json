@@ -327,7 +327,7 @@
     "addFaq": "Додати питання",
     "mapAddress": "Адреса",
     "mapEmbedUrl": "URL вбудовування Google Maps",
-    "mapEmbedHelp": "У Google Maps: Поділитися → Вбудувати карту → скопіюйте URL із src=\"...\".",
+    "mapEmbedHelp": "Вставте будь-яке посилання Google Maps або залиште порожнім, щоб використати адресу вище.",
     "sectionOrder": "Порядок розділів",
     "sectionOrderHelp": "Змініть порядок розділів на сторінці. Шапка завжди залишається зверху.",
     "moveUp": "Вгору",
@@ -354,7 +354,9 @@
     "imagePosition": "Положення зображення",
     "posTop": "Зверху",
     "posBottom": "Знизу",
-    "imageHeight": "Висота зображення"
+    "imageHeight": "Висота зображення",
+    "videoUrl": "URL відео (YouTube, Vimeo або .mp4)",
+    "videoHelp": "Вставте посилання на відео — воно показується замість зображення."
   },
   "questionTypes": {
     "text": "Короткий текст",
