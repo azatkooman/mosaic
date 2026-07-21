@@ -9,19 +9,14 @@ import { DATE_FORMATS, TIME_FORMATS, applyDateFormatClient } from '@/lib/date-fo
 import { formatSampleDate, formatSampleTime } from '@/lib/dates'
 import { Button, Dialog, Field, Input, NativeSelect } from '@/components/ui'
 
-// Remembers a dismissal so the prompt doesn't re-nag on every navigation
-// while the (fire-and-forget) onboarded_at write settles; the server stops
-// rendering the dialog entirely once onboarded_at is set. New key (not the
-// old namePrompt one) so the redesigned welcome shows once to everyone.
-const DISMISSED_KEY = 'mosaic.welcome.dismissed'
-
 // Flows that collect these details themselves or would be obscured by the modal.
 function isExcludedPath(pathname) {
   return pathname.startsWith('/my/profile') || pathname.startsWith('/events/')
 }
 
 /** One-time welcome: name (when missing) + language + date/time formats.
- *  Save persists everything; Skip only marks the user onboarded. */
+ *  Saving is the only way out — the server stops rendering the dialog once
+ *  onboarded_at is set. */
 export function NameCaptureDialog({
   userId,
   needsName = true,
@@ -49,26 +44,12 @@ export function NameCaptureDialog({
 
   useEffect(() => {
     if (isExcludedPath(pathname)) return
-    if (localStorage.getItem(DISMISSED_KEY)) return
     setOpen(true)
   }, [pathname])
 
-  function markOnboarded() {
-    // Fire-and-forget; localStorage covers this session if the write fails.
-    supabase
-      .from('profiles')
-      .update({ onboarded_at: new Date().toISOString() })
-      .eq('id', userId)
-      .then(() => {})
-  }
-
   function onOpenChange(next) {
-    setOpen(next)
-    // Any close that isn't a successful save counts as "skip".
-    if (!next) {
-      localStorage.setItem(DISMISSED_KEY, '1')
-      markOnboarded()
-    }
+    // Escape / overlay clicks must not dismiss: saving is the only way out.
+    if (next) setOpen(true)
   }
 
   async function save(e) {
@@ -99,7 +80,6 @@ export function NameCaptureDialog({
       return
     }
     applyDateFormatClient({ dateFormat, timeFormat })
-    localStorage.setItem(DISMISSED_KEY, '1')
     setOpen(false)
     if (preferredLocale !== uiLocale) {
       router.replace(pathname, { locale: preferredLocale })
@@ -185,11 +165,6 @@ export function NameCaptureDialog({
         </Field>
         {error && <p className="alert alert-error">{error}</p>}
         <div style={{ display: 'flex', gap: 'var(--s-3)', justifyContent: 'flex-end' }}>
-          <Dialog.Close asChild>
-            <Button variant="ghost" type="button">
-              {t('namePromptSkip')}
-            </Button>
-          </Dialog.Close>
           <Button type="submit" disabled={saving}>
             {saving ? tCommon('loading') : tCommon('save')}
           </Button>

@@ -314,7 +314,6 @@
     "namePromptIntro": "Añade tu nombre para que los organizadores sepan quién eres. Puedes cambiarlo más tarde en tu perfil.",
     "firstName": "Nombre",
     "lastName": "Apellidos",
-    "namePromptSkip": "Omitir por ahora",
     "namePromptRequired": "Introduce tu nombre y apellidos.",
     "theme": "Apariencia",
     "themeHelp": "Elige claro u oscuro, o sigue tu dispositivo.",
