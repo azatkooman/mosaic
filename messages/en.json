@@ -494,7 +494,11 @@
     "videoUrl": "Video URL (YouTube, Vimeo or .mp4)",
     "videoHelp": "Paste a video link — it shows instead of the image.",
     "heroOpacityHelp": "Tints the cover image. With no image the color fills the hero solid.",
-    "pagePreviewHint": "This is the page as attendees see it. Hover a section and click the pencil to edit it."
+    "pagePreviewHint": "This is the page as attendees see it. Hover a section and click the pencil to edit it.",
+    "slugHelp": "Used in the event's public link. Changing it breaks the old link.",
+    "slugWarnTitle": "Change the event URL?",
+    "slugWarnBody": "The public link will change from “/events/{old}” to “/events/{next}”. Anyone with the old link — flyers, emails, messages already shared — will no longer reach this event. Continue?",
+    "slugWarnConfirm": "Change URL & save"
   },
   "questionTypes": {
     "text": "Short text",

@@ -45,10 +45,22 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [publishBurst, setPublishBurst] = useState(null)
+  const [slugWarnOpen, setSlugWarnOpen] = useState(false)
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
 
+  // Changing the slug breaks every existing link to this event's public page,
+  // so confirm before committing a change. An unchanged slug saves directly.
+  function requestSave() {
+    if (slug !== event.slug) {
+      setSlugWarnOpen(true)
+      return
+    }
+    save()
+  }
+
   async function save() {
+    setSlugWarnOpen(false)
     setSaveState('saving')
     const { error } = await supabase
       .from('events')
@@ -158,7 +170,7 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
 
       <section className="card card-pad">
         <div className={styles.grid2}>
-          <Field label={t('slug')}>
+          <Field label={t('slug')} help={t('slugHelp')}>
             {({ id }) => <Input id={id} value={slug} onChange={(e) => setSlug(e.target.value)} />}
           </Field>
           <Field label={t('timezone')}>
@@ -365,11 +377,29 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             )}
             <ConfettiBurst burst={publishBurst} />
           </span>
-          <Button onClick={save} disabled={saveState === 'saving'}>
+          <Button onClick={requestSave} disabled={saveState === 'saving'}>
             {tCommon('save')}
           </Button>
         </div>
       </div>
+
+      <Dialog
+        open={slugWarnOpen}
+        onOpenChange={setSlugWarnOpen}
+        title={t('slugWarnTitle')}
+      >
+        <p className={styles.sectionHelp} style={{ marginBottom: 'var(--s-4)' }}>
+          {t('slugWarnBody', { old: event.slug, next: slug })}
+        </p>
+        <div className={styles.footerActions}>
+          <Dialog.Close asChild>
+            <Button variant="secondary">{tCommon('cancel')}</Button>
+          </Dialog.Close>
+          <Button onClick={save} disabled={saveState === 'saving'}>
+            {t('slugWarnConfirm')}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }
