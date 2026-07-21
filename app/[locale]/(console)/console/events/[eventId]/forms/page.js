@@ -43,12 +43,23 @@ export default async function FormsPage({ params }) {
                 <tr key={form.id}>
                   <td>
                     <strong>{form.title}</strong>{' '}
-                    {form.registration_mode && (
+                    {form.registration_mode ? (
                       <Badge>
                         {form.registration_mode === 'single'
                           ? t('formModeSingle')
                           : t('formModeFamily')}
                       </Badge>
+                    ) : (
+                      <span
+                        className="tip tip-right"
+                        data-tip={t('defaultFormTip')}
+                        tabIndex={0}
+                        style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}
+                      >
+                        <Badge>{t('formModeDefault')}</Badge>
+                        <span aria-hidden="true" style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>ⓘ</span>
+                        <span className="sr-only">{t('defaultFormTip')}</span>
+                      </span>
                     )}
                     <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                       {published ? `v${published.version}` : t('draftSaved')}

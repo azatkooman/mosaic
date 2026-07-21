@@ -296,7 +296,22 @@
     "joinEventsAllAccess": "You have admin access and can view all events.",
     "joinEventsEmpty": "There are no other active events to join.",
     "joinByCode": "Join by event code",
-    "joinByCodeHelp": "Enter the event's slug/code (e.g. summer-conference-2026) to request organizer access."
+    "joinByCodeHelp": "Enter the event's slug/code (e.g. summer-conference-2026) to request organizer access.",
+    "noMyEvents": "You're not part of any events yet. Create one, or request to join an event below.",
+    "createForm": "Create form",
+    "formModeDefault": "Default",
+    "defaultFormTip": "This form is used when no matching single or family response form exists.",
+    "eventPublished": "Event published!",
+    "visibility": "Visibility",
+    "visibilityHelp": "Unlisted events don't appear on the public list — only people with the link can open them.",
+    "visibilityPublic": "Public — shown on the home page",
+    "visibilityUnlisted": "Unlisted — link only",
+    "deleteEvent": "Delete",
+    "deleting": "Deleting…",
+    "deleteEventTitle": "Delete “{name}”?",
+    "deleteEventDraftWarning": "This event was never published. It will be permanently deleted along with its forms, participant types, and settings. This cannot be undone.",
+    "deleteEventPublishedWarning": "This event has been published before, so it will be hidden from everyone — including you — but kept in the database as archive history.",
+    "deleteEventError": "Could not delete the event. Please try again."
   },
   "questionTypes": {
     "text": "Short text",
@@ -321,8 +336,6 @@
     "fullName": "Full name",
     "language": "Preferred language",
     "saved": "Saved",
-    "namePromptTitle": "What's your name?",
-    "namePromptIntro": "Add your name so organizers know who you are. You can change it later in your profile.",
     "firstName": "First name",
     "lastName": "Last name",
     "namePromptRequired": "Please enter your first and last name.",
@@ -338,7 +351,9 @@
     "timeFormatHelp": "12-hour or 24-hour clock.",
     "dateFormat_auto": "Automatic",
     "timeFormat_auto": "Automatic",
-    "formatPromptIntro": "How should dates and times look? You can change this anytime in your profile."
+    "formatPromptIntro": "How should dates and times look? You can change this anytime in your profile.",
+    "welcomeTitle": "Welcome to Mosaic",
+    "welcomeNameIntro": "Add your name so organizers know who you are. You can change it later in your profile."
   },
   "runtime": {
     "firstName": "First name",
@@ -352,5 +367,12 @@
     "address_state": "State / Province",
     "address_postalCode": "Postal code",
     "address_country": "Country"
+  },
+  "eventPhase": {
+    "registrationNotOpen": "Registration opens soon",
+    "registrationOpen": "Registration open",
+    "registrationClosed": "Registration closed",
+    "inProgress": "Happening now",
+    "ended": "Event ended"
   }
 }

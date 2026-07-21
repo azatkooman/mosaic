@@ -16,8 +16,9 @@ export default async function HomePage({ params }) {
   const supabase = getSupabaseAnonClient()
   const { data: events } = await supabase
     .from('events')
-    .select('id, slug, name, description, location, timezone, starts_at, ends_at, cover_image_path, default_locale')
+    .select('id, slug, name, description, location, timezone, starts_at, ends_at, cover_image_path, default_locale, registration_opens_at, registration_closes_at')
     .eq('status', 'published')
+    .eq('visibility', 'public')
     .gte('ends_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
 

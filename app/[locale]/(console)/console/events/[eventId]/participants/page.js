@@ -9,7 +9,7 @@ export default async function ParticipantsPage({ params }) {
   setRequestLocale(locale)
 
   const supabase = await getSupabaseServerClient()
-  const [{ data: types }, { data: versions }, { data: canEdit }] = await Promise.all([
+  const [{ data: types }, { data: versions }, { data: canEdit }, { data: canChangeStatus }] = await Promise.all([
     supabase
       .from('participant_types')
       .select('id, key, name')
@@ -23,6 +23,8 @@ export default async function ParticipantsPage({ params }) {
       .eq('forms.event_id', eventId),
     // UX gate for the Edit button (update_participant re-checks authoritatively).
     supabase.rpc('can_add_registrants_api', { eid: eventId }),
+    // Status changes are restricted to roles with the check-in privilege.
+    supabase.rpc('can_checkin_event_api', { eid: eventId }),
   ])
 
   // Union of questions across versions, keyed by stable question id.
@@ -44,6 +46,7 @@ export default async function ParticipantsPage({ params }) {
       questions={[...questionById.values()]}
       definitionByVersion={definitionByVersion}
       canEdit={Boolean(canEdit)}
+      canChangeStatus={Boolean(canChangeStatus)}
     />
   )
 }

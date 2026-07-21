@@ -11,7 +11,10 @@ import { Button, Dialog, Field, Input, NativeSelect } from '@/components/ui'
 
 // Flows that collect these details themselves or would be obscured by the modal.
 function isExcludedPath(pathname) {
-  return pathname.startsWith('/my/profile') || pathname.startsWith('/events/')
+  // Only the registration flow — never cover an in-progress form. The profile
+  // page is NOT excluded: signed-out users land there after login, and the
+  // welcome dialog must appear immediately rather than after navigating away.
+  return pathname.startsWith('/events/')
 }
 
 /** One-time welcome: name (when missing) + language + date/time formats.
@@ -89,11 +92,11 @@ export function NameCaptureDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title={t('namePromptTitle')}>
+    <Dialog open={open} onOpenChange={onOpenChange} title={t('welcomeTitle')}>
       <form onSubmit={save} style={{ display: 'grid', gap: 'var(--s-4)' }}>
-        <p style={{ color: 'var(--ink-soft)', margin: 0 }}>{t('namePromptIntro')}</p>
         {needsName && (
           <>
+            <p style={{ color: 'var(--ink-soft)', margin: 0 }}>{t('welcomeNameIntro')}</p>
             <Field label={t('firstName')} required>
               {({ id }) => (
                 <Input

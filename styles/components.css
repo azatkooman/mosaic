@@ -337,3 +337,119 @@
   background: var(--pine-tint);
   color: var(--pine-deep);
 }
+
+/* Confetti burst + publish-success flash (see components/ui/ConfettiBurst) */
+.confetti-burst {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 10;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 1px;
+  opacity: 0;
+  animation: confetti-pop 1.3s cubic-bezier(0.16, 0.8, 0.35, 1) forwards;
+}
+
+@keyframes confetti-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 22px))
+      scale(1) rotate(var(--rot));
+  }
+}
+
+.publish-flash {
+  animation: publish-flash 1.2s ease-out;
+}
+
+@keyframes publish-flash {
+  0% {
+    color: var(--success, #3aa981);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--success, #3aa981) 60%, transparent);
+    transform: scale(1.12);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+  .publish-flash {
+    animation: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Instant hover tooltip: <span class="tip" data-tip="..."> (native title
+   attributes have an OS-imposed ~1s delay). */
+.tip {
+  position: relative;
+  cursor: help;
+}
+
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--surface);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  width: max-content;
+  max-width: 16rem;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms ease-out;
+  z-index: 30;
+}
+
+.tip:hover::after,
+.tip:focus-visible::after {
+  opacity: 1;
+}
+
+/* Right-side tooltip placement: use inside overflow containers (tables),
+   where an above-the-element tooltip gets clipped at the box edge. */
+.tip-right::after {
+  bottom: auto;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}

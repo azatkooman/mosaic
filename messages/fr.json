@@ -296,7 +296,22 @@
     "joinEventsAllAccess": "Vous disposez d'un accès administrateur et pouvez consulter tous les événements.",
     "joinEventsEmpty": "Il n'y a pas d'autres événements actifs à rejoindre.",
     "joinByCode": "Rejoindre par code d'événement",
-    "joinByCodeHelp": "Entrez le slug/code de l'événement (ex. summer-conference-2026) pour demander un accès organisateur."
+    "joinByCodeHelp": "Entrez le slug/code de l'événement (ex. summer-conference-2026) pour demander un accès organisateur.",
+    "noMyEvents": "Vous ne faites encore partie d'aucun événement. Créez-en un ou demandez à rejoindre un événement ci-dessous.",
+    "createForm": "Créer le formulaire",
+    "formModeDefault": "Par défaut",
+    "defaultFormTip": "Ce formulaire est utilisé lorsqu'aucun formulaire de réponse individuelle ou familiale ne s'applique.",
+    "eventPublished": "Événement publié !",
+    "visibility": "Visibilité",
+    "visibilityHelp": "Les événements non répertoriés n'apparaissent pas dans la liste publique — seules les personnes disposant du lien peuvent les ouvrir.",
+    "visibilityPublic": "Public — affiché sur la page d'accueil",
+    "visibilityUnlisted": "Non répertorié — lien uniquement",
+    "deleteEvent": "Supprimer",
+    "deleting": "Suppression…",
+    "deleteEventTitle": "Supprimer « {name} » ?",
+    "deleteEventDraftWarning": "Cet événement n'a jamais été publié. Il sera définitivement supprimé, ainsi que ses formulaires, types de participants et paramètres. Cette action est irréversible.",
+    "deleteEventPublishedWarning": "Cet événement a déjà été publié : il sera masqué pour tout le monde — y compris vous — mais conservé dans la base de données comme historique.",
+    "deleteEventError": "Impossible de supprimer l'événement. Veuillez réessayer."
   },
   "questionTypes": {
     "text": "Texte court",
@@ -321,8 +336,6 @@
     "fullName": "Nom complet",
     "language": "Langue préférée",
     "saved": "Enregistré",
-    "namePromptTitle": "Comment vous appelez-vous ?",
-    "namePromptIntro": "Ajoutez votre nom pour que les organisateurs sachent qui vous êtes. Vous pourrez le modifier plus tard dans votre profil.",
     "firstName": "Prénom",
     "lastName": "Nom",
     "namePromptRequired": "Veuillez saisir votre prénom et votre nom.",
@@ -338,7 +351,9 @@
     "timeFormatHelp": "Horloge de 12 ou 24 heures.",
     "dateFormat_auto": "Automatique",
     "timeFormat_auto": "Automatique",
-    "formatPromptIntro": "Comment les dates et heures doivent-elles s'afficher ? Modifiable à tout moment dans votre profil."
+    "formatPromptIntro": "Comment les dates et heures doivent-elles s'afficher ? Modifiable à tout moment dans votre profil.",
+    "welcomeTitle": "Bienvenue sur Mosaic",
+    "welcomeNameIntro": "Ajoutez votre nom pour que les organisateurs sachent qui vous êtes. Vous pourrez le modifier plus tard dans votre profil."
   },
   "runtime": {
     "firstName": "Prénom",
@@ -352,5 +367,12 @@
     "address_state": "État / Province",
     "address_postalCode": "Code postal",
     "address_country": "Pays"
+  },
+  "eventPhase": {
+    "registrationNotOpen": "Ouverture des inscriptions bientôt",
+    "registrationOpen": "Inscriptions ouvertes",
+    "registrationClosed": "Inscriptions closes",
+    "inProgress": "En cours",
+    "ended": "Événement terminé"
   }
 }

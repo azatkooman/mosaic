@@ -9,6 +9,7 @@ import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
   Button,
+  ConfettiBurst,
   Dialog,
   Field,
   Input,
@@ -38,10 +39,12 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [regOpens, setRegOpens] = useState(toLocalInput(event.registration_opens_at, event.timezone))
   const [regCloses, setRegCloses] = useState(toLocalInput(event.registration_closes_at, event.timezone))
   const [capacity, setCapacity] = useState(event.capacity ?? '')
+  const [visibility, setVisibility] = useState(event.visibility ?? 'public')
   const [contact, setContact] = useState(event.contact ?? {})
   const [types, setTypes] = useState(initialTypes)
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
+  const [publishBurst, setPublishBurst] = useState(null)
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
 
@@ -60,6 +63,7 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         registration_opens_at: fromLocalInput(regOpens, timezone),
         registration_closes_at: fromLocalInput(regCloses, timezone),
         capacity: capacity === '' ? null : Number(capacity),
+        visibility,
         contact,
         supported_locales: LOCALES.filter((l) => (name[l] ?? '').trim() !== ''),
       })
@@ -70,7 +74,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
 
   async function setStatus(status) {
     const { error } = await supabase.from('events').update({ status }).eq('id', event.id)
-    if (!error) router.refresh()
+    if (!error) {
+      if (status === 'published') setPublishBurst(Date.now())
+      router.refresh()
+    }
   }
 
   async function addType(preset) {
@@ -186,6 +193,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
           <Field label={t('capacity')} help={t('capacityHelp')}>
             {({ id }) => (
               <Input id={id} type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+            )}
+          </Field>
+          <Field label={t('visibility')} help={t('visibilityHelp')}>
+            {({ id }) => (
+              <NativeSelect id={id} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                <option value="public">{t('visibilityPublic')}</option>
+                <option value="unlisted">{t('visibilityUnlisted')}</option>
+              </NativeSelect>
             )}
           </Field>
         </div>
@@ -331,17 +346,25 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         <div className={styles.footerStatus} aria-live="polite">
           {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
           {saveState === 'error' && <span className="badge badge-cancelled">⚠</span>}
+          {publishBurst && (
+            <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+              {t('eventPublished')}
+            </strong>
+          )}
         </div>
         <div className={styles.footerActions}>
-          {event.status === 'draft' ? (
-            <Button variant="secondary" onClick={() => setStatus('published')}>
-              {t('publish')}
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => setStatus('draft')}>
-              {t('unpublish')}
-            </Button>
-          )}
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            {event.status === 'draft' ? (
+              <Button variant="secondary" onClick={() => setStatus('published')}>
+                {t('publish')}
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setStatus('draft')}>
+                {t('unpublish')}
+              </Button>
+            )}
+            <ConfettiBurst burst={publishBurst} />
+          </span>
           <Button onClick={save} disabled={saveState === 'saving'}>
             {tCommon('save')}
           </Button>

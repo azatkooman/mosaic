@@ -5,11 +5,13 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
 import { formatEventDateRange } from '@/lib/dates'
-import { Input } from '@/components/ui'
+import { eventPhase, EVENT_PHASE_TONES } from '@/lib/event-phase'
+import { Badge, Input } from '@/components/ui'
 import styles from './home.module.css'
 
 export function HomeEventsList({ events, dateFmt }) {
   const t = useTranslations('home')
+  const tRoot = useTranslations()
   const locale = useLocale()
   const [search, setSearch] = useState('')
 
@@ -41,12 +43,17 @@ export function HomeEventsList({ events, dateFmt }) {
         </p>
       ) : (
         <ul className={styles.grid}>
-          {visible.map((event) => (
+          {visible.map((event) => {
+            const phase = eventPhase(event)
+            return (
             <li key={event.id}>
               <Link href={`/events/${event.slug}`} className={styles.cardLink}>
                 <article className="card">
                   <div className={styles.cardBody}>
                     <h3>{lt(event.name, locale, event.default_locale)}</h3>
+                    <p style={{ marginBlock: '0.2rem 0.4rem' }}>
+                      <Badge tone={EVENT_PHASE_TONES[phase]}>{tRoot(`eventPhase.${phase}`)}</Badge>
+                    </p>
                     <p className={styles.cardMeta}>
                       {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale, dateFmt)}
                     </p>
@@ -59,7 +66,7 @@ export function HomeEventsList({ events, dateFmt }) {
                 </article>
               </Link>
             </li>
-          ))}
+          )})}
         </ul>
       )}
     </>

@@ -4,6 +4,8 @@ import { Link } from '@/lib/i18n/navigation'
 import { getSupabaseAnonClient } from '@/lib/supabase/server'
 import { lt, LOCALES } from '@/lib/i18n/locales'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
+import { eventPhase, EVENT_PHASE_TONES } from '@/lib/event-phase'
+import { Badge } from '@/components/ui'
 import { getDateFormatPrefs } from '@/lib/date-format-server'
 import styles from './event.module.css'
 
@@ -39,16 +41,17 @@ export default async function EventPage({ params }) {
   const { slug, locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations('event')
+  const tPhase = await getTranslations('eventPhase')
   const dateFmt = await getDateFormatPrefs()
 
   const event = await getEvent(slug)
   if (!event) notFound()
 
-  const now = Date.now()
-  const opensAt = event.registration_opens_at ? Date.parse(event.registration_opens_at) : null
-  const closesAt = event.registration_closes_at ? Date.parse(event.registration_closes_at) : null
-  const notOpenYet = opensAt != null && now < opensAt
-  const closed = closesAt != null && now > closesAt
+  const phase = eventPhase(event)
+  const notOpenYet = phase === 'registrationNotOpen'
+  // In-progress events keep the register CTA (walk-ins are allowed unless a
+  // close date passed — mirrors the server-side registration-window check).
+  const closed = phase === 'registrationClosed' || phase === 'ended'
 
   const coverUrl = event.cover_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/event-covers/${event.cover_image_path}`
@@ -64,6 +67,9 @@ export default async function EventPage({ params }) {
       )}
       <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
         <h1 className="page-title">{lt(event.name, locale, event.default_locale)}</h1>
+        <p style={{ marginBlock: '0.3rem var(--s-4)' }}>
+          <Badge tone={EVENT_PHASE_TONES[phase]}>{tPhase(phase)}</Badge>
+        </p>
 
         <dl className={styles.meta}>
           <div>

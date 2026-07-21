@@ -12,6 +12,12 @@ import styles from './participants.module.css'
 
 const PAGE_SIZE = 50
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
+const STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'waitlisted', 'cancelled'],
+  confirmed: ['cancelled'],
+  waitlisted: ['confirmed', 'cancelled'],
+  cancelled: ['confirmed', 'waitlisted'],
+}
 
 /**
  * Filters compile straight to PostgREST operators on the JSONB answers
@@ -24,6 +30,7 @@ export function ParticipantsTable({
   questions,
   definitionByVersion = {},
   canEdit = false,
+  canChangeStatus = false,
 }) {
   const t = useTranslations()
   const locale = useLocale()
@@ -36,6 +43,7 @@ export function ParticipantsTable({
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState(null) // participant row for the drawer
+  const [statusError, setStatusError] = useState('')
 
   const typeById = useMemo(
     () => new Map(participantTypes.map((pt) => [pt.id, pt])),
@@ -90,7 +98,15 @@ export function ParticipantsTable({
   })
 
   async function changeStatus(participantId, status) {
-    await supabase.from('participants').update({ status }).eq('id', participantId)
+    setStatusError('')
+    const { error } = await supabase.rpc('transition_participant_status', {
+      p_participant_id: participantId,
+      p_new_status: status,
+    })
+    if (error) {
+      setStatusError(error.message)
+      return
+    }
     queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
   }
 
@@ -153,6 +169,9 @@ export function ParticipantsTable({
           {t('console.exportCsv')}
         </a>
       </div>
+      {statusError && (
+        <p className="alert alert-error" role="alert">{statusError}</p>
+      )}
 
       <div className="table-wrap">
         <table className="table">
@@ -202,16 +221,19 @@ export function ParticipantsTable({
                       <Button variant="ghost" size="sm" onClick={() => setSelected(p)}>
                         {t('console.viewDetail')}
                       </Button>
-                      <NativeSelect
-                        value={p.status}
-                        aria-label={t('console.changeStatus')}
-                        style={{ width: 'auto', paddingBlock: '0.2rem' }}
-                        onChange={(e) => changeStatus(p.id, e.target.value)}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>{t(`status.${s}`)}</option>
-                        ))}
-                      </NativeSelect>
+                      {canChangeStatus && (
+                        <NativeSelect
+                          value={p.status}
+                          aria-label={t('console.changeStatus')}
+                          style={{ width: 'auto', paddingBlock: '0.2rem' }}
+                          onChange={(e) => changeStatus(p.id, e.target.value)}
+                        >
+                          <option value={p.status}>{t(`status.${p.status}`)}</option>
+                          {(STATUS_TRANSITIONS[p.status] ?? []).map((s) => (
+                            <option key={s} value={s}>{t(`status.${s}`)}</option>
+                          ))}
+                        </NativeSelect>
+                      )}
                     </div>
                   </td>
                 </tr>

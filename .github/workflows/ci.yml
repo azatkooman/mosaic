@@ -6,6 +6,36 @@ on:
     branches: [main]
 
 jobs:
+  migration-safety:
+    name: Migration safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check migration numbering
+        run: npm run check:migrations
+      - name: Require append-only migrations in pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          changed=$(git diff --name-status "origin/${{ github.base_ref }}"...HEAD -- supabase/migrations)
+          if printf '%s\n' "$changed" | grep -Eq '^(M|D|R|C)'; then
+            echo "Existing migration files are append-only. Add a new migration instead of editing, renaming, or deleting an old one."
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase
+        run: supabase start
+      - name: Apply migrations and seed to a clean local database
+        run: supabase db reset --local
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +56,7 @@ jobs:
   migrate-staging:
     # Pushes committed migrations to the staging Supabase project.
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: test
+    needs: [migration-safety, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
