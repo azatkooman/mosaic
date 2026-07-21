@@ -20,7 +20,7 @@
   "nav": {
     "events": "Події",
     "myRegistrations": "Мої реєстрації",
-    "console": "Консоль організатора",
+    "console": "Центр подій",
     "home": "Головна",
     "profile": "Профіль",
     "adminConsole": "Панель адміністратора"
@@ -112,7 +112,7 @@
     "eventUnavailable": "Подія більше недоступна"
   },
   "console": {
-    "title": "Консоль організатора",
+    "title": "Центр подій",
     "dashboard": "Панель",
     "events": "Події",
     "newEvent": "Нова подія",

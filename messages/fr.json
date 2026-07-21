@@ -20,7 +20,7 @@
   "nav": {
     "events": "Événements",
     "myRegistrations": "Mes inscriptions",
-    "console": "Console organisateur",
+    "console": "Espace événements",
     "home": "Accueil",
     "profile": "Profil",
     "adminConsole": "Console d'administration"
@@ -112,7 +112,7 @@
     "eventUnavailable": "L'événement n'est plus disponible"
   },
   "console": {
-    "title": "Console organisateur",
+    "title": "Espace événements",
     "dashboard": "Tableau de bord",
     "events": "Événements",
     "newEvent": "Nouvel événement",

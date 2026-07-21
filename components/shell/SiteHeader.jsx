@@ -36,7 +36,7 @@ export async function SiteHeader() {
           {/* All signed-in users can open the console: those without access
               get the request-access panel instead of the event list. */}
           {user && <Link href="/console">{t('nav.console')}</Link>}
-          {isAdmin && <Link href="/console/admin">{t('nav.adminConsole')}</Link>}
+          {isAdmin && <Link href="/admin">{t('nav.adminConsole')}</Link>}
         </nav>
         <div className={styles.headerActions}>
           <LocaleSwitcher label={t('common.language')} />
