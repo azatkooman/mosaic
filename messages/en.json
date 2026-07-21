@@ -20,7 +20,7 @@
   "nav": {
     "events": "Events",
     "myRegistrations": "My registrations",
-    "console": "Organizer console",
+    "console": "Events Hub",
     "home": "Home",
     "profile": "Profile",
     "adminConsole": "Admin console"
@@ -43,7 +43,9 @@
     "heroTitle": "Every registration, one picture",
     "heroSubtitle": "Conferences, camps and gatherings — find your event and register in your language.",
     "upcomingEvents": "Upcoming events",
-    "noEvents": "No published events yet. Check back soon."
+    "noEvents": "No published events yet. Check back soon.",
+    "searchEvents": "Search events",
+    "noSearchResults": "No events match your search."
   },
   "event": {
     "register": "Register",
@@ -112,7 +114,7 @@
     "eventUnavailable": "Event no longer available"
   },
   "console": {
-    "title": "Organizer console",
+    "title": "Events Hub",
     "dashboard": "Dashboard",
     "events": "Events",
     "newEvent": "New event",
@@ -199,7 +201,7 @@
     "globalRoleLabel": "Global role",
     "roleSuperAdmin": "Super admin",
     "roleAdmin": "Admin",
-    "roleGlobalOrganizer": "Organizer",
+    "roleGlobalOrganizer": "Global Organizer",
     "roleNone": "No role",
     "makeSuperAdmin": "Make super admin",
     "transferConfirm": "Transfer super admin to {name}? You will become a regular admin.",
@@ -280,6 +282,15 @@
     "addressParts": "Address fields",
     "viewDetail": "View",
     "participantDetail": "Participant details",
+    "noMyEvents": "You haven't created or joined any events yet. Create your first event to get started.",
+    "addByEmail": "Add by email",
+    "addByEmailHelp": "Grant a global role by email. The person must have signed in to Mosaic at least once.",
+    "add": "Add",
+    "roleGranted": "Role granted. A notification email is on its way.",
+    "eventCode": "Event code",
+    "eventCodeHelp": "Share this code so people can request to join this event.",
+    "copy": "Copy",
+    "copied": "Copied",
     "joinEvents": "Join events",
     "joinEventsHelp": "You can request access to organize or view other events in this organization.",
     "joinEventsAllAccess": "You have admin access and can view all events.",

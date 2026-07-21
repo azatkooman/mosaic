@@ -8,8 +8,6 @@ import { getDateFormatPrefs } from '@/lib/date-format-server'
 import { Badge } from '@/components/ui'
 import { NewEventButton } from './NewEventButton'
 import { DeleteEventButton } from './DeleteEventButton'
-import { JoinEvents } from './JoinEvents'
-import { RequestOrganizerRole } from './RequestOrganizerRole'
 import styles from './console.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -29,10 +27,9 @@ export default async function ConsoleHome({ params }) {
     return null
   }
 
-  const [{ data: myRoles }, { data: memberships }, { data: roleRequest }] = await Promise.all([
+  const [{ data: myRoles }, { data: memberships }] = await Promise.all([
     supabase.from('user_roles').select('role').eq('user_id', user.id),
     supabase.from('event_organizers').select('event_id, status').eq('user_id', user.id),
-    supabase.from('role_requests').select('user_id').eq('user_id', user.id).maybeSingle(),
   ])
   // Admins and global organizers see and manage every event.
   const seesAllEvents = (myRoles?.length ?? 0) > 0
@@ -41,9 +38,7 @@ export default async function ConsoleHome({ params }) {
   const activeIds = (memberships ?? [])
     .filter((m) => m.status === 'active')
     .map((m) => m.event_id)
-  const requestedIds = (memberships ?? [])
-    .filter((m) => m.status === 'requested')
-    .map((m) => m.event_id)
+
 
   // "My events": events the user has an active role on; admins and global
   // organizers see all. (RLS also exposes published events to everyone,
@@ -67,19 +62,6 @@ export default async function ConsoleHome({ params }) {
     if (row.status === 'confirmed' || row.status === 'waitlisted') {
       totals.set(row.event_id, (totals.get(row.event_id) ?? 0) + row.n)
     }
-  }
-
-  // Published events the user isn't on: offered for access requests.
-  let joinable = []
-  if (!seesAllEvents) {
-    const { data: published } = await supabase
-      .from('events')
-      .select('id, name, default_locale, timezone, starts_at, ends_at')
-      .eq('status', 'published')
-      .eq('visibility', 'public')
-      .is('deleted_at', null)
-      .order('starts_at', { ascending: true })
-    joinable = (published ?? []).filter((e) => !activeIds.includes(e.id))
   }
 
   return (
@@ -139,16 +121,6 @@ export default async function ConsoleHome({ params }) {
             </tbody>
           </table>
         </div>
-      )}
-
-      <JoinEvents
-        events={joinable}
-        requestedEventIds={requestedIds}
-        allAccess={seesAllEvents}
-      />
-
-      {!seesAllEvents && (
-        <RequestOrganizerRole userId={user.id} roleRequested={Boolean(roleRequest)} />
       )}
     </>
   )

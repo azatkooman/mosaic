@@ -26,6 +26,11 @@
   max-inline-size: 48ch;
 }
 
+.searchRow {
+  margin-top: var(--s-4);
+  max-inline-size: 24rem;
+}
+
 .grid {
   list-style: none;
   padding: 0;

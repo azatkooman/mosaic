@@ -20,7 +20,7 @@
   "nav": {
     "events": "Eventos",
     "myRegistrations": "Mis inscripciones",
-    "console": "Consola del organizador",
+    "console": "Centro de eventos",
     "home": "Inicio",
     "profile": "Perfil",
     "adminConsole": "Consola de administración"
@@ -43,7 +43,9 @@
     "heroTitle": "Cada inscripción, una sola imagen",
     "heroSubtitle": "Conferencias, campamentos y encuentros: encuentra tu evento e inscríbete en tu idioma.",
     "upcomingEvents": "Próximos eventos",
-    "noEvents": "Aún no hay eventos publicados. Vuelve pronto."
+    "noEvents": "Aún no hay eventos publicados. Vuelve pronto.",
+    "searchEvents": "Buscar eventos",
+    "noSearchResults": "Ningún evento coincide con tu búsqueda."
   },
   "event": {
     "register": "Inscribirse",
@@ -112,7 +114,7 @@
     "eventUnavailable": "El evento ya no está disponible"
   },
   "console": {
-    "title": "Consola del organizador",
+    "title": "Centro de eventos",
     "dashboard": "Panel",
     "events": "Eventos",
     "newEvent": "Nuevo evento",
@@ -199,7 +201,7 @@
     "globalRoleLabel": "Rol global",
     "roleSuperAdmin": "Superadministrador",
     "roleAdmin": "Administrador",
-    "roleGlobalOrganizer": "Organizador",
+    "roleGlobalOrganizer": "Organizador global",
     "roleNone": "Sin rol",
     "makeSuperAdmin": "Hacer superadministrador",
     "transferConfirm": "¿Transferir superadministrador a {name}? Pasarás a ser un administrador normal.",
@@ -280,6 +282,15 @@
     "addressParts": "Campos de dirección",
     "viewDetail": "Ver",
     "participantDetail": "Detalles del participante",
+    "noMyEvents": "Aún no has creado ni te has unido a ningún evento. Crea tu primer evento para empezar.",
+    "addByEmail": "Añadir por correo electrónico",
+    "addByEmailHelp": "Concede un rol global por correo electrónico. La persona debe haber iniciado sesión en Mosaic al menos una vez.",
+    "add": "Añadir",
+    "roleGranted": "Rol concedido. Se está enviando un correo de notificación.",
+    "eventCode": "Código del evento",
+    "eventCodeHelp": "Comparte este código para que otras personas puedan solicitar unirse a este evento.",
+    "copy": "Copiar",
+    "copied": "Copiado",
     "joinEvents": "Unirse a eventos",
     "joinEventsHelp": "Puedes solicitar acceso para organizar o ver otros eventos en esta organización.",
     "joinEventsAllAccess": "Tienes acceso de administrador y puedes ver todos los eventos.",
