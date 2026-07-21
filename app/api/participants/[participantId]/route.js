@@ -30,12 +30,11 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: 'bad_json' }, { status: 400 })
   }
 
+  // Name and email are removable form questions (see migration 0016), so a
+  // participant may legitimately have no name; blanks are stored as ''.
   const asString = (v) => (typeof v === 'string' ? v.trim() : '')
   const firstName = asString(body?.firstName)
   const lastName = asString(body?.lastName)
-  if (!firstName || !lastName) {
-    return NextResponse.json({ error: 'validation', details: { _name: 'required' } }, { status: 422 })
-  }
 
   // Load the participant with its type key and the exact form version it
   // answered — RLS returns it only if the caller can view the event.

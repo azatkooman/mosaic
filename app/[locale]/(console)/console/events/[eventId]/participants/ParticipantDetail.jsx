@@ -46,9 +46,10 @@ export function ParticipantDetail({
   }
 
   async function save() {
+    // Name/email are removable form questions, so blank names are legal here;
+    // when the form does include a required name question, the shared answer
+    // validation below still enforces it.
     const nextErrors = {}
-    if (!firstName.trim()) nextErrors._firstName = 'required'
-    if (!lastName.trim()) nextErrors._lastName = 'required'
     const res = validateParticipantAnswers(definition, typeKey, answers)
     Object.assign(nextErrors, res.errors)
     if (Object.keys(nextErrors).length > 0) {
@@ -96,14 +97,14 @@ export function ParticipantDetail({
           {editing ? (
             <>
               <div className={styles.editGrid}>
-                <Field label={t('wizard.firstName')} required error={errors._firstName ? t('validation.required') : undefined}>
-                  {({ id, invalid }) => (
-                    <Input id={id} value={firstName} aria-invalid={invalid} onChange={(e) => setFirstName(e.target.value)} />
+                <Field label={t('wizard.firstName')}>
+                  {({ id }) => (
+                    <Input id={id} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                   )}
                 </Field>
-                <Field label={t('wizard.lastName')} required error={errors._lastName ? t('validation.required') : undefined}>
-                  {({ id, invalid }) => (
-                    <Input id={id} value={lastName} aria-invalid={invalid} onChange={(e) => setLastName(e.target.value)} />
+                <Field label={t('wizard.lastName')}>
+                  {({ id }) => (
+                    <Input id={id} value={lastName} onChange={(e) => setLastName(e.target.value)} />
                   )}
                 </Field>
                 <Field label={t('wizard.email')}>
