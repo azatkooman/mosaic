@@ -101,7 +101,9 @@
     "modeFamilyHelp": "Inscribo a mi familia o a un grupo.",
     "noModeSelected": "Elige un tipo de inscripción para continuar.",
     "singleTypeTitle": "¿Qué tipo de participante eres?",
-    "singleTypeHelp": "Elige la opción que te describe."
+    "singleTypeHelp": "Elige la opción que te describe.",
+    "alreadyRegistered": "Ya te has inscrito en este evento. Puedes revisar o editar tu inscripción mientras la inscripción esté abierta.",
+    "viewMyRegistrations": "Ver mis inscripciones"
   },
   "validation": {
     "required": "Este campo es obligatorio",

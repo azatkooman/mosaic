@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
+import { extractIdentity } from '@/lib/form-engine/identity'
 
 /**
  * Edit a registrant's details from the organizer console.
@@ -63,11 +64,17 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: 'validation', details: errors }, { status: 422 })
   }
 
+  // Identity comes from the form's name/email questions when present,
+  // exactly like /api/register — otherwise an edit to the name question
+  // would not update the stored first_name/last_name columns and the
+  // participant list would diverge from the answers. Top-level fields
+  // remain the fallback for forms without identity questions.
+  const identity = extractIdentity(definition, typeKey, cleaned)
   const { error } = await supabase.rpc('update_participant', {
     p_participant_id: participantId,
-    p_first_name: firstName,
-    p_last_name: lastName,
-    p_email: asString(body?.email) || null,
+    p_first_name: identity.firstName || firstName,
+    p_last_name: identity.lastName || lastName,
+    p_email: identity.email || asString(body?.email) || null,
     p_answers: cleaned,
   })
   if (error) {

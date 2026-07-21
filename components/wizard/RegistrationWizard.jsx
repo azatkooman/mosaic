@@ -221,7 +221,14 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
           participants: people,
         }),
       })
-      if (!res.ok) throw new Error(`status ${res.status}`)
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        if (payload?.error?.includes?.('already registered')) {
+          setSubmitState('already-registered')
+          return
+        }
+        throw new Error(`status ${res.status}`)
+      }
       const data = await res.json()
       setResult(data)
       setStep('done')
@@ -441,6 +448,9 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
         })}
       </ul>
       {submitState === 'error' && <p className="alert alert-error">{t('submitError')}</p>}
+      {submitState === 'already-registered' && (
+        <p className="alert alert-error">{t('alreadyRegistered')}</p>
+      )}
       <div className={styles.nav}>
         <Button variant="ghost" onClick={prevStep}>
           {tCommon('back')}

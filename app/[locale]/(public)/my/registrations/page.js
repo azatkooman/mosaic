@@ -5,8 +5,10 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
 import { formatEventDateRange } from '@/lib/dates'
 import { getDateFormatPrefs } from '@/lib/date-format-server'
+import { eventPhase } from '@/lib/event-phase'
 import { Badge } from '@/components/ui'
 import { CancelParticipantButton } from './CancelParticipantButton'
+import { EditParticipantButton } from './EditParticipantButton'
 import styles from './myregs.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -29,9 +31,11 @@ export default async function MyRegistrationsPage({ params }) {
     .from('registrations')
     .select(`
       id, created_at,
-      events ( id, slug, name, default_locale, timezone, starts_at, ends_at ),
-      participants ( id, first_name, last_name, status,
-        participant_types ( name ) )
+      events ( id, slug, name, default_locale, timezone, starts_at, ends_at,
+        registration_opens_at, registration_closes_at ),
+      participants ( id, first_name, last_name, email, status, answers,
+        participant_types ( key, name ),
+        form_versions ( definition ) )
     `)
     .eq('registered_by', user.id)
     .order('created_at', { ascending: false })
@@ -51,7 +55,12 @@ export default async function MyRegistrationsPage({ params }) {
         </div>
       ) : (
         <ul className={styles.list}>
-          {registrations.map((reg) => (
+          {registrations.map((reg) => {
+            // Self-service edits share the registration window: allowed while
+            // the event is live and registration hasn't closed (the RPC
+            // re-checks this server-side).
+            const editable = reg.events && eventPhase(reg.events) === 'registrationOpen'
+            return (
             <li key={reg.id} className="card card-pad">
               <div className={styles.regHead}>
                 {/* reg.events is null when the event was unpublished/archived:
@@ -83,6 +92,16 @@ export default async function MyRegistrationsPage({ params }) {
                     </span>
                     <span className={styles.rowActions}>
                       <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
+                      {editable && p.status !== 'cancelled' && (
+                        <EditParticipantButton
+                          participant={{
+                            ...p,
+                            participant_type_key: p.participant_types?.key,
+                          }}
+                          typeName={p.participant_types?.name}
+                          definition={p.form_versions?.definition ?? { questions: [] }}
+                        />
+                      )}
                       {p.status !== 'cancelled' && (
                         <CancelParticipantButton
                           participantId={p.id}
@@ -97,7 +116,7 @@ export default async function MyRegistrationsPage({ params }) {
                 ))}
               </ul>
             </li>
-          ))}
+          )})}
         </ul>
       )}
     </div>

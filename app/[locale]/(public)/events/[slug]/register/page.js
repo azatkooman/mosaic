@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { redirect } from '@/lib/i18n/navigation'
+import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
@@ -30,6 +30,47 @@ export default async function RegisterPage({ params }) {
     .eq('status', 'published')
     .maybeSingle()
   if (!event) notFound()
+
+  // One registration per account per event (the submit RPC enforces this
+  // authoritatively) — send returning registrants to their registration
+  // instead of the wizard.
+  const [{ data: existing }, { data: globalRoles }, { data: teamRoles }] =
+    await Promise.all([
+      supabase
+        .from('registrations')
+        .select('id, participants ( status )')
+        .eq('event_id', event.id)
+        .eq('registered_by', user.id),
+      supabase.from('user_roles').select('role').eq('user_id', user.id),
+      supabase
+        .from('event_organizers')
+        .select('status, event_roles:role_id ( can_add_registrants )')
+        .eq('event_id', event.id)
+        .eq('user_id', user.id),
+    ])
+  // Mirrors the RPC's exemption: registrars (add-registrants privilege or a
+  // global role) may submit multiple registrations on behalf of others.
+  const isRegistrar =
+    (globalRoles?.length ?? 0) > 0 ||
+    (teamRoles ?? []).some((m) => m.status === 'active' && m.event_roles?.can_add_registrants)
+  const alreadyRegistered =
+    !isRegistrar &&
+    (existing ?? []).some((r) =>
+      (r.participants ?? []).some((p) => p.status !== 'cancelled')
+    )
+  if (alreadyRegistered) {
+    return (
+      <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+        <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
+          {t('title', { event: lt(event.name, locale, event.default_locale) })}
+        </h1>
+        <p className="alert alert-info">{t('alreadyRegistered')}</p>
+        <Link href="/my/registrations" className="btn btn-primary">
+          {t('viewMyRegistrations')}
+        </Link>
+      </div>
+    )
+  }
 
   const { data: types } = await supabase
     .from('participant_types')

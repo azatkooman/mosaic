@@ -179,6 +179,7 @@ export async function POST(request) {
       'too few participants',
     ]
     const known = businessErrors.some((m) => error.message?.includes(m))
+      || error.message?.includes('already registered')
     if (known) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }

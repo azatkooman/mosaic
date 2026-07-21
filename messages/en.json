@@ -101,7 +101,9 @@
     "modeFamilyHelp": "I'm registering my family or a group.",
     "noModeSelected": "Choose a registration type to continue.",
     "singleTypeTitle": "What type of participant are you?",
-    "singleTypeHelp": "Pick the option that describes you."
+    "singleTypeHelp": "Pick the option that describes you.",
+    "alreadyRegistered": "You have already registered for this event. You can review or edit your registration while registration is open.",
+    "viewMyRegistrations": "View my registrations"
   },
   "validation": {
     "required": "This field is required",

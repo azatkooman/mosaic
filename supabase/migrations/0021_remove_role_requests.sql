@@ -3,6 +3,7 @@
 drop function if exists public.approve_role_request(uuid, global_role);
 drop function if exists public.request_global_access(text);
 
-drop policy if exists role_requests_select on role_requests;
-drop policy if exists role_requests_delete on role_requests;
-drop table if exists role_requests;
+-- Policies vanish with the table; dropping them explicitly would error when
+-- the table is already gone ("drop policy if exists" still requires the
+-- relation to exist).
+drop table if exists role_requests cascade;
