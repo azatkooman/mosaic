@@ -339,7 +339,22 @@
     "testimonialHeadingHelp": "Заголовок необязателен — оставьте пустым, чтобы показывать только цитаты.",
     "chipStyle": "Стиль плашки",
     "chipStylePill": "Плашка (с фоном)",
-    "chipStyleText": "Только текст"
+    "chipStyleText": "Только текст",
+    "countdownToEnd": "Конец события",
+    "countdownPastHelp": "Если выбранная дата уже прошла, отсчёт скрывается — выберите будущую (например, конец события).",
+    "countdownStyle": "Стиль отсчёта",
+    "countdownStyleMinimal": "Минимальный (только цифры)",
+    "countdownStyleBoxes": "Плитки",
+    "countdownStyleCompact": "Компактный (одна строка)",
+    "countdownColor": "Цвет отсчёта",
+    "useTitleColor": "Цвет заголовка",
+    "imageFit": "Подгонка изображения",
+    "fitCover": "Заполнить (обрезать)",
+    "fitContain": "Показать целиком",
+    "imagePosition": "Положение изображения",
+    "posTop": "Сверху",
+    "posBottom": "Снизу",
+    "imageHeight": "Высота изображения"
   },
   "questionTypes": {
     "text": "Короткий текст",

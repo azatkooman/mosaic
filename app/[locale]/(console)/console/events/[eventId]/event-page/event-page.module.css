@@ -219,6 +219,17 @@
   align-content: start;
 }
 
+/* Image fit/position/height selects */
+.imageAdjust {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.imageAdjust > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 /* Section reorder list */
 .orderList {
   display: grid;

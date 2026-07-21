@@ -339,7 +339,22 @@
     "testimonialHeadingHelp": "El título es opcional: déjalo vacío para mostrar solo las citas.",
     "chipStyle": "Estilo de la etiqueta",
     "chipStylePill": "Píldora (con fondo)",
-    "chipStyleText": "Solo texto"
+    "chipStyleText": "Solo texto",
+    "countdownToEnd": "Fin del evento",
+    "countdownPastHelp": "Si la fecha elegida ya pasó, la cuenta regresiva se oculta: elige una futura (p. ej. el fin del evento).",
+    "countdownStyle": "Estilo de la cuenta regresiva",
+    "countdownStyleMinimal": "Minimalista (solo números)",
+    "countdownStyleBoxes": "Cajas",
+    "countdownStyleCompact": "Compacta (una línea)",
+    "countdownColor": "Color de la cuenta regresiva",
+    "useTitleColor": "Usar el color del título",
+    "imageFit": "Ajuste de imagen",
+    "fitCover": "Rellenar (recortar)",
+    "fitContain": "Mostrar imagen completa",
+    "imagePosition": "Posición de la imagen",
+    "posTop": "Arriba",
+    "posBottom": "Abajo",
+    "imageHeight": "Altura de la imagen"
   },
   "questionTypes": {
     "text": "Texto corto",

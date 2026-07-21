@@ -161,7 +161,25 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const countdownTarget =
     hero.countdown_target === 'registration_closes_at'
       ? event.registration_closes_at
-      : event.starts_at
+      : hero.countdown_target === 'ends_at'
+        ? event.ends_at
+        : event.starts_at
+
+  // Per-image display adjustments (fit / focal position / height preset).
+  const IMAGE_HEIGHTS = { sm: '12rem', md: '18rem', lg: '28rem' }
+  const imgAdjust = (d = {}, prefix = 'image') => {
+    const s = {}
+    const fit = d[`${prefix}_fit`]
+    const pos = d[`${prefix}_pos`]
+    const h = d[`${prefix}_height`]
+    if (fit) s.objectFit = fit
+    if (pos) s.objectPosition = pos
+    if (h && IMAGE_HEIGHTS[h]) {
+      s.height = IMAGE_HEIGHTS[h]
+      s.minHeight = 0
+    }
+    return s
+  }
   const showAbout = about.enabled && (L(about.body) || about.image_path || about.stats?.length)
   const showSpeakers = speakers.enabled && speakers.items?.length > 0
   const showAgenda = agenda.enabled && (agenda.items?.length > 0 || agenda.image_path)
@@ -282,7 +300,13 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
       </div>
       {hero.show_countdown !== false && !closed && countdownTarget && (
         <div className={styles.heroCountdown}>
-          <Countdown targetIso={countdownTarget} tone={countdownTone} label={t('countdownLabel')} />
+          <Countdown
+            targetIso={countdownTarget}
+            tone={countdownTone}
+            label={t('countdownLabel')}
+            variant={hero.countdown_style || 'minimal'}
+            color={hero.countdown_color}
+          />
         </div>
       )}
     </>
@@ -330,7 +354,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
           {about.image_path && (
             <div className={styles.aboutMedia}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={eventMediaUrl(about.image_path)} alt="" />
+              <img src={eventMediaUrl(about.image_path)} alt="" style={imgAdjust(about)} />
             </div>
           )}
         </div>
@@ -388,7 +412,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
           {agenda.image_path && (
             <div className={styles.agendaMedia}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={eventMediaUrl(agenda.image_path)} alt="" />
+              <img src={eventMediaUrl(agenda.image_path)} alt="" style={imgAdjust(agenda)} />
             </div>
           )}
           {agenda.items?.length > 0 && (
@@ -490,7 +514,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
     contact: hasContact && (
       <Section section="contact" className={styles.contact} style={sectionBg(contactSection)} {...sectionProps}>
         <div className={`container-narrow ${styles.contactInner}`}>
-          <h2 className={styles.sectionTitle}>{t('contact')}</h2>
+          {heading(contactSection, t('contact'))}
           <div className={styles.contactList}>
             {contact.name && <span>{contact.name}</span>}
             {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
@@ -523,7 +547,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
             <div className={styles.heroSplitMedia}>
               {coverUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={coverUrl} alt="" />
+                <img src={coverUrl} alt="" style={imgAdjust(hero, 'cover')} />
               ) : (
                 <div className={styles.heroSplitPlaceholder} aria-hidden="true" />
               )}
@@ -545,7 +569,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
               aria-hidden="true"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={coverUrl} alt="" />
+              <img src={coverUrl} alt="" style={imgAdjust(hero, 'cover')} />
             </div>
           )}
           {coverUrl && heroTint && (

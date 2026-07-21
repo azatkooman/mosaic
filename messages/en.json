@@ -339,7 +339,22 @@
     "testimonialHeadingHelp": "The heading is optional — leave it empty to show only the quotes.",
     "chipStyle": "Chip Style",
     "chipStylePill": "Pill (with background)",
-    "chipStyleText": "Text Only"
+    "chipStyleText": "Text Only",
+    "countdownToEnd": "Event end",
+    "countdownPastHelp": "If the chosen date is already in the past, the countdown hides itself — pick a future one (e.g. event end).",
+    "countdownStyle": "Countdown Style",
+    "countdownStyleMinimal": "Minimal (numbers only)",
+    "countdownStyleBoxes": "Boxes",
+    "countdownStyleCompact": "Compact (one line)",
+    "countdownColor": "Countdown Color",
+    "useTitleColor": "Use Title Color",
+    "imageFit": "Image Fit",
+    "fitCover": "Fill (crop to fit)",
+    "fitContain": "Show whole image",
+    "imagePosition": "Image Position",
+    "posTop": "Top",
+    "posBottom": "Bottom",
+    "imageHeight": "Image Height"
   },
   "questionTypes": {
     "text": "Short text",

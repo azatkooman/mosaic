@@ -339,7 +339,22 @@
     "testimonialHeadingHelp": "Заголовок необов'язковий — залиште порожнім, щоб показувати лише цитати.",
     "chipStyle": "Стиль плашки",
     "chipStylePill": "Плашка (з тлом)",
-    "chipStyleText": "Лише текст"
+    "chipStyleText": "Лише текст",
+    "countdownToEnd": "Кінець події",
+    "countdownPastHelp": "Якщо обрана дата вже минула, відлік ховається — оберіть майбутню (напр., кінець події).",
+    "countdownStyle": "Стиль відліку",
+    "countdownStyleMinimal": "Мінімальний (лише цифри)",
+    "countdownStyleBoxes": "Плитки",
+    "countdownStyleCompact": "Компактний (один рядок)",
+    "countdownColor": "Колір відліку",
+    "useTitleColor": "Колір заголовка",
+    "imageFit": "Підгонка зображення",
+    "fitCover": "Заповнити (обрізати)",
+    "fitContain": "Показати повністю",
+    "imagePosition": "Положення зображення",
+    "posTop": "Зверху",
+    "posBottom": "Знизу",
+    "imageHeight": "Висота зображення"
   },
   "questionTypes": {
     "text": "Короткий текст",

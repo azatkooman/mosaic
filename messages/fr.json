@@ -339,7 +339,22 @@
     "testimonialHeadingHelp": "Le titre est facultatif — laissez-le vide pour n'afficher que les citations.",
     "chipStyle": "Style de l'étiquette",
     "chipStylePill": "Pastille (avec fond)",
-    "chipStyleText": "Texte seul"
+    "chipStyleText": "Texte seul",
+    "countdownToEnd": "Fin de l'événement",
+    "countdownPastHelp": "Si la date choisie est déjà passée, le compte à rebours se masque — choisissez-en une future (p. ex. la fin de l'événement).",
+    "countdownStyle": "Style du compte à rebours",
+    "countdownStyleMinimal": "Minimaliste (chiffres seuls)",
+    "countdownStyleBoxes": "Cases",
+    "countdownStyleCompact": "Compact (une ligne)",
+    "countdownColor": "Couleur du compte à rebours",
+    "useTitleColor": "Utiliser la couleur du titre",
+    "imageFit": "Ajustement de l'image",
+    "fitCover": "Remplir (recadrer)",
+    "fitContain": "Afficher l'image entière",
+    "imagePosition": "Position de l'image",
+    "posTop": "Haut",
+    "posBottom": "Bas",
+    "imageHeight": "Hauteur de l'image"
   },
   "questionTypes": {
     "text": "Texte court",

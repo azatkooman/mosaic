@@ -165,6 +165,47 @@ function HeadingStyleEditor({ t, previewLocale, data = {}, defaultHeading, onPat
   )
 }
 
+// Fit / focal position / height controls for an uploaded image.
+function ImageAdjust({ t, value = {}, onChange, showHeight }) {
+  return (
+    <div className={styles.imageAdjust}>
+      <NativeSelect
+        value={value.fit ?? ''}
+        onChange={(e) => onChange({ fit: e.target.value || undefined })}
+        aria-label={t('imageFit')}
+      >
+        <option value="">{t('imageFit')}</option>
+        <option value="cover">{t('fitCover')}</option>
+        <option value="contain">{t('fitContain')}</option>
+      </NativeSelect>
+      <NativeSelect
+        value={value.pos ?? ''}
+        onChange={(e) => onChange({ pos: e.target.value || undefined })}
+        aria-label={t('imagePosition')}
+      >
+        <option value="">{t('imagePosition')}</option>
+        <option value="top">{t('posTop')}</option>
+        <option value="center">{t('alignCenter')}</option>
+        <option value="bottom">{t('posBottom')}</option>
+        <option value="left">{t('alignLeft')}</option>
+        <option value="right">{t('alignRight')}</option>
+      </NativeSelect>
+      {showHeight && (
+        <NativeSelect
+          value={value.height ?? ''}
+          onChange={(e) => onChange({ height: e.target.value || undefined })}
+          aria-label={t('imageHeight')}
+        >
+          <option value="">{t('imageHeight')}</option>
+          <option value="sm">{t('size_sm')}</option>
+          <option value="md">{t('size_md')}</option>
+          <option value="lg">{t('size_lg')}</option>
+        </NativeSelect>
+      )}
+    </div>
+  )
+}
+
 function SectionHeader({ title, toggleLabel, enabled, onToggle }) {
   return (
     <div className={styles.panelSectionHead}>
@@ -470,6 +511,7 @@ export function EventPageEditor({ initialEvent }) {
     'faq',
     'tickets',
     'map',
+    'contact',
   ]
 
   const sectionBgField = (section) => (
@@ -726,6 +768,18 @@ export function EventPageEditor({ initialEvent }) {
             </Button>
           )}
         </div>
+        {event.cover_image_path && (
+          <ImageAdjust
+            t={t}
+            value={{ fit: hero.cover_fit, pos: hero.cover_pos }}
+            onChange={(p) =>
+              patchContent('hero', {
+                ...('fit' in p ? { cover_fit: p.fit } : {}),
+                ...('pos' in p ? { cover_pos: p.pos } : {}),
+              })
+            }
+          />
+        )}
         <p className="field-help">{t('coverHelp')}</p>
 
         <h4 className={styles.panelSubhead}>{t('dateLocationChip')}</h4>
@@ -802,8 +856,44 @@ export function EventPageEditor({ initialEvent }) {
             >
               <option value="starts_at">{t('countdownToStart')}</option>
               <option value="registration_closes_at">{t('countdownToClose')}</option>
+              <option value="ends_at">{t('countdownToEnd')}</option>
             </NativeSelect>
+            <p className="field-help">{t('countdownPastHelp')}</p>
           </div>
+        )}
+        {hero.show_countdown !== false && (
+          <>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('countdownStyle')}</span>
+              <NativeSelect
+                value={hero.countdown_style ?? 'minimal'}
+                onChange={(e) => patchContent('hero', { countdown_style: e.target.value })}
+                aria-label={t('countdownStyle')}
+              >
+                <option value="minimal">{t('countdownStyleMinimal')}</option>
+                <option value="boxes">{t('countdownStyleBoxes')}</option>
+                <option value="compact">{t('countdownStyleCompact')}</option>
+              </NativeSelect>
+            </div>
+            <ColorField
+              label={t('countdownColor')}
+              addLabel={t('addColor')}
+              resetLabel={t('resetColor')}
+              value={hero.countdown_color}
+              defaultValue={isDark ? '#ffffff' : '#000000'}
+              onChange={(c) => patchContent('hero', { countdown_color: c ?? undefined })}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!content.theme?.title_color}
+              onClick={() =>
+                patchContent('hero', { countdown_color: content.theme?.title_color })
+              }
+            >
+              {t('useTitleColor')}
+            </Button>
+          </>
         )}
         <CheckboxRow
           label={t('heroTexture')}
@@ -846,6 +936,20 @@ export function EventPageEditor({ initialEvent }) {
             </Button>
           )}
         </div>
+        {about.image_path && (
+          <ImageAdjust
+            t={t}
+            showHeight
+            value={{ fit: about.image_fit, pos: about.image_pos, height: about.image_height }}
+            onChange={(p) =>
+              patchContent('about', {
+                ...('fit' in p ? { image_fit: p.fit } : {}),
+                ...('pos' in p ? { image_pos: p.pos } : {}),
+                ...('height' in p ? { image_height: p.height } : {}),
+              })
+            }
+          />
+        )}
 
         <h4 className={styles.panelSubhead}>{t('stats')}</h4>
         <p className="field-help">{t('statsHelp')}</p>
@@ -1079,6 +1183,20 @@ export function EventPageEditor({ initialEvent }) {
             </Button>
           )}
         </div>
+        {agenda.image_path && (
+          <ImageAdjust
+            t={t}
+            showHeight
+            value={{ fit: agenda.image_fit, pos: agenda.image_pos, height: agenda.image_height }}
+            onChange={(p) =>
+              patchContent('agenda', {
+                ...('fit' in p ? { image_fit: p.fit } : {}),
+                ...('pos' in p ? { image_pos: p.pos } : {}),
+                ...('height' in p ? { image_height: p.height } : {}),
+              })
+            }
+          />
+        )}
         {items.map((it) => (
           <div key={it.id} className={styles.panelItem}>
             <div className={styles.panelItemFields}>
@@ -1189,6 +1307,7 @@ export function EventPageEditor({ initialEvent }) {
     const set = (key, value) => patchEvent({ contact: { ...contact, [key]: value } })
     return (
       <>
+        {headingEditor('contact')}
         {sectionBgField('contact')}
         <Field label={t('contactName')}>
           {({ id }) => <Input id={id} value={contact.name ?? ''} onChange={(e) => set('name', e.target.value)} />}
