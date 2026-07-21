@@ -494,7 +494,11 @@
     "videoUrl": "URL del video (YouTube, Vimeo o .mp4)",
     "videoHelp": "Pega un enlace de video — se muestra en lugar de la imagen.",
     "heroOpacityHelp": "Tiñe la imagen de portada. Sin imagen, el color rellena el encabezado sólido.",
-    "pagePreviewHint": "Así ven la página los asistentes. Pasa el cursor por una sección y haz clic en el lápiz para editarla."
+    "pagePreviewHint": "Así ven la página los asistentes. Pasa el cursor por una sección y haz clic en el lápiz para editarla.",
+    "slugHelp": "Se usa en el enlace público del evento. Cambiarlo rompe el enlace anterior.",
+    "slugWarnTitle": "¿Cambiar la URL del evento?",
+    "slugWarnBody": "El enlace público cambiará de «/events/{old}» a «/events/{next}». Cualquiera que tenga el enlace anterior —folletos, correos, mensajes ya compartidos— ya no podrá acceder a este evento. ¿Continuar?",
+    "slugWarnConfirm": "Cambiar URL y guardar"
   },
   "questionTypes": {
     "text": "Texto corto",
