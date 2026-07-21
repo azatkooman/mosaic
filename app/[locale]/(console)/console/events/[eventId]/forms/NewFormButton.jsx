@@ -149,7 +149,7 @@ export function NewFormButton({ eventId, existingForms }) {
             </Button>
           </Dialog.Close>
           <Button type="submit" disabled={state === 'creating' || !mode}>
-            {state === 'creating' ? t('creating') : t('create')}
+            {state === 'creating' ? t('creating') : t('createForm')}
           </Button>
         </div>
       </form>

@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
-import { Button, NativeSelect } from '@/components/ui'
+import { Button, NativeSelect, ConfettiBurst } from '@/components/ui'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
@@ -46,6 +46,7 @@ export function FormBuilder({
   const store = useBuilderStore()
   const { definition, selectedId, dirty } = store
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | published
+  const [publishBurst, setPublishBurst] = useState(null)
   const [previewing, setPreviewing] = useState(false)
   const [previewAnswers, setPreviewAnswers] = useState({})
   const [previewTypeKey, setPreviewTypeKey] = useState(participantTypes[0]?.key ?? '')
@@ -116,6 +117,7 @@ export function FormBuilder({
       return
     }
     setSaveState('published')
+    setPublishBurst(Date.now())
     router.refresh()
   }
 
@@ -187,7 +189,11 @@ export function FormBuilder({
           <span aria-live="polite" className={styles.saveState}>
             {saveState === 'saving' && t('draftSaving')}
             {saveState === 'saved' && t('draftSaved')}
-            {saveState === 'published' && t('formPublished')}
+            {saveState === 'published' && (
+              <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+                {t('formPublished')}
+              </strong>
+            )}
             {saveState === 'saveFailed' && (
               <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
             )}
@@ -215,9 +221,12 @@ export function FormBuilder({
           >
             {t('previewForm')}
           </Button>
-          <Button size="sm" onClick={publish}>
-            {t('publishForm')}
-          </Button>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <Button size="sm" onClick={publish}>
+              {t('publishForm')}
+            </Button>
+            <ConfettiBurst burst={publishBurst} />
+          </span>
         </div>
 
         <DndContext

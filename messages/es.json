@@ -285,7 +285,12 @@
     "joinEventsAllAccess": "Tienes acceso de administrador y puedes ver todos los eventos.",
     "joinEventsEmpty": "No hay otros eventos activos a los que unirse.",
     "joinByCode": "Unirse por código de evento",
-    "joinByCodeHelp": "Introduce el slug/código del evento (por ejemplo, summer-conference-2026) para solicitar acceso de organizador."
+    "joinByCodeHelp": "Introduce el slug/código del evento (por ejemplo, summer-conference-2026) para solicitar acceso de organizador.",
+    "noMyEvents": "Aún no formas parte de ningún evento. Crea uno o solicita unirte a un evento más abajo.",
+    "createForm": "Crear formulario",
+    "formModeDefault": "Predeterminado",
+    "defaultFormTip": "Este formulario se usa cuando no existe un formulario de respuesta individual o familiar adecuado.",
+    "eventPublished": "¡Evento publicado!"
   },
   "questionTypes": {
     "text": "Texto corto",

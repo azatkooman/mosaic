@@ -107,7 +107,7 @@ export function NewEventButton({ label }) {
     // event is registerable out of the box. Settings can change both.
     const { data: form } = await supabase
       .from('forms')
-      .insert({ event_id: event.id, title: 'Registration form' })
+      .insert({ event_id: event.id, title: 'Default form' })
       .select('id')
       .single()
     if (form) {

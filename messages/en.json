@@ -285,7 +285,12 @@
     "joinEventsAllAccess": "You have admin access and can view all events.",
     "joinEventsEmpty": "There are no other active events to join.",
     "joinByCode": "Join by event code",
-    "joinByCodeHelp": "Enter the event's slug/code (e.g. summer-conference-2026) to request organizer access."
+    "joinByCodeHelp": "Enter the event's slug/code (e.g. summer-conference-2026) to request organizer access.",
+    "noMyEvents": "You're not part of any events yet. Create one, or request to join an event below.",
+    "createForm": "Create form",
+    "formModeDefault": "Default",
+    "defaultFormTip": "This form is used when no matching single or family response form exists.",
+    "eventPublished": "Event published!"
   },
   "questionTypes": {
     "text": "Short text",
