@@ -78,17 +78,17 @@ export function RoleMatrix({ roles, orgId, eventId = null }) {
       <div className="table-wrap" style={{ overflowX: 'hidden' }}>
         <table className="table" style={{ tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '20%' }} />
+            <col style={{ width: '18%' }} />
             {PRIVILEGES.map((p) => (
-              <col key={p.key} style={{ width: `${72 / PRIVILEGES.length}%` }} />
+              <col key={p.key} style={{ width: `${70 / PRIVILEGES.length}%` }} />
             ))}
-            <col style={{ width: '8%' }} />
+            <col style={{ width: '12%' }} />
           </colgroup>
           <thead>
             <tr>
               <th>{t('roleName')}</th>
               {PRIVILEGES.map((p) => (
-                <th key={p.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', whiteSpace: 'normal', lineHeight: '1.3', wordBreak: 'break-word' }}>
+                <th key={p.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', whiteSpace: 'normal', lineHeight: '1.25', overflowWrap: 'break-word', letterSpacing: 0, padding: 'var(--s-3) var(--s-1)' }}>
                   {t(p.label)}
                 </th>
               ))}

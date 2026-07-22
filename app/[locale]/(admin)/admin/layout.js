@@ -41,6 +41,7 @@ export default async function AdminLayout({ children, params }) {
           <span>{t('console.adminTitle')}</span>
         </Link>
         <nav className={styles.topnav} aria-label="Admin">
+          <Link href="/">{t('console.navHome')} ↗</Link>
           <Link href="/admin/users">{t('console.adminUsers')}</Link>
           <Link href="/admin/roles">{t('console.roles')}</Link>
           <Link href="/admin/requests">{t('console.accessRequests')}</Link>

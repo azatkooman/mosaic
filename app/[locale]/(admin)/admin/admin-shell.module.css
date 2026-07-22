@@ -65,6 +65,15 @@
   max-inline-size: 56rem;
 }
 
+/* Wider variant for dense, wide content (e.g. the 8-column roles matrix)
+   that would be cramped at the default reading width. */
+.pageWide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-inline-size: 72rem;
+}
+
 .pageHead {
   display: flex;
   align-items: baseline;
