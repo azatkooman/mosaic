@@ -35,21 +35,24 @@
   transform: none;
 }
 
-/* Primary — solid brand fill with subtle depth and a gentle press. */
+/* Primary — brand fill with a soft gradient, top highlight and a clear
+   resting shadow so the main call-to-action reads as elevated. */
 .btn-primary {
-  background: var(--pine);
+  background: linear-gradient(180deg, var(--pine) 0%, var(--pine-deep) 100%);
   color: #fff;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--pine-deep) 35%, transparent);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--pine-deep) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--pine-deep);
+  background: linear-gradient(180deg, var(--pine-deep) 0%, var(--pine-deep) 100%);
   color: #fff;
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--pine-deep) 32%, transparent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--pine-deep) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--pine-deep) 35%, transparent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--pine-deep) 40%, transparent);
 }
 
 /* Secondary — outlined, lifts to the brand color on hover. */
@@ -85,21 +88,23 @@
   background: color-mix(in srgb, var(--surface-sunken) 70%, var(--line));
 }
 
-/* Danger — destructive actions. */
+/* Danger — destructive actions, same elevated treatment as primary. */
 .btn-danger {
-  background: var(--danger);
+  background: linear-gradient(180deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 82%, black) 100%);
   color: #fff;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--danger) 35%, transparent);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--danger) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
 }
 .btn-danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 85%, black);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 88%, black) 0%, color-mix(in srgb, var(--danger) 72%, black) 100%);
   color: #fff;
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--danger) 30%, transparent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--danger) 38%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
   transform: translateY(-1px);
 }
 .btn-danger:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--danger) 35%, transparent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
 .btn-sm {
