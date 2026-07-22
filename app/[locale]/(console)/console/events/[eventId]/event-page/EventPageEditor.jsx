@@ -311,14 +311,19 @@ export function EventPageEditor({ initialEvent }) {
       const textToTranslate = map[source] || Object.values(map).find(v => typeof v === 'string' && v.trim() !== '')
       if (!textToTranslate) return map
       try {
-        const res = await fetch(
-          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(textToTranslate)}`
-        )
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: textToTranslate,
+            targetLocale: target,
+            sourceLocale: source,
+          }),
+        })
         if (!res.ok) return map
         const data = await res.json()
-        if (data && data[0]) {
-          const translatedText = data[0].map(x => x[0]).join('')
-          return { ...map, [target]: translatedText }
+        if (data && data.translation) {
+          return { ...map, [target]: data.translation }
         }
       } catch (err) {
         console.error('Translation error:', err)
