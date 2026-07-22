@@ -40,7 +40,9 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
     if (!email) return
     setError(null)
     setNotice(null)
-    const { error } = await supabase.rpc('grant_global_role', {
+    // Grants immediately for an existing user; queues a pending invite (applied
+    // on their first sign-in) for an email with no account yet.
+    const { data: result, error } = await supabase.rpc('invite_global_role', {
       p_email: email,
       p_role: inviteRole,
     })
@@ -48,14 +50,15 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
       setError(error.message)
       return
     }
+    const invited = result === 'invited'
     // Fire-and-forget notification email — don't block the UI on it.
     fetch('/api/notify-role', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role: inviteRole }),
+      body: JSON.stringify({ email, role: inviteRole, mode: invited ? 'invite' : 'granted' }),
     }).catch(() => {})
     setInviteEmail('')
-    setNotice(t('roleGranted'))
+    setNotice(invited ? t('inviteSentPending') : t('roleGranted'))
     router.refresh()
   }
 

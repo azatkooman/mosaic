@@ -38,12 +38,15 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_json' }, { status: 400 })
   }
 
-  const { email, role } = body ?? {}
+  const { email, role, mode } = body ?? {}
   if (typeof email !== 'string' || !email.trim()) {
     return NextResponse.json({ error: 'missing_email' }, { status: 400 })
   }
+  // 'invite' = the person has no account yet; the role is queued and applied
+  // when they first sign in. Anything else = the role was granted now.
+  const isInvite = mode === 'invite'
 
-  // Look up the target user's name.
+  // Look up the target user's name (absent for a not-yet-registered invitee).
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name')
@@ -53,11 +56,35 @@ export async function POST(request) {
   const name = profile?.full_name || email
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mosaic.cru.org'
   const consoleUrl = `${siteUrl}/en/console`
+  // Invitees sign in first, then land in the console with the role applied.
+  const loginUrl = `${siteUrl}/en/login?next=${encodeURIComponent('/en/console')}`
 
   const roleName =
     role === 'admin' ? 'Admin' : 'Global Organizer'
 
-  const html = `
+  const html = isInvite
+    ? `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+      <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
+        Dear ${escapeHtml(name)},
+      </p>
+      <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
+        You have been invited to join Mosaic Events as a <strong>${roleName}</strong>.
+        Sign in once to activate your access — your ${roleName} role will be
+        applied automatically, and you'll be able to manage events from the
+        organizer console.
+      </p>
+      <p style="margin: 28px 0;">
+        <a href="${loginUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2c6e5a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">
+          Sign in to Mosaic →
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #666; line-height: 1.5;">
+        If you have questions, please reach out to your event administrator.
+      </p>
+    </div>
+  `.trim()
+    : `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
       <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
         Dear ${escapeHtml(name)},
@@ -80,7 +107,9 @@ export async function POST(request) {
   try {
     await sendEmail({
       to: email.trim(),
-      subject: `You've been added as a ${roleName} on Mosaic`,
+      subject: isInvite
+        ? `You've been invited to Mosaic as a ${roleName}`
+        : `You've been added as a ${roleName} on Mosaic`,
       html,
     })
   } catch (err) {
