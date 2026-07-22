@@ -34,7 +34,7 @@ export default async function RegisterPage({ params }) {
   // One registration per account per event (the submit RPC enforces this
   // authoritatively) — send returning registrants to their registration
   // instead of the wizard.
-  const [{ data: existing }, { data: globalRoles }, { data: teamRoles }] =
+  const [{ data: existing }, { data: globalRoles }, { data: teamRoles }, { data: profile }] =
     await Promise.all([
       supabase
         .from('registrations')
@@ -47,6 +47,11 @@ export default async function RegisterPage({ params }) {
         .select('status, event_roles:role_id ( can_add_registrants )')
         .eq('event_id', event.id)
         .eq('user_id', user.id),
+      supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle(),
     ])
   // Mirrors the RPC's exemption: registrars (add-registrants privilege or a
   // global role) may submit multiple registrations on behalf of others.
@@ -132,6 +137,7 @@ export default async function RegisterPage({ params }) {
         participantTypes={participantTypes}
         modeForms={modeForms}
         userId={user.id}
+        profile={profile}
       />
     </div>
   )
