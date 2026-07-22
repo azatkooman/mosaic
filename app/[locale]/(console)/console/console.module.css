@@ -29,7 +29,8 @@
 
 .topnav {
   display: flex;
-  gap: var(--s-4);
+  align-items: center;
+  gap: var(--s-1);
   flex: 1;
 }
 
@@ -38,10 +39,20 @@
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: 500;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .topnav a:hover {
   color: var(--ink);
+  background: var(--surface-sunken);
+}
+
+.topnav a:focus-visible {
+  outline: none;
+  color: var(--ink);
+  box-shadow: var(--focus-ring);
 }
 
 .actions {
