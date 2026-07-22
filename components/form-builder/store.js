@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_ADDRESS_PARTS } from '@/lib/form-engine/address'
 
 /**
  * Draft form definition editor state with a simple undo stack.
@@ -34,6 +35,10 @@ export const useBuilderStore = create((set, get) => ({
       type,
       label: {},
       ...(['select', 'multiselect', 'radio'].includes(type) ? { options: [] } : {}),
+      ...(type === 'name' ? { nameFormat: 'first_last', required: true } : {}),
+      ...(type === 'address'
+        ? { addressParts: structuredClone(DEFAULT_ADDRESS_PARTS) }
+        : {}),
     }
     const def = get().definition
     get()._commit({ ...def, questions: [...def.questions, question] }, { selectedId: id })

@@ -31,6 +31,7 @@ export default async function EventLayout({ children, params }) {
         eventId={eventId}
         labels={{
           overview: t('console.overview'),
+          eventPage: t('console.eventPage'),
           settings: t('console.settings'),
           forms: t('console.forms'),
           participants: t('console.participants'),

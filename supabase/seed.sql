@@ -1,5 +1,7 @@
 -- Local development seed. Never run against production.
 
+-- Migration 0003 may already have created the org (with a random id), so
+-- resolve it by slug everywhere below instead of assuming a fixed uuid.
 insert into organizations (id, slug, name)
 values ('00000000-0000-0000-0000-000000000001', 'cru', 'Cru')
 on conflict (slug) do nothing;
@@ -35,7 +37,8 @@ values
 on conflict do nothing;
 
 insert into user_roles (user_id, org_id, role)
-values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'super_admin')
+select '10000000-0000-0000-0000-000000000001', id, 'super_admin'
+from organizations where slug = 'cru'
 on conflict do nothing;
 
 -- Sample event
@@ -45,7 +48,7 @@ insert into events (
   capacity, default_locale, supported_locales, created_by
 ) values (
   '20000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000001',
+  (select id from organizations where slug = 'cru'),
   'summer-conference-2026',
   'published',
   '{"en":"Summer Conference 2026","es":"Conferencia de Verano 2026","fr":"Conférence d''été 2026","ru":"Летняя конференция 2026","uk":"Літня конференція 2026"}',

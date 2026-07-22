@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { LOCALES, LOCALE_NAMES, lt } from '@/lib/i18n/locales'
+import { ADDRESS_PART_KEYS, DEFAULT_ADDRESS_PARTS } from '@/lib/form-engine/address'
 import {
   Field,
   Input,
@@ -29,7 +30,17 @@ export function QuestionInspector({
   onChange,
 }) {
   const t = useTranslations('console')
+  const tr = useTranslations('runtime')
   const [editLocale, setEditLocale] = useState(defaultLocale)
+
+  function setAddressPart(key, patch) {
+    const current = q.addressParts ?? DEFAULT_ADDRESS_PARTS
+    const prev = current[key] ?? DEFAULT_ADDRESS_PARTS[key]
+    const next = { ...prev, ...patch }
+    // A disabled part can't be required.
+    if (!next.enabled) next.required = false
+    onChange({ addressParts: { ...current, [key]: next } })
+  }
 
   const myIndex = allQuestions.findIndex((x) => x.id === q.id)
   // Conditions may only reference earlier questions (backward references).
@@ -122,6 +133,55 @@ export function QuestionInspector({
           />
           <span>{t('requiredField')}</span>
         </label>
+      )}
+
+      {/* Name format */}
+      {q.type === 'name' && (
+        <div className={styles.inspectorSection}>
+          <Field label={t('nameFormat')}>
+            {({ id }) => (
+              <NativeSelect
+                id={id}
+                value={q.nameFormat ?? 'first_last'}
+                onChange={(e) => onChange({ nameFormat: e.target.value })}
+              >
+                <option value="first_last">{t('nameFormatFirstLast')}</option>
+                <option value="full">{t('nameFormatFull')}</option>
+                <option value="first_middle_last">{t('nameFormatFirstMiddleLast')}</option>
+              </NativeSelect>
+            )}
+          </Field>
+        </div>
+      )}
+
+      {/* Address parts */}
+      {q.type === 'address' && (
+        <div className={styles.inspectorSection}>
+          <span className="field-label">{t('addressParts')}</span>
+          {ADDRESS_PART_KEYS.map((key) => {
+            const part = (q.addressParts ?? DEFAULT_ADDRESS_PARTS)[key] ?? DEFAULT_ADDRESS_PARTS[key]
+            return (
+              <div key={key} className={styles.typeCheck} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1 }}>
+                  <Checkbox
+                    checked={!!part.enabled}
+                    onCheckedChange={(c) => setAddressPart(key, { enabled: !!c })}
+                  />
+                  <span>{tr(`address_${key}`)}</span>
+                </label>
+                {part.enabled && (
+                  <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', color: 'var(--ink-soft)', fontSize: 'var(--text-sm)' }}>
+                    <Checkbox
+                      checked={!!part.required}
+                      onCheckedChange={(c) => setAddressPart(key, { required: !!c })}
+                    />
+                    <span>{t('requiredField')}</span>
+                  </label>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* Participant types */}

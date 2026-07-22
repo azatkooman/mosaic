@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
+import { formatStructuredAnswer } from '@/lib/form-engine/format'
+import { formatEventDate } from '@/lib/dates'
+import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -40,15 +43,24 @@ export async function GET(request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
-  const [{ data: event }, { data: types }, { data: versions }] = await Promise.all([
-    admin.from('events').select('slug, name, default_locale').eq('id', eventId).single(),
-    admin.from('participant_types').select('id, name').eq('event_id', eventId),
-    admin
-      .from('form_versions')
-      // FK hint required: forms↔form_versions has two relationships.
-      .select('id, definition, forms!form_versions_form_id_fkey!inner ( event_id )')
-      .eq('forms.event_id', eventId),
-  ])
+  const [{ data: event }, { data: types }, { data: versions }, { data: requesterProfile }] =
+    await Promise.all([
+      admin.from('events').select('slug, name, default_locale, timezone').eq('id', eventId).single(),
+      admin.from('participant_types').select('id, name').eq('event_id', eventId),
+      admin
+        .from('form_versions')
+        // FK hint required: forms↔form_versions has two relationships.
+        .select('id, definition, forms!form_versions_form_id_fkey!inner ( event_id )')
+        .eq('forms.event_id', eventId),
+      // Requester's display prefs come from their profile row (the DB is the
+      // source of truth; the cookie may be absent for direct downloads).
+      admin.from('profiles').select('date_format, time_format').eq('id', user.id).maybeSingle(),
+    ])
+
+  const dateFmt = {
+    dateFormat: normalizeDateFormat(requesterProfile?.date_format),
+    timeFormat: normalizeTimeFormat(requesterProfile?.time_format),
+  }
 
   const typeName = new Map((types ?? []).map((t) => [t.id, lt(t.name, locale, event?.default_locale)]))
   const questionById = new Map()
@@ -85,14 +97,19 @@ export async function GET(request) {
         p.email ?? '',
         typeName.get(p.participant_type_id) ?? '',
         p.status,
-        p.created_at,
+        formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
         ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale)),
       ])
     }
     if (!data || data.length < PAGE) break
   }
 
-  const filename = `${event?.slug ?? 'participants'}-${new Date().toISOString().slice(0, 10)}`
+  // Filename date follows the pref too, with filesystem-safe separators.
+  const fileDate =
+    dateFmt.dateFormat === 'auto'
+      ? new Date().toISOString().slice(0, 10)
+      : formatSampleDateSafe(dateFmt.dateFormat)
+  const filename = `${event?.slug ?? 'participants'}-${fileDate}`
 
   if (format === 'csv') {
     const csv = [header, ...rows]
@@ -130,6 +147,8 @@ export async function GET(request) {
 
 function plainAnswer(value, question, locale) {
   if (value == null) return ''
+  const structured = formatStructuredAnswer(question, value)
+  if (structured !== null) return structured
   if (question.type === 'checkbox') return value ? 'yes' : 'no'
   if (Array.isArray(value)) {
     return value
@@ -145,4 +164,15 @@ function plainAnswer(value, question, locale) {
 function csvCell(v) {
   const s = String(v ?? '')
   return /[",\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s
+}
+
+/** Today's date in the forced order with '-' separators (filename-safe). */
+function formatSampleDateSafe(dateFormat) {
+  const now = new Date()
+  const y = String(now.getUTCFullYear())
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(now.getUTCDate()).padStart(2, '0')
+  if (dateFormat === 'mdy') return `${m}-${d}-${y}`
+  if (dateFormat === 'dmy') return `${d}-${m}-${y}`
+  return `${y}-${m}-${d}`
 }

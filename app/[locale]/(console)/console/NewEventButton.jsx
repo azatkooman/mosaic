@@ -6,6 +6,7 @@ import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { fromLocalInput } from '@/lib/dates'
 import { DEFAULT_PARTICIPANT_TYPE } from '@/lib/participant-type-presets'
+import { defaultFormQuestions } from '@/lib/form-defaults'
 import { Button, Dialog, Field, Input, NativeSelect } from '@/components/ui'
 import styles from './console.module.css'
 
@@ -106,11 +107,20 @@ export function NewEventButton({ label }) {
     // event is registerable out of the box. Settings can change both.
     const { data: form } = await supabase
       .from('forms')
-      .insert({ event_id: event.id, title: 'Registration form' })
+      .insert({ event_id: event.id, title: 'Default form' })
       .select('id')
       .single()
     if (form) {
-      await supabase.rpc('create_draft_version', { p_form_id: form.id })
+      const { data: versionId } = await supabase.rpc('create_draft_version', {
+        p_form_id: form.id,
+      })
+      // New forms start with name + email questions (removable in the builder).
+      if (versionId) {
+        await supabase
+          .from('form_versions')
+          .update({ definition: { questions: defaultFormQuestions() } })
+          .eq('id', versionId)
+      }
       await supabase.from('participant_types').insert({
         event_id: event.id,
         key: DEFAULT_PARTICIPANT_TYPE.key,

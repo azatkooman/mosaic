@@ -9,6 +9,7 @@ import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
   Button,
+  ConfettiBurst,
   Dialog,
   Field,
   Input,
@@ -19,7 +20,6 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui'
-import { PhoneInput } from '@/components/form-runtime/PhoneField'
 import styles from './settings.module.css'
 
 export function EventSettingsForm({ event, initialTypes, forms }) {
@@ -39,14 +39,28 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [regOpens, setRegOpens] = useState(toLocalInput(event.registration_opens_at, event.timezone))
   const [regCloses, setRegCloses] = useState(toLocalInput(event.registration_closes_at, event.timezone))
   const [capacity, setCapacity] = useState(event.capacity ?? '')
+  const [visibility, setVisibility] = useState(event.visibility ?? 'public')
   const [contact, setContact] = useState(event.contact ?? {})
   const [types, setTypes] = useState(initialTypes)
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
+  const [publishBurst, setPublishBurst] = useState(null)
+  const [slugWarnOpen, setSlugWarnOpen] = useState(false)
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
 
+  // Changing the slug breaks every existing link to this event's public page,
+  // so confirm before committing a change. An unchanged slug saves directly.
+  function requestSave() {
+    if (slug !== event.slug) {
+      setSlugWarnOpen(true)
+      return
+    }
+    save()
+  }
+
   async function save() {
+    setSlugWarnOpen(false)
     setSaveState('saving')
     const { error } = await supabase
       .from('events')
@@ -61,6 +75,7 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         registration_opens_at: fromLocalInput(regOpens, timezone),
         registration_closes_at: fromLocalInput(regCloses, timezone),
         capacity: capacity === '' ? null : Number(capacity),
+        visibility,
         contact,
         supported_locales: LOCALES.filter((l) => (name[l] ?? '').trim() !== ''),
       })
@@ -71,7 +86,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
 
   async function setStatus(status) {
     const { error } = await supabase.from('events').update({ status }).eq('id', event.id)
-    if (!error) router.refresh()
+    if (!error) {
+      if (status === 'published') setPublishBurst(Date.now())
+      router.refresh()
+    }
   }
 
   async function addType(preset) {
@@ -152,7 +170,7 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
 
       <section className="card card-pad">
         <div className={styles.grid2}>
-          <Field label={t('slug')}>
+          <Field label={t('slug')} help={t('slugHelp')}>
             {({ id }) => <Input id={id} value={slug} onChange={(e) => setSlug(e.target.value)} />}
           </Field>
           <Field label={t('timezone')}>
@@ -189,6 +207,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
               <Input id={id} type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
             )}
           </Field>
+          <Field label={t('visibility')} help={t('visibilityHelp')}>
+            {({ id }) => (
+              <NativeSelect id={id} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                <option value="public">{t('visibilityPublic')}</option>
+                <option value="unlisted">{t('visibilityUnlisted')}</option>
+              </NativeSelect>
+            )}
+          </Field>
         </div>
       </section>
 
@@ -216,14 +242,12 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             )}
           </Field>
           <Field label={t('contactPhone')}>
-            {({ id, describedBy, invalid }) => (
-              <PhoneInput
+            {({ id }) => (
+              <Input
                 id={id}
-                describedBy={describedBy}
-                invalid={invalid}
+                type="tel"
                 value={contact.phone ?? ''}
-                onChange={(v) => setContact({ ...contact, phone: v })}
-                locale={locale}
+                onChange={(e) => setContact({ ...contact, phone: e.target.value })}
               />
             )}
           </Field>
@@ -242,26 +266,23 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       </section>
 
       <section className="card card-pad">
-        <h2 style={{ marginBottom: 'var(--s-2)' }}>{t('participantTypes')}</h2>
-        <p className={styles.sectionHelp}>{t('participantTypesHelp')}</p>
+        <h2 style={{ marginBottom: 'var(--s-4)' }}>{t('participantTypes')}</h2>
         <div className={styles.typeList}>
           {types.map((pt) => (
             <div key={pt.id} className={styles.typeRow}>
-              <Field label={t('typeKey')} hint={t('typeKeyHelp')}>
-                {({ id, describedBy }) => (
+              <Field label={t('typeKey')}>
+                {({ id }) => (
                   <Input
                     id={id}
-                    aria-describedby={describedBy}
                     value={pt.key}
                     onChange={(e) => updateType(pt.id, { key: e.target.value })}
                   />
                 )}
               </Field>
-              <Field label={`${t('typeName')} (${locale})`} hint={t('typeNameHelp')}>
-                {({ id, describedBy }) => (
+              <Field label={`${t('typeName')} (${locale})`}>
+                {({ id }) => (
                   <Input
                     id={id}
-                    aria-describedby={describedBy}
                     value={pt.name?.[locale] ?? pt.name?.en ?? ''}
                     onChange={(e) =>
                       updateType(pt.id, { name: { ...pt.name, [locale]: e.target.value } })
@@ -269,11 +290,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
                   />
                 )}
               </Field>
-              <Field label={t('capacity')} hint={t('typeCapacityHelp')}>
-                {({ id, describedBy }) => (
+              <Field label={t('capacity')}>
+                {({ id }) => (
                   <Input
                     id={id}
-                    aria-describedby={describedBy}
                     type="number"
                     min="1"
                     value={pt.capacity ?? ''}
@@ -285,20 +305,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
                   />
                 )}
               </Field>
-              <Field
-                label={t('form')}
-                hint={t('typeFormHelp')}
-                error={pt.form_id ? undefined : t('typeFormMissing')}
-              >
-                {({ id, describedBy, invalid }) => (
+              <Field label={t('form')}>
+                {({ id }) => (
                   <NativeSelect
                     id={id}
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid || undefined}
                     value={pt.form_id ?? ''}
                     onChange={(e) => updateType(pt.id, { form_id: e.target.value || null })}
                   >
-                    <option value="">{t('selectFormOption')}</option>
+                    <option value="" />
                     {forms.map((f) => (
                       <option key={f.id} value={f.id}>{f.title}</option>
                     ))}
@@ -344,22 +358,48 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         <div className={styles.footerStatus} aria-live="polite">
           {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
           {saveState === 'error' && <span className="badge badge-cancelled">⚠</span>}
+          {publishBurst && (
+            <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+              {t('eventPublished')}
+            </strong>
+          )}
         </div>
         <div className={styles.footerActions}>
-          {event.status === 'draft' ? (
-            <Button variant="secondary" onClick={() => setStatus('published')}>
-              {t('publish')}
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => setStatus('draft')}>
-              {t('unpublish')}
-            </Button>
-          )}
-          <Button onClick={save} disabled={saveState === 'saving'}>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            {event.status === 'draft' ? (
+              <Button variant="secondary" onClick={() => setStatus('published')}>
+                {t('publish')}
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setStatus('draft')}>
+                {t('unpublish')}
+              </Button>
+            )}
+            <ConfettiBurst burst={publishBurst} />
+          </span>
+          <Button onClick={requestSave} disabled={saveState === 'saving'}>
             {tCommon('save')}
           </Button>
         </div>
       </div>
+
+      <Dialog
+        open={slugWarnOpen}
+        onOpenChange={setSlugWarnOpen}
+        title={t('slugWarnTitle')}
+      >
+        <p className={styles.sectionHelp} style={{ marginBottom: 'var(--s-4)' }}>
+          {t('slugWarnBody', { old: event.slug, next: slug })}
+        </p>
+        <div className={styles.footerActions}>
+          <Dialog.Close asChild>
+            <Button variant="secondary">{tCommon('cancel')}</Button>
+          </Dialog.Close>
+          <Button onClick={save} disabled={saveState === 'saving'}>
+            {t('slugWarnConfirm')}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }

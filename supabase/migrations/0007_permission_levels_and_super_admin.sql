@@ -23,6 +23,10 @@ create type global_role as enum ('super_admin', 'admin', 'organizer');
 alter table user_roles
   alter column role type global_role using role::text::global_role;
 drop function public.grant_global_role(text, global_role_old);
+-- 0006 created approve_role_request against the pre-swap enum; drop it here
+-- (it still depends on global_role_old) and recreate it at the end of this
+-- migration with the new type.
+drop function if exists public.approve_role_request(uuid, global_role_old);
 drop type global_role_old;
 
 alter type event_role rename to event_role_old;
@@ -351,3 +355,35 @@ end;
 $$;
 revoke execute on function public.request_event_access(uuid) from public, anon;
 grant execute on function public.request_event_access(uuid) to authenticated;
+
+-- Recreate 0006's approve_role_request against the new global_role enum
+-- (dropped above during the enum swap). Body identical apart from the type.
+create or replace function public.approve_role_request(p_user_id uuid, p_role global_role)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_org uuid;
+begin
+  if not private.is_admin() then
+    raise exception 'not allowed';
+  end if;
+  if p_role = 'super_admin' then
+    raise exception 'super admin can only be assigned via transfer_super_admin';
+  end if;
+  select org_id into v_org from role_requests where user_id = p_user_id;
+  if v_org is null then
+    raise exception 'no pending request for that user';
+  end if;
+  if exists (select 1 from user_roles where user_id = p_user_id and role = 'super_admin') then
+    raise exception 'the super admin''s role cannot be changed';
+  end if;
+  insert into user_roles (user_id, org_id, role)
+  values (p_user_id, v_org, p_role)
+  on conflict (user_id, org_id) do update set role = excluded.role;
+  delete from role_requests where user_id = p_user_id;
+end;
+$$;
+revoke execute on function public.approve_role_request(uuid, global_role) from public, anon;
+grant execute on function public.approve_role_request(uuid, global_role) to authenticated;

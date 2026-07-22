@@ -9,11 +9,22 @@ import { RoleMatrix } from '@/components/roles/RoleMatrix'
 import { roleLabel, sortRoles } from '@/components/roles/roleUtils'
 import styles from './team.module.css'
 
-export function TeamManager({ eventId, orgId, initialMembers, roles }) {
+export function TeamManager({ eventId, eventSlug, orgId, initialMembers, roles }) {
   const t = useTranslations('console')
   const tCommon = useTranslations('common')
   const router = useRouter()
   const supabase = getSupabaseBrowserClient()
+  const [copied, setCopied] = useState(false)
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(eventSlug)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard unavailable (permissions/insecure context) — ignore
+    }
+  }
 
   const assignableRoles = sortRoles(roles)
   const defaultRoleId = assignableRoles.find((r) => r.preset_key === 'view')?.id
@@ -80,6 +91,19 @@ export function TeamManager({ eventId, orgId, initialMembers, roles }) {
 
   return (
     <div className={styles.wrap}>
+      {eventSlug && (
+        <p style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--ink-soft)' }}>{t('eventCode')}:</span>
+          <code>{eventSlug}</code>
+          <Button variant="ghost" size="sm" onClick={copyCode}>
+            {copied ? t('copied') : t('copy')}
+          </Button>
+          <span style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
+            {t('eventCodeHelp')}
+          </span>
+        </p>
+      )}
+
       <form onSubmit={add} className={styles.addRow}>
         <Field label={t('inviteByEmail')}>
           {({ id }) => (

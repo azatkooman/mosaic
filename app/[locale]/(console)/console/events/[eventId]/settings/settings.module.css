@@ -3,7 +3,6 @@
   flex-direction: column;
   gap: var(--s-5);
   max-inline-size: 56rem;
-  margin-inline: auto;
 }
 
 .grid {
@@ -28,15 +27,10 @@
   display: grid;
   grid-template-columns: 1fr 1.4fr 0.7fr 1fr auto;
   gap: var(--s-3);
-  align-items: start;
+  align-items: end;
   padding: var(--s-3);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-}
-
-/* Keep the remove button level with the inputs, below the labels. */
-.typeRow > button {
-  margin-top: 1.75rem;
 }
 
 .sectionHelp {

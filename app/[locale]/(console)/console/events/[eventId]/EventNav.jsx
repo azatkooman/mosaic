@@ -8,6 +8,7 @@ export function EventNav({ eventId, labels }) {
   const base = `/console/events/${eventId}`
   const items = [
     { href: base, label: labels.overview, exact: true },
+    { href: `${base}/event-page`, label: labels.eventPage },
     { href: `${base}/settings`, label: labels.settings },
     { href: `${base}/forms`, label: labels.forms },
     { href: `${base}/participants`, label: labels.participants },
