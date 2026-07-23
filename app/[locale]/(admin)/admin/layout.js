@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { SignOutButton } from '@/components/shell/SignOutButton'
+import { NavLink } from '@/components/shell/NavLink'
 import styles from './admin-shell.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -41,9 +42,9 @@ export default async function AdminLayout({ children, params }) {
           <span>{t('console.adminTitle')}</span>
         </Link>
         <nav className={styles.topnav} aria-label="Admin">
-          <Link href="/admin/users">{t('console.adminUsers')}</Link>
-          <Link href="/admin/roles">{t('console.roles')}</Link>
-          <Link href="/admin/requests">{t('console.accessRequests')}</Link>
+          <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
+          <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
+          <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
           <Link href="/console">{t('console.title')} ↗</Link>
         </nav>
         <div className={styles.actions}>
