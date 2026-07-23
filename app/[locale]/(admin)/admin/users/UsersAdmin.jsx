@@ -170,7 +170,7 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
                 <td>
                   <div className={styles.rowActions}>
                     {isSuperAdmin && user.id !== currentUserId && user.role !== 'super_admin' && (
-                      <Button variant="ghost" size="sm" onClick={() => transferSuperAdmin(user)}>
+                      <Button variant="secondary" size="sm" onClick={() => transferSuperAdmin(user)}>
                         {t('makeSuperAdmin')}
                       </Button>
                     )}
