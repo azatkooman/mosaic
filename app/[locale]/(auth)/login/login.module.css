@@ -1,16 +1,88 @@
 .wrap {
   min-height: 100dvh;
   display: grid;
+  grid-template-columns: 1.05fr 1fr;
+}
+@media (max-width: 52rem) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left brand panel — deep green with a floating mosaic-tile motif. */
+.brandPanel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: var(--s-8) var(--s-7);
+  color: #fff;
+  background: linear-gradient(155deg, var(--pine) 0%, var(--pine-deep) 100%);
+}
+@media (max-width: 52rem) {
+  .brandPanel {
+    display: none;
+  }
+}
+
+.brandTiles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.brandTiles span {
+  position: absolute;
+  border-radius: 22%;
+  animation: loginFloat 10s ease-in-out infinite;
+}
+.brandTiles span:nth-child(1) { width: 9rem;   height: 9rem;   right: 9%;  top: 9%;     background: #fff;          opacity: 0.16; }
+.brandTiles span:nth-child(2) { width: 5rem;   height: 5rem;   right: 24%; top: 42%;    background: var(--gold);   opacity: 0.55; animation-delay: -2s; }
+.brandTiles span:nth-child(3) { width: 6.5rem; height: 6.5rem; left: -2rem; bottom: 12%; background: var(--coral);  opacity: 0.45; animation-delay: -4s; }
+.brandTiles span:nth-child(4) { width: 3.5rem; height: 3.5rem; right: 16%; bottom: 18%; background: var(--sky);    opacity: 0.5;  animation-delay: -6s; }
+
+.brandContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-inline-size: 30rem;
+}
+.brandMark {
+  font-size: var(--text-3xl);
+}
+.brandHeadline {
+  font-family: var(--font-display, inherit);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+.brandSub {
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  max-inline-size: 40ch;
+}
+
+@keyframes loginFloat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-14px) rotate(3deg); }
+}
+
+/* Right form panel */
+.formPanel {
+  display: grid;
   place-items: center;
-  padding: var(--s-4);
+  padding: var(--s-6);
   background:
-    radial-gradient(40rem 20rem at 110% -10%, var(--pine-tint), transparent),
-    radial-gradient(30rem 16rem at -10% 110%, var(--gold-tint), transparent),
+    radial-gradient(36rem 20rem at 110% -10%, var(--pine-tint), transparent 70%),
+    radial-gradient(28rem 16rem at -10% 110%, var(--gold-tint), transparent 70%),
     var(--paper);
 }
 
 .card {
-  width: min(100%, 26rem);
+  width: min(100%, 25rem);
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
@@ -18,6 +90,12 @@
 
 .brand {
   font-size: var(--text-2xl);
+}
+/* The brand panel already shows the mark on wide screens. */
+@media (min-width: 52rem) {
+  .brand {
+    display: none;
+  }
 }
 
 .subtitle {
@@ -38,7 +116,6 @@
   color: var(--ink-faint);
   font-size: var(--text-xs);
 }
-
 .divider::before,
 .divider::after {
   content: '';
@@ -50,4 +127,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brandTiles span {
+    animation: none;
+  }
 }

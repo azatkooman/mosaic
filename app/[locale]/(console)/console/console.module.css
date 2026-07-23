@@ -55,6 +55,15 @@
   transform: scale(0.96);
 }
 
+/* Underline the current page. */
+.topnav a[aria-current='page'] {
+  color: var(--pine-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--pine);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
 .topnav a:focus-visible {
   outline: none;
   color: var(--pine-deep);

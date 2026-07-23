@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SignOutButton } from './SignOutButton'
+import { NavLink } from './NavLink'
 import styles from './shell.module.css'
 
 export async function SiteHeader() {
@@ -31,12 +32,12 @@ export async function SiteHeader() {
           <span>{t('common.appName')}</span>
         </Link>
         <nav className={styles.nav} aria-label="Main">
-          <Link href="/">{t('nav.home')}</Link>
-          {user && <Link href="/my/registrations">{t('nav.myRegistrations')}</Link>}
+          <NavLink href="/">{t('nav.home')}</NavLink>
+          {user && <NavLink href="/my/registrations">{t('nav.myRegistrations')}</NavLink>}
           {/* All signed-in users can open the console: those without access
               get the request-access panel instead of the event list. */}
-          {user && <Link href="/console">{t('nav.console')}</Link>}
-          {isAdmin && <Link href="/admin">{t('nav.adminConsole')}</Link>}
+          {user && <NavLink href="/console">{t('nav.console')}</NavLink>}
+          {isAdmin && <NavLink href="/admin">{t('nav.adminConsole')}</NavLink>}
         </nav>
         <div className={styles.headerActions}>
           <LocaleSwitcher label={t('common.language')} />

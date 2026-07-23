@@ -60,6 +60,15 @@
   box-shadow: var(--focus-ring);
 }
 
+/* Underline the current page. */
+.nav a[aria-current='page'] {
+  color: var(--pine-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--pine);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nav a:active {
     transform: none;
