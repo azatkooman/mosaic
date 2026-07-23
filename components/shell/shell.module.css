@@ -32,24 +32,38 @@
 }
 
 .nav a {
-  color: var(--ink-soft);
+  color: var(--ink);
   text-decoration: none;
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 600;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease, transform 90ms ease;
 }
 
 .nav a:hover {
-  color: var(--ink);
+  color: var(--pine-deep);
   background: var(--surface-sunken);
+}
+
+/* Rounded-rectangle fill when tapped / pressed. */
+.nav a:active {
+  background: var(--pine-tint);
+  color: var(--pine-deep);
+  transform: scale(0.96);
 }
 
 .nav a:focus-visible {
   outline: none;
-  color: var(--ink);
+  color: var(--pine-deep);
+  background: var(--surface-sunken);
   box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav a:active {
+    transform: none;
+  }
 }
 
 .headerActions {
