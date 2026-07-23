@@ -48,8 +48,14 @@ export default async function MyRegistrationsPage({ params }) {
 
       {!registrations?.length ? (
         <div className={styles.empty}>
-          <p>{t('myRegs.empty')}</p>
-          <Link href="/" className="btn btn-primary">
+          <div className={styles.emptyIcon} aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M3 8.5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z" />
+              <path d="M14 6.5v11" strokeDasharray="1.5 2" />
+            </svg>
+          </div>
+          <p className={styles.emptyTitle}>{t('myRegs.empty')}</p>
+          <Link href="/" className={`btn btn-primary ${styles.emptyCta}`}>
             {t('myRegs.browseEvents')}
           </Link>
         </div>
@@ -61,7 +67,7 @@ export default async function MyRegistrationsPage({ params }) {
             // re-checks this server-side).
             const editable = reg.events && eventPhase(reg.events) === 'registrationOpen'
             return (
-            <li key={reg.id} className="card card-pad">
+            <li key={reg.id} className={`card card-pad ${styles.regCard}`}>
               <div className={styles.regHead}>
                 {/* reg.events is null when the event was unpublished/archived:
                     RLS hides it from the registrant while the registration

@@ -1,9 +1,44 @@
 .empty {
+  margin-top: var(--s-4);
+  padding: var(--s-8) var(--s-5);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s-4);
+  align-items: center;
+  text-align: center;
+  gap: var(--s-3);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(28rem 14rem at 50% -20%, var(--pine-tint), transparent 70%),
+    var(--surface);
   color: var(--ink-soft);
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--r-lg);
+  background: var(--pine-tint);
+  color: var(--pine-deep);
+  box-shadow: var(--shadow-sm);
+}
+.emptyIcon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.emptyTitle {
+  font-family: var(--font-display, inherit);
+  font-size: var(--text-xl);
+  color: var(--ink);
+  margin: 0;
+  max-inline-size: 34ch;
+}
+
+.emptyCta {
+  margin-top: var(--s-2);
 }
 
 .list {
@@ -14,6 +49,24 @@
   gap: var(--s-4);
 }
 
+/* Each registration is a card with a brand accent strip and hover lift. */
+.regCard {
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 140ms ease, transform 140ms ease, border-color 140ms ease;
+}
+.regCard::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pine), var(--gold), var(--coral), var(--sky));
+}
+.regCard:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
 .regHead {
   display: flex;
   justify-content: space-between;
@@ -21,6 +74,17 @@
   gap: var(--s-4);
   flex-wrap: wrap;
   margin-bottom: var(--s-3);
+}
+
+.regHead strong {
+  font-size: var(--text-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .regCard,
+  .regCard:hover {
+    transform: none;
+  }
 }
 
 .muted {
