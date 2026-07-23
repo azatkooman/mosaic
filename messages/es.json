@@ -504,7 +504,8 @@
     "slugWarnConfirm": "Cambiar URL y guardar",
     "editsNotSaved": "Cambios sin guardar",
     "dateFormatHint": "Las fechas se muestran a cada persona en su formato de fecha preferido (configurado en su perfil).",
-    "slugWarnRevert": "Revertir URL y guardar"
+    "slugWarnRevert": "Revertir URL y guardar",
+    "publishNeedsForm": "Publica al menos un formulario antes de publicar el evento."
   },
   "questionTypes": {
     "text": "Texto corto",

@@ -115,11 +115,14 @@ export function NewEventButton({ label }) {
         p_form_id: form.id,
       })
       // New forms start with name + email questions (removable in the builder).
+      // Publish this first version immediately so the event is registerable
+      // out of the box — an event can't be published without a published form.
       if (versionId) {
         await supabase
           .from('form_versions')
           .update({ definition: { questions: defaultFormQuestions() } })
           .eq('id', versionId)
+        await supabase.rpc('publish_form_version', { p_version_id: versionId })
       }
       await supabase.from('participant_types').insert({
         event_id: event.id,

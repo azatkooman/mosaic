@@ -504,7 +504,8 @@
     "slugWarnConfirm": "Modifier l'URL et enregistrer",
     "editsNotSaved": "Modifications non enregistrées",
     "dateFormatHint": "Les dates sont affichées à chaque personne dans son format de date préféré (défini dans son profil).",
-    "slugWarnRevert": "Rétablir l'URL et enregistrer"
+    "slugWarnRevert": "Rétablir l'URL et enregistrer",
+    "publishNeedsForm": "Publiez au moins un formulaire avant de publier l’événement."
   },
   "questionTypes": {
     "text": "Texte court",
