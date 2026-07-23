@@ -566,7 +566,12 @@
     "translateError": "Échec de la traduction. Réessayez.",
     "translateNoKey": "La traduction automatique n'est pas encore configurée (clé API manquante). Demandez à votre administrateur d'ajouter GOOGLE_TRANSLATE_API_KEY.",
     "translateNoTargets": "Activez d'abord au moins une autre langue.",
-    "translateNothing": "Rien à traduire pour l'instant — ajoutez du texte d'abord."
+    "translateNothing": "Rien à traduire pour l'instant — ajoutez du texte d'abord.",
+    "addLanguage": "+ Ajouter une langue",
+    "addLanguageConfirm": "Ajouter",
+    "cancel": "Annuler",
+    "languageNamePlaceholder": "Nom de la langue (p. ex. Portugais)",
+    "customLanguageHelp": "Langues personnalisées : vous saisissez tout le texte dans un nouvel onglet. Les boutons fixes de la plateforme restent dans la langue par défaut."
   },
   "questionTypes": {
     "text": "Texte court",

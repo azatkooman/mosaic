@@ -247,6 +247,28 @@
   grid-column: 1 / -1;
 }
 
+/* Custom language row + add-language form */
+.customLangRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.addLangForm {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+}
+
 /* Section reorder list */
 .orderList {
   display: grid;

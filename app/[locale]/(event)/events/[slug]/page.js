@@ -36,17 +36,28 @@ export async function generateMetadata({ params }) {
   return meta
 }
 
-export default async function EventPage({ params }) {
+export default async function EventPage({ params, searchParams }) {
   const { slug, locale } = await params
+  const { lang } = (await searchParams) ?? {}
   setRequestLocale(locale)
 
   const event = await getEvent(slug)
   if (!event) notFound()
 
+  // A ?lang= custom language (defined by the organizer) resolves the content;
+  // dates/UI stay in the route locale. Only honor codes the event actually has.
+  const customCodes = Array.isArray(event.page_content?.i18n?.custom)
+    ? event.page_content.i18n.custom.map((c) => c.code)
+    : []
+  const available = event.page_content?.i18n?.available ?? []
+  const contentLocale =
+    lang && customCodes.includes(lang) && available.includes(lang) ? lang : locale
+
   return (
     <EventPageView
       event={event}
       locale={locale}
+      contentLocale={contentLocale}
       registerHref={`/${locale}/events/${slug}/register`}
     />
   )

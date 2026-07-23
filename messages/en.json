@@ -566,7 +566,12 @@
     "translateError": "Translation failed. Please try again.",
     "translateNoKey": "Auto-translation isn't set up yet (missing API key). Ask your admin to add GOOGLE_TRANSLATE_API_KEY.",
     "translateNoTargets": "Enable at least one other language first.",
-    "translateNothing": "Nothing to translate yet — add some text first."
+    "translateNothing": "Nothing to translate yet — add some text first.",
+    "addLanguage": "+ Add a language",
+    "addLanguageConfirm": "Add",
+    "cancel": "Cancel",
+    "languageNamePlaceholder": "Language name (e.g. Portuguese)",
+    "customLanguageHelp": "Custom languages: you fill in all the text yourself in a new tab. Fixed platform buttons stay in the default language."
   },
   "questionTypes": {
     "text": "Short text",

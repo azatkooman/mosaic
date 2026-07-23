@@ -136,12 +136,23 @@ function RegisterCta({ editable, registerHref, label }) {
  * The public event landing page. Rendered by the public route AND by the
  * console's Event Page tab (editable=true adds hover pencils per section).
  */
-export function EventPageView({ event, locale, registerHref, editable = false, onEditSection }) {
+export function EventPageView({
+  event,
+  locale,
+  contentLocale,
+  registerHref,
+  editable = false,
+  onEditSection,
+}) {
   const t = useTranslations('event')
   const content = event.page_content ?? {}
   const dl = event.default_locale
+  // `locale` is a real platform locale (used for dates/number formatting);
+  // `contentLocale` is what the organizer's text is resolved in — may be a
+  // custom language code that Intl doesn't know, so it never touches dates.
+  const cl = contentLocale || locale
 
-  const L = (map) => lt(map, locale, dl)
+  const L = (map) => lt(map, cl, dl)
 
   const theme = content.theme ?? {}
   const hero = content.hero ?? {}
@@ -260,15 +271,26 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const logoUrl = eventMediaUrl(logo.path)
   const logoPos = ['left', 'center', 'right'].includes(logo.position) ? logo.position : 'left'
   const logoAtBottom = logo.placement === 'bottom'
+  // Custom (organizer-defined) languages, e.g. { code: 'pt', name: 'Português' }.
+  const customLangs = Array.isArray(content.i18n?.custom) ? content.i18n.custom : []
+  const customCodes = customLangs.map((c) => c.code)
+  const validCodes = new Set([...LOCALES, ...customCodes])
   const availableLocales = (
     Array.isArray(content.i18n?.available) && content.i18n.available.length
       ? content.i18n.available
       : event.supported_locales?.length
         ? event.supported_locales
         : [dl]
-  ).filter((l) => LOCALES.includes(l))
+  ).filter((l) => validCodes.has(l))
   const showLangSwitch = availableLocales.length > 1
   const eventSlug = event.slug
+  const isCustom = (code) => customCodes.includes(code)
+  const langLabel = (code) =>
+    isCustom(code) ? customLangs.find((c) => c.code === code)?.name || code : code.toUpperCase()
+  // Built-in locales get their own route; custom ones ride on the current
+  // route locale via a ?lang= param (they aren't platform routes).
+  const langHref = (code) =>
+    isCustom(code) ? `/${locale}/events/${eventSlug}?lang=${code}` : `/${code}/events/${eventSlug}`
 
   const heroTopBar = (logoUrl || showLangSwitch) && (
     <div className={styles.heroTopBar} data-logo-pos={logoPos}>
@@ -282,16 +304,12 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         <nav className={styles.langSwitch} aria-label="Language">
           {availableLocales.map((l) =>
             editable ? (
-              <span key={l} data-active={l === locale ? '' : undefined}>
-                {l.toUpperCase()}
+              <span key={l} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
               </span>
             ) : (
-              <a
-                key={l}
-                href={`/${l}/events/${eventSlug}`}
-                data-active={l === locale ? '' : undefined}
-              >
-                {l.toUpperCase()}
+              <a key={l} href={langHref(l)} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
               </a>
             )
           )}
