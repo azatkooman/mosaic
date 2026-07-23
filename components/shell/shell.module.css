@@ -48,11 +48,11 @@
   background: var(--surface-sunken);
 }
 
-/* Rounded-rectangle fill when tapped / pressed. */
+/* Rounded-rectangle fill when tapped / pressed — shrinks in. */
 .nav a:active {
   background: var(--pine-tint);
   color: var(--pine-deep);
-  transform: scale(0.96);
+  transform: scale(0.9);
 }
 
 .nav a:focus-visible {
