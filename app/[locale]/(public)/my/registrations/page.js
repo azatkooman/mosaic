@@ -41,13 +41,22 @@ export default async function MyRegistrationsPage({ params }) {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
-      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
-        {t('myRegs.title')}
-      </h1>
+    <>
+      <section className={styles.pageHero}>
+        <div className={styles.heroTiles} aria-hidden="true">
+          <span /><span /><span />
+        </div>
+        <div className={`container-narrow ${styles.pageHeroInner}`}>
+          <h1 className="page-title">{t('myRegs.title')}</h1>
+        </div>
+      </section>
 
+      <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
       {!registrations?.length ? (
         <div className={styles.empty}>
+          <div className={styles.emptyTiles} aria-hidden="true">
+            <span /><span /><span /><span />
+          </div>
           <div className={styles.emptyIcon} aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
               <path d="M3 8.5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z" />
@@ -125,6 +134,7 @@ export default async function MyRegistrationsPage({ params }) {
           )})}
         </ul>
       )}
-    </div>
+      </div>
+    </>
   )
 }

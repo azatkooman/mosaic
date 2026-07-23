@@ -1,5 +1,53 @@
+/* Page header band — gradient + floating mosaic tiles, like the home hero. */
+.pageHero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(44rem 20rem at 85% -40%, var(--pine-tint), transparent 70%),
+    radial-gradient(30rem 16rem at 0% 130%, var(--gold-tint), transparent 70%);
+  padding-block: var(--s-7) var(--s-6);
+}
+.pageHeroInner {
+  position: relative;
+  z-index: 1;
+}
+.pageHeroSub {
+  margin-top: var(--s-2);
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+}
+.heroTiles {
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10rem;
+  height: 10rem;
+  pointer-events: none;
+}
+.heroTiles span {
+  position: absolute;
+  border-radius: 26%;
+  opacity: 0.8;
+  animation: floaty 9s ease-in-out infinite;
+}
+.heroTiles span:nth-child(1) { width: 4rem;   height: 4rem;   right: 3rem;   top: 0;      background: var(--pine); }
+.heroTiles span:nth-child(2) { width: 2.6rem; height: 2.6rem; right: 0;      top: 3.4rem; background: var(--gold);  animation-delay: -2s; }
+.heroTiles span:nth-child(3) { width: 3rem;   height: 3rem;   right: 4.5rem; top: 4.5rem; background: var(--coral); animation-delay: -4s; }
+@media (max-width: 40rem) {
+  .heroTiles { display: none; }
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-12px) rotate(4deg); }
+}
+
 .empty {
-  margin-top: var(--s-4);
+  position: relative;
+  overflow: hidden;
+  margin-top: var(--s-5);
   padding: var(--s-8) var(--s-5);
   display: flex;
   flex-direction: column;
@@ -9,24 +57,59 @@
   border: 1px dashed var(--line-strong);
   border-radius: var(--r-lg);
   background:
-    radial-gradient(28rem 14rem at 50% -20%, var(--pine-tint), transparent 70%),
+    radial-gradient(30rem 15rem at 50% -10%, var(--pine-tint), transparent 70%),
     var(--surface);
   color: var(--ink-soft);
 }
 
+/* Faint decorative tiles drifting inside the panel. */
+.emptyTiles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.emptyTiles span {
+  position: absolute;
+  border-radius: 26%;
+  opacity: 0.14;
+  animation: floaty 11s ease-in-out infinite;
+}
+.emptyTiles span:nth-child(1) { width: 4rem; height: 4rem; left: 8%;  top: 18%; background: var(--pine); }
+.emptyTiles span:nth-child(2) { width: 2.6rem; height: 2.6rem; right: 12%; top: 28%; background: var(--gold); animation-delay: -3s; }
+.emptyTiles span:nth-child(3) { width: 3.2rem; height: 3.2rem; right: 18%; bottom: 14%; background: var(--coral); animation-delay: -6s; }
+.emptyTiles span:nth-child(4) { width: 2rem; height: 2rem; left: 18%; bottom: 20%; background: var(--sky); animation-delay: -8s; }
+
 .emptyIcon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 4rem;
-  height: 4rem;
+  width: 4.5rem;
+  height: 4.5rem;
   border-radius: var(--r-lg);
-  background: var(--pine-tint);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pine-tint) 60%, var(--surface)), var(--pine-tint));
   color: var(--pine-deep);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent);
+  animation: floaty 6s ease-in-out infinite;
+}
+/* Soft glowing halo behind the icon. */
+.emptyIcon::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--pine) 35%, transparent), transparent 65%);
+  filter: blur(10px);
+  animation: pulse 4s ease-in-out infinite;
 }
 .emptyIcon svg {
-  width: 2rem;
-  height: 2rem;
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 0.9; transform: scale(1.08); }
 }
 
 .emptyTitle {
@@ -84,6 +167,12 @@
   .regCard,
   .regCard:hover {
     transform: none;
+  }
+  .heroTiles span,
+  .emptyTiles span,
+  .emptyIcon,
+  .emptyIcon::after {
+    animation: none;
   }
 }
 
