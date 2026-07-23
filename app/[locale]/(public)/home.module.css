@@ -6,9 +6,22 @@
   border-bottom: 1px solid var(--line);
 }
 
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* A soft highlight band that sweeps across the headline, then rests. */
+@keyframes heroShine {
+  0%        { background-position: 160% 0; }
+  45%, 100% { background-position: -60% 0; }
+}
+
 .heroMark {
   font-size: var(--text-3xl);
   margin-bottom: var(--s-4);
+  opacity: 0;
+  animation: heroRise 650ms ease-out 40ms both;
 }
 
 .heroTitle {
@@ -17,6 +30,22 @@
   font-size: clamp(1.9rem, 4.5vw, 3.1rem);
   letter-spacing: -0.015em;
   max-inline-size: 22ch;
+  opacity: 0;
+  /* Mostly ink text with a moving brand-colored highlight → readable + motion */
+  background: linear-gradient(
+    100deg,
+    var(--ink) 0%, var(--ink) 42%,
+    var(--pine) 50%,
+    var(--ink) 58%, var(--ink) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 160% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: heroRise 650ms ease-out 160ms both,
+    heroShine 7s ease-in-out 1.1s infinite;
 }
 
 .heroSubtitle {
@@ -24,6 +53,23 @@
   color: var(--ink-soft);
   font-size: var(--text-lg);
   max-inline-size: 48ch;
+  opacity: 0;
+  animation: heroRise 650ms ease-out 300ms both;
+}
+
+/* Accessibility: honor reduced-motion — no animation, solid readable title. */
+@media (prefers-reduced-motion: reduce) {
+  .heroMark,
+  .heroTitle,
+  .heroSubtitle {
+    animation: none;
+    opacity: 1;
+  }
+  .heroTitle {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--ink);
+  }
 }
 
 .searchRow {
