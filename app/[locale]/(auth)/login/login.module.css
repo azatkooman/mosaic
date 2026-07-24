@@ -141,6 +141,39 @@
   gap: var(--s-3);
 }
 
+/* Gold sign-in buttons — DARK MODE ONLY. Light mode keeps the default
+   green/outlined styles. Dark text keeps contrast on gold. Covers both the
+   manual theme toggle (data-theme) and system dark preference. */
+:global(:root[data-theme='dark']) .providers :global(.btn),
+:global(:root[data-theme='dark']) .magic :global(.btn) {
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-deep) 100%);
+  color: #2a1d05 !important;
+  border-color: transparent;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--gold-deep) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent);
+}
+:global(:root[data-theme='dark']) .providers :global(.btn:hover:not(:disabled)),
+:global(:root[data-theme='dark']) .magic :global(.btn:hover:not(:disabled)) {
+  background: var(--gold-deep);
+  color: #2a1d05 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .providers :global(.btn),
+  :global(:root:not([data-theme='light'])) .magic :global(.btn) {
+    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-deep) 100%);
+    color: #2a1d05 !important;
+    border-color: transparent;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--gold-deep) 34%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent);
+  }
+  :global(:root:not([data-theme='light'])) .providers :global(.btn:hover:not(:disabled)),
+  :global(:root:not([data-theme='light'])) .magic :global(.btn:hover:not(:disabled)) {
+    background: var(--gold-deep);
+    color: #2a1d05 !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brandTiles span,
   .brandContent {
