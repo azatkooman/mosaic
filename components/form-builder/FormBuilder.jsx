@@ -52,6 +52,7 @@ export function FormBuilder({
   const [previewing, setPreviewing] = useState(false)
   const [previewAnswers, setPreviewAnswers] = useState({})
   const [previewTypeKey, setPreviewTypeKey] = useState(participantTypes[0]?.key ?? '')
+  const [editLocale, setEditLocale] = useState(defaultLocale)
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -61,6 +62,13 @@ export function FormBuilder({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Keep editLocale valid if supportedLocales changes.
+  useEffect(() => {
+    if (supportedLocales && !supportedLocales.includes(editLocale)) {
+      setEditLocale(defaultLocale)
+    }
+  }, [supportedLocales, defaultLocale, editLocale])
 
   // Debounced autosave of the draft version.
   useEffect(() => {
@@ -207,6 +215,22 @@ export function FormBuilder({
             )}
           </span>
           <span style={{ flex: 1 }} />
+          {supportedLocales.length > 1 && (
+            <div className={styles.localeSwitch} role="tablist" aria-label="Edit language">
+              {supportedLocales.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={editLocale === l}
+                  data-active={editLocale === l}
+                  onClick={() => setEditLocale(l)}
+                >
+                  {localeNames[l] ?? l}
+                </button>
+              ))}
+            </div>
+          )}
           <Button variant="ghost" size="sm" onClick={store.undo} aria-label="Undo">
             ↩
           </Button>
@@ -272,6 +296,7 @@ export function FormBuilder({
             defaultLocale={defaultLocale}
             supportedLocales={supportedLocales}
             localeNames={localeNames}
+            editLocale={editLocale}
             onChange={(patch) => store.updateQuestion(selected.id, patch)}
           />
         ) : (
