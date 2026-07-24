@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { applyThemeClient } from '@/lib/theme'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 /** Header light/dark toggle. Reads the theme that's actually applied (the
  *  data-theme attribute the server set, or the system preference), flips it,
  *  and persists via applyThemeClient (cookie + attribute → no flash on the
- *  next server render). */
+ *  next server render). When signed in it also saves to the profile so the
+ *  Profile → Appearance setting stays in sync with this toggle. */
 export function ThemeToggle({ label }) {
   const [dark, setDark] = useState(null)
+  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     const attr = document.documentElement.dataset.theme
@@ -18,10 +21,17 @@ export function ThemeToggle({ label }) {
     setDark(isDark)
   }, [])
 
-  function toggle() {
+  async function toggle() {
     const next = dark ? 'light' : 'dark'
     applyThemeClient(next)
     setDark(!dark)
+    // Keep the profile's Appearance setting in sync (signed-in users only).
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('profiles').update({ theme: next }).eq('id', user.id)
+    }
   }
 
   return (
