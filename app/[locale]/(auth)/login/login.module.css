@@ -9,7 +9,9 @@
   }
 }
 
-/* Left brand panel — deep green with a floating mosaic-tile motif. */
+/* Left brand panel — a fixed deep green (identical in light AND dark mode,
+   so the white text stays high-contrast; the theme tokens would otherwise
+   invert to a light teal in dark mode). */
 .brandPanel {
   position: relative;
   overflow: hidden;
@@ -17,7 +19,10 @@
   align-items: center;
   padding: var(--s-8) var(--s-7);
   color: #fff;
-  background: linear-gradient(155deg, var(--pine) 0%, var(--pine-deep) 100%);
+  background:
+    radial-gradient(30rem 26rem at 72% 20%, rgba(255, 255, 255, 0.10), transparent 62%),
+    linear-gradient(155deg, #16766a 0%, #0d473c 55%, #08302a 100%);
+  box-shadow: inset 0 0 9rem rgba(0, 0, 0, 0.22);
 }
 @media (max-width: 52rem) {
   .brandPanel {
@@ -47,6 +52,7 @@
   flex-direction: column;
   gap: var(--s-4);
   max-inline-size: 30rem;
+  animation: brandRise 700ms ease-out both;
 }
 .brandMark {
   font-size: var(--text-3xl);
@@ -54,15 +60,21 @@
 .brandHeadline {
   font-family: var(--font-display, inherit);
   font-weight: 500;
-  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
-  line-height: 1.1;
-  letter-spacing: -0.015em;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.18);
 }
 .brandSub {
   font-size: var(--text-lg);
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
   max-inline-size: 40ch;
+}
+
+@keyframes brandRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
 }
 
 @keyframes loginFloat {
@@ -130,7 +142,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brandTiles span {
+  .brandTiles span,
+  .brandContent {
     animation: none;
   }
 }
