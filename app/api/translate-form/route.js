@@ -64,7 +64,7 @@ export async function POST(request) {
   // organizer-picked custom languages translate too — not just the built-ins.
   const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
 
-  const { definition, source, targets } = body ?? {}
+  const { definition, source, targets, locales } = body ?? {}
   if (
     !definition ||
     typeof definition !== 'object' ||
@@ -75,13 +75,21 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-  const targetList = targets.filter((target) => supported.has(target) && target !== source)
+  const MAX_TARGETS = 5
+  const targetList = targets
+    .filter((target) => typeof target === 'string' && supported.has(target) && target !== source)
+    .slice(0, MAX_TARGETS)
   if (targetList.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
   }
 
+  const validLocales = Array.isArray(locales)
+    ? locales.filter((locale) => typeof locale === 'string' && supported.has(locale))
+    : []
+  const allowed = new Set([...supported, ...validLocales])
+
   const sourceStrings = new Set()
-  collectLocalizedStrings(definition, source, sourceStrings, supported)
+  collectLocalizedStrings(definition, source, sourceStrings, allowed)
   const strings = [...sourceStrings]
   if (strings.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
@@ -108,6 +116,6 @@ export async function POST(request) {
   }
 
   return NextResponse.json({
-    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict, supported),
+    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict, allowed),
   })
 }
