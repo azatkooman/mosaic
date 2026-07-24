@@ -255,6 +255,36 @@
   min-width: 0;
 }
 
+.localeSwitch {
+  display: flex;
+  gap: var(--s-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  max-width: 20rem; /* Give it a limit to scroll if space is tight */
+}
+
+.localeSwitch::-webkit-scrollbar {
+  display: none;
+}
+
+.localeSwitch button {
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  color: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.localeSwitch button[data-active='true'] {
+  border-color: currentColor;
+  font-weight: 600;
+}
+
 @media (max-width: 960px) {
   .builder {
     grid-template-columns: 1fr;
