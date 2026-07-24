@@ -91,6 +91,13 @@
   margin-inline: auto;
 }
 
+/* Centered, comfortably-narrow column for a single event's pages. */
+.eventContent {
+  max-inline-size: 64rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
 /* Event sub-navigation */
 .eventNav {
   display: flex;
