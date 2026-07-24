@@ -5,6 +5,7 @@ import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SignOutButton } from './SignOutButton'
 import { NavLink } from './NavLink'
+import { ThemeToggle } from './ThemeToggle'
 import styles from './shell.module.css'
 
 export async function SiteHeader() {
@@ -40,6 +41,7 @@ export async function SiteHeader() {
           {isAdmin && <NavLink href="/admin">{t('nav.adminConsole')}</NavLink>}
         </nav>
         <div className={styles.headerActions}>
+          <ThemeToggle label={t('common.toggleTheme')} />
           <LocaleSwitcher label={t('common.language')} />
           {user && (
             <Link href="/my/profile" className="btn btn-ghost btn-sm">

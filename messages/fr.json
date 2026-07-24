@@ -15,7 +15,8 @@
     "submit": "Envoyer",
     "search": "Rechercher",
     "actions": "Actions",
-    "optional": "facultatif"
+    "optional": "facultatif",
+    "toggleTheme": "Basculer entre le mode clair et sombre"
   },
   "nav": {
     "events": "Événements",
