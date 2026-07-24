@@ -9,6 +9,7 @@ import { eventPhase } from '@/lib/event-phase'
 import { Badge } from '@/components/ui'
 import { CancelParticipantButton } from './CancelParticipantButton'
 import { EditParticipantButton } from './EditParticipantButton'
+import { ParticipantTicket } from '@/components/tickets/ParticipantTicket'
 import styles from './myregs.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -107,6 +108,10 @@ export default async function MyRegistrationsPage({ params }) {
                     </span>
                     <span className={styles.rowActions}>
                       <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
+                      <ParticipantTicket
+                        participant={p}
+                        eventName={reg.events ? lt(reg.events.name, locale, reg.events.default_locale) : ''}
+                      />
                       {editable && p.status !== 'cancelled' && (
                         <EditParticipantButton
                           participant={{
