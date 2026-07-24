@@ -280,8 +280,9 @@ export function EventPageView({
   const showLangSwitch = availableLocales.length > 1
   const eventSlug = event.slug
   const isCustom = (code) => customCodes.includes(code)
-  const langLabel = (code) =>
-    isCustom(code) ? customLangs.find((c) => c.code === code)?.name || code : code.toUpperCase()
+  // Show the language code as an acronym (e.g. "EN", "PT") for every language,
+  // built-in and custom alike, so the switcher stays compact.
+  const langLabel = (code) => code.toUpperCase()
   // Built-in locales get their own route; custom ones ride on the current
   // route locale via a ?lang= param (they aren't platform routes).
   const langHref = (code) =>
