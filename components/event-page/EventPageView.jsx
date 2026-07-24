@@ -509,6 +509,7 @@ export function EventPageView({
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -547,6 +548,7 @@ export function EventPageView({
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -557,6 +559,7 @@ export function EventPageView({
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -605,6 +608,7 @@ export function EventPageView({
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -615,6 +619,7 @@ export function EventPageView({
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
