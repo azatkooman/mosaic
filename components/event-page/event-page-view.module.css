@@ -137,10 +137,13 @@
   inset: 0;
 }
 
-.heroBg img {
+.heroBg img,
+.heroBg video,
+.heroBg iframe {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border: 0;
 }
 
 .heroBg::after {
@@ -190,10 +193,14 @@
   opacity: 0.7;
 }
 
-/* Logo + language switcher bar at the top of the hero. */
+/* Logo + language switcher bar — floats over the hero (overlays the image)
+   instead of taking its own strip of height. */
 .heroTopBar {
-  position: relative;
-  z-index: 3;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -201,6 +208,23 @@
   padding: var(--s-4) var(--s-5);
   max-width: var(--container);
   margin-inline: auto;
+  pointer-events: none;
+}
+
+/* Only the actual controls are clickable, so the bar doesn't block the hero. */
+.heroTopBar > * {
+  pointer-events: auto;
+}
+
+.heroTopBar[data-bottom] {
+  top: auto;
+  bottom: 0;
+}
+
+/* Put the language switch on the image side (split hero) so it overlays the
+   image rather than the text half. */
+.heroTopBar[data-lang-side='left'] {
+  flex-direction: row-reverse;
 }
 
 .heroTopBar[data-logo-pos='center'] {
@@ -388,6 +412,9 @@
 @media (min-width: 56rem) {
   .aboutGrid {
     grid-template-columns: 1.1fr 0.9fr;
+  }
+  .aboutGrid[data-no-media] {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -782,6 +809,12 @@
   width: 100%;
 }
 
+/* Divider between the text and countdown can be turned off. */
+.heroCountdown[data-no-divider] {
+  border-top: 0;
+  padding-top: 0;
+}
+
 /* ---- split hero variant ---- */
 .heroSplit {
   position: relative;
@@ -791,14 +824,18 @@
 
 .heroSplitInner {
   display: grid;
-  gap: 0;
   align-items: stretch;
+  min-height: 20rem;
 }
 
 @media (min-width: 56rem) {
   .heroSplitInner {
-    grid-template-columns: 1.05fr 0.95fr;
-    gap: var(--s-7);
+    grid-template-columns: 1fr 1fr;
+    min-height: 32rem;
+  }
+  /* Image on the left → media takes the first column, text the second. */
+  .heroSplitInner[data-image-side='left'] .heroSplitMedia {
+    order: -1;
   }
 }
 
@@ -807,22 +844,28 @@
   justify-items: start;
   align-content: center;
   gap: var(--s-4);
-  padding-block: var(--s-8);
+  padding: var(--s-8) var(--s-6);
+  max-width: 40rem;
+  margin-inline: auto;
+  width: 100%;
 }
 
+/* Image fills its whole half of the hero, edge to edge (no floating box). */
 .heroSplitMedia {
   position: relative;
-  min-height: 22rem;
-  border-radius: var(--r-lg);
+  align-self: stretch;
+  min-height: 16rem;
   overflow: hidden;
-  align-self: center;
 }
 
-.heroSplitMedia img {
+.heroSplitMedia img,
+.heroSplitMedia video,
+.heroSplitMedia iframe {
   width: 100%;
   height: 100%;
-  min-height: 22rem;
   object-fit: cover;
+  display: block;
+  border: 0;
 }
 
 .heroSplitPlaceholder {
@@ -835,15 +878,15 @@
   );
 }
 
-/* In the split hero the text sits on light paper, so reset the white-on-dark
-   hero treatment for title/description/chip. */
-.heroSplit .heroTitle {
+/* Text side sits on light paper by default → dark text. When the organizer
+   sets a custom hero background, drop that so their colors/contrast win. */
+.heroSplit:not([data-has-bg]) .heroTitle {
   color: var(--ink);
 }
-.heroSplit .heroDescription {
+.heroSplit:not([data-has-bg]) .heroDescription {
   color: var(--ink-soft);
 }
-.heroSplit .heroChip {
+.heroSplit:not([data-has-bg]) .heroChip {
   background: var(--surface-sunken);
   border-color: var(--line);
   color: var(--ink-soft);

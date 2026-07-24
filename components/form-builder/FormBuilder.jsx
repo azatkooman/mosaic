@@ -25,57 +25,6 @@ import { SortableQuestionCard } from './SortableQuestionCard'
 import { QuestionInspector } from './QuestionInspector'
 import styles from './builder.module.css'
 
-// --- Auto-translate ------------------------------------------------------
-// Localized form fields (question label/help and option labels) are stored as
-// {en: "...", tg: "..."} maps. These helpers gather the source-language strings
-// and write machine translations into empty target slots (never overwriting).
-
-function collectFormStrings(definition, source, out) {
-  for (const q of definition.questions ?? []) {
-    for (const key of ['label', 'help']) {
-      const s = q[key]?.[source]
-      if (s && s.trim()) out.add(s)
-    }
-    for (const o of q.options ?? []) {
-      const s = o.label?.[source]
-      if (s && s.trim()) out.add(s)
-    }
-  }
-}
-
-// Fill empty target slots of one locale map from dict; returns a new map only
-// if something changed. dict: { [target]: Map(sourceString -> translated) }.
-function fillMap(map, source, targets, dict) {
-  const s = map?.[source]
-  if (!s || !s.trim()) return map
-  let next = map
-  for (const tgt of targets) {
-    if (!next[tgt] || !next[tgt].trim()) {
-      const tr = dict[tgt]?.get(s)
-      if (tr) {
-        if (next === map) next = { ...map }
-        next[tgt] = tr
-      }
-    }
-  }
-  return next
-}
-
-function applyFormTranslations(definition, source, targets, dict) {
-  const questions = (definition.questions ?? []).map((q) => {
-    const next = { ...q }
-    if (q.label) next.label = fillMap(q.label, source, targets, dict)
-    if (q.help) next.help = fillMap(q.help, source, targets, dict)
-    if (Array.isArray(q.options)) {
-      next.options = q.options.map((o) =>
-        o.label ? { ...o, label: fillMap(o.label, source, targets, dict) } : o
-      )
-    }
-    return next
-  })
-  return { ...definition, questions }
-}
-
 const QUESTION_TYPES = [
   'name', 'text', 'textarea', 'select', 'multiselect', 'radio', 'checkbox',
   'date', 'number', 'email', 'phone', 'address', 'file', 'section',
@@ -103,8 +52,7 @@ export function FormBuilder({
   const [previewing, setPreviewing] = useState(false)
   const [previewAnswers, setPreviewAnswers] = useState({})
   const [previewTypeKey, setPreviewTypeKey] = useState(participantTypes[0]?.key ?? '')
-  const [translateState, setTranslateState] = useState('idle') // idle|working|done|error
-  const [translateMsg, setTranslateMsg] = useState('')
+  const [editLocale, setEditLocale] = useState(defaultLocale)
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -114,6 +62,56 @@ export function FormBuilder({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Keep editLocale valid if supportedLocales changes.
+  useEffect(() => {
+    if (supportedLocales && !supportedLocales.includes(editLocale)) {
+      setEditLocale(defaultLocale)
+    }
+  }, [supportedLocales, defaultLocale, editLocale])
+
+  useEffect(() => {
+    if (!initialized.current) return
+    if (editLocale === defaultLocale) return
+    if (supportedLocales && !supportedLocales.includes(editLocale)) return
+
+    let cancelled = false
+
+    async function translateSelectedLocale() {
+      try {
+        const res = await fetch('/api/translate-form', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            definition,
+            source: defaultLocale,
+            targets: [editLocale],
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || cancelled) return
+
+        const nextDefinition = data?.translatedDefinition
+        if (!nextDefinition) return
+        const latestDefinition = useBuilderStore.getState().definition
+        if (JSON.stringify(latestDefinition) !== JSON.stringify(definition)) {
+          return
+        }
+        if (JSON.stringify(nextDefinition) !== JSON.stringify(latestDefinition)) {
+          store.replaceDefinition(nextDefinition)
+        }
+      } catch {
+        // Translation is best-effort; editing must keep working even if the
+        // API key is missing or the request fails.
+      }
+    }
+
+    translateSelectedLocale()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLocale, defaultLocale, supportedLocales])
 
   // Debounced autosave of the draft version.
   useEffect(() => {
@@ -136,57 +134,6 @@ export function FormBuilder({
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, dirty, versionId])
-
-  // Machine-translate the form's question text from the source (default)
-  // language into every other event language, filling only empty slots. The
-  // organizer reviews per-language via the question tabs, then it autosaves.
-  async function translateAll() {
-    const source = defaultLocale
-    const targets = (supportedLocales ?? []).filter((l) => l !== source)
-    if (!targets.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNoTargets'))
-      return
-    }
-    const set = new Set()
-    collectFormStrings(definition, source, set)
-    const strings = [...set]
-    if (!strings.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNothing'))
-      return
-    }
-    setTranslateState('working')
-    setTranslateMsg('')
-    try {
-      const res = await fetch('/api/translate-event', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ strings, source, targets }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setTranslateState('error')
-        setTranslateMsg(data?.error === 'no_api_key' ? t('translateNoKey') : t('translateError'))
-        return
-      }
-      const dict = {}
-      for (const tgt of targets) {
-        const arr = data.translations?.[tgt]
-        if (Array.isArray(arr)) {
-          const m = new Map()
-          strings.forEach((s, i) => m.set(s, arr[i]))
-          dict[tgt] = m
-        }
-      }
-      store.replaceDefinition(applyFormTranslations(definition, source, targets, dict))
-      setTranslateState('done')
-      setTranslateMsg(t('translateDoneForm'))
-    } catch {
-      setTranslateState('error')
-      setTranslateMsg(t('translateError'))
-    }
-  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -311,32 +258,28 @@ export function FormBuilder({
             )}
           </span>
           <span style={{ flex: 1 }} />
+          {supportedLocales.length > 1 && (
+            <div className={styles.localeSwitch} role="tablist" aria-label="Edit language">
+              {supportedLocales.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={editLocale === l}
+                  data-active={editLocale === l}
+                  onClick={() => setEditLocale(l)}
+                >
+                  {localeNames[l] ?? l}
+                </button>
+              ))}
+            </div>
+          )}
           <Button variant="ghost" size="sm" onClick={store.undo} aria-label="Undo">
             ↩
           </Button>
           <Button variant="ghost" size="sm" onClick={store.redo} aria-label="Redo">
             ↪
           </Button>
-          {supportedLocales?.length > 1 && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={translateState === 'working'}
-              onClick={translateAll}
-              title={t('translateAllHelp')}
-            >
-              {translateState === 'working' ? t('translating') : t('translateAll')}
-            </Button>
-          )}
-          {translateMsg && (
-            <span
-              aria-live="polite"
-              className={styles.saveState}
-              style={{ color: translateState === 'error' ? 'var(--danger)' : undefined }}
-            >
-              {translateMsg}
-            </span>
-          )}
           <Button
             variant="secondary"
             size="sm"
@@ -396,6 +339,7 @@ export function FormBuilder({
             defaultLocale={defaultLocale}
             supportedLocales={supportedLocales}
             localeNames={localeNames}
+            editLocale={editLocale}
             onChange={(patch) => store.updateQuestion(selected.id, patch)}
           />
         ) : (

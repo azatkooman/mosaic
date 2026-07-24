@@ -52,6 +52,12 @@ export const useBuilderStore = create((set, get) => ({
     })
   },
 
+  replaceDefinition(nextDefinition) {
+    const { definition } = get()
+    if (definition === nextDefinition) return
+    get()._commit(nextDefinition)
+  },
+
   removeQuestion(id) {
     const def = get().definition
     // Also strip visibility rules that reference the deleted question —
@@ -78,12 +84,6 @@ export const useBuilderStore = create((set, get) => ({
     const [moved] = questions.splice(from, 1)
     questions.splice(to, 0, moved)
     get()._commit({ ...def, questions })
-  },
-
-  // Replace the whole definition in one commit (undoable). Used by
-  // auto-translate, which fills many localized slots at once.
-  replaceDefinition(nextDefinition) {
-    get()._commit(nextDefinition)
   },
 
   select(id) {
