@@ -1,0 +1,69 @@
+/* Wide screens show the full role × privilege matrix; narrow screens (phones
+   and the medium band where the matrix would re-cramp) show one card per role
+   with the privileges as a toggle list. Breakpoint matches the team page's
+   content cap so the table only appears when it has room to breathe. */
+
+.tableView {
+  display: block;
+}
+
+.cardView {
+  display: none;
+}
+
+@media (max-width: 56rem) {
+  .tableView {
+    display: none;
+  }
+
+  .cardView {
+    display: grid;
+    gap: var(--s-4);
+  }
+}
+
+.card {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+.sub {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+.privList {
+  display: grid;
+  gap: var(--s-2);
+}
+
+/* Two columns of toggles once the card is wide enough for it. */
+@media (min-width: 26rem) {
+  .privList {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* A privilege toggle that can't be changed reads as static, not clickable. */
+.privList .choice-row[data-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}

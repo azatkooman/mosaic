@@ -104,6 +104,23 @@
   min-width: 0;
 }
 
+/* Mobile preview: constrain the rendered page to a phone width, centered. */
+.frame[data-device='mobile'] {
+  background: var(--surface-sunken);
+  padding: var(--s-4);
+  display: flex;
+  justify-content: center;
+}
+
+.frame[data-device='mobile'] .frameInner {
+  width: 390px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+
 /* ---- customize panel ---- */
 
 .panel {
@@ -228,6 +245,35 @@
 
 .imageAdjust > :last-child:nth-child(odd) {
   grid-column: 1 / -1;
+}
+
+/* Read-only language info (control lives in Settings) */
+.langInfo {
+  display: grid;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.langDefault {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.customLangRow {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.langSettingsLink {
+  display: inline-block;
+  margin-bottom: var(--s-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--pine-deep);
 }
 
 /* Section reorder list */

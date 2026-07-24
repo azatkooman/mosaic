@@ -18,7 +18,7 @@ export default async function AdminRolesPage({ params }) {
   ])
 
   return (
-    <div className={styles.page}>
+    <div className={styles.pageWide}>
       <div>
         <h1 className="page-title">{t('roles')}</h1>
         <p style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-sm)' }}>

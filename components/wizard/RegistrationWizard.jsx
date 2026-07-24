@@ -6,6 +6,7 @@ import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { extractIdentity } from '@/lib/form-engine/identity'
+import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
 import styles from './wizard.module.css'
@@ -18,9 +19,12 @@ import styles from './wizard.module.css'
  *
  * Props: event row, participantTypes (with joined form + current version
  * definition — null when the type relies on a mode form), modeForms
- * ({ single?, family? } definitions that override per-type forms), userId.
+ * ({ single?, family? } definitions that override per-type forms), userId,
+ * profile ({ full_name, email } of the signed-in registrant, used to prefill
+ * single-mode registrations — in family mode person #1 may not be the
+ * account holder, so no prefill there).
  */
-export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId }) {
+export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId, profile = null }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
   const tMyRegs = useTranslations('myRegs')
@@ -118,9 +122,18 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
       return
     }
     // Keep an already-entered person of the same type on back-and-forth.
+    // A fresh person starts with name/email seeded from the registrant's
+    // profile — single mode means they're registering themself.
     setPeople((prev) => {
       const existing = prev.find((p) => p.participantTypeKey === singleTypeKey)
-      return [existing ?? { participantTypeKey: singleTypeKey, answers: {} }]
+      if (existing) return [existing]
+      const pt = typeByKey.get(singleTypeKey)
+      return [
+        {
+          participantTypeKey: singleTypeKey,
+          answers: prefillIdentityAnswers(definitionFor(pt, 'single'), pt.key, profile),
+        },
+      ]
     })
     setErrors({})
     setPersonIndex(0)

@@ -8,9 +8,10 @@ import { defaultFormQuestions } from '@/lib/form-defaults'
 import { Button, Dialog, Field, NativeSelect, RadioGroup, RadioRow } from '@/components/ui'
 import styles from '../../../console.module.css'
 
+// The mode value stays 'family' internally; the display title says "Group".
 const MODE_TITLES = {
   single: 'Single response form',
-  family: 'Family response form',
+  family: 'Group response form',
 }
 
 /** Creates a mode-scoped form (single/family response form). When other

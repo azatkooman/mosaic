@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { lt } from '@/lib/i18n/locales'
+import { lt, eventLocales, LOCALES } from '@/lib/i18n/locales'
+import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,7 @@ export default async function RegisterPage({ params }) {
   const { slug, locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations('wizard')
+  const tCommon = await getTranslations('common')
 
   const supabase = await getSupabaseServerClient()
   const {
@@ -34,7 +36,7 @@ export default async function RegisterPage({ params }) {
   // One registration per account per event (the submit RPC enforces this
   // authoritatively) — send returning registrants to their registration
   // instead of the wizard.
-  const [{ data: existing }, { data: globalRoles }, { data: teamRoles }] =
+  const [{ data: existing }, { data: globalRoles }, { data: teamRoles }, { data: profile }] =
     await Promise.all([
       supabase
         .from('registrations')
@@ -47,6 +49,11 @@ export default async function RegisterPage({ params }) {
         .select('status, event_roles:role_id ( can_add_registrants )')
         .eq('event_id', event.id)
         .eq('user_id', user.id),
+      supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle(),
     ])
   // Mirrors the RPC's exemption: registrars (add-registrants privilege or a
   // global role) may submit multiple registrations on behalf of others.
@@ -122,8 +129,17 @@ export default async function RegisterPage({ params }) {
         : null,
     }))
 
+  // The registration form is built-in locales only; custom languages are
+  // event-landing-page content and can't be routed to here.
+  const localeOptions = eventLocales(event).filter((l) => LOCALES.includes(l))
+
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+      {localeOptions.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-3)' }}>
+          <LocaleSwitcher label={tCommon('language')} locales={localeOptions} />
+        </div>
+      )}
       <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
         {t('title', { event: lt(event.name, locale, event.default_locale) })}
       </h1>
@@ -132,6 +148,7 @@ export default async function RegisterPage({ params }) {
         participantTypes={participantTypes}
         modeForms={modeForms}
         userId={user.id}
+        profile={profile}
       />
     </div>
   )

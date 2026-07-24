@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { lt } from '@/lib/i18n/locales'
@@ -13,14 +14,23 @@ export function SortableQuestionCard({
   locale,
   defaultLocale,
   typeLabel,
+  participantTypes = [],
   selected,
   onSelect,
   onRemove,
 }) {
+  const t = useTranslations('console')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: q.id })
 
   const label = lt(q.label, locale, defaultLocale)
+  // Show the human type names in the summary, not the internal keys.
+  const typeNames = (q.participantTypes ?? [])
+    .map((k) => {
+      const pt = participantTypes.find((p) => p.key === k)
+      return pt ? lt(pt.name, locale, defaultLocale) || k : k
+    })
+    .join(', ')
   // Unlabeled questions still need something visible to click on.
   const previewQuestion = label ? q : { ...q, label: { [locale]: '…' } }
 
@@ -60,7 +70,21 @@ export function SortableQuestionCard({
         <span className={styles.questionMeta}>
           {typeLabel}
           {q.visibleIf?.rules?.length ? ' · ⑂' : ''}
-          {q.participantTypes?.length ? ` · ${q.participantTypes.join(', ')}` : ''}
+          {q.participantTypes?.length ? ` · ${typeNames}` : ''}
+          {q.type === 'date' && (
+            <>
+              {' '}
+              <span
+                className="tip tip-right"
+                data-tip={t('dateFormatHint')}
+                tabIndex={0}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={t('dateFormatHint')}
+              >
+                ⓘ
+              </span>
+            </>
+          )}
         </span>
         {/* Live preview of what a respondent sees; inert so clicks select the card. */}
         <div className={styles.questionPreview} inert>

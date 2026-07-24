@@ -2,13 +2,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
-  max-inline-size: 40rem;
+  /* Wide enough for the role matrix to breathe; narrower blocks (invite form,
+     member/request tables) cap themselves below. */
+  max-inline-size: 56rem;
 }
 
 .addRow {
   display: flex;
   align-items: flex-end;
   gap: var(--s-3);
+  max-inline-size: 40rem;
 }
 
 .addRow > :first-child {

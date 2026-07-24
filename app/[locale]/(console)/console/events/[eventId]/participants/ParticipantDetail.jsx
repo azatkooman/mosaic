@@ -5,6 +5,9 @@ import { useLocale, useTranslations } from 'next-intl'
 import { lt } from '@/lib/i18n/locales'
 import { visibleQuestions, appliesToType } from '@/lib/form-engine/visibility'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
+import { formatStructuredAnswer } from '@/lib/form-engine/format'
+import { formatDateValue } from '@/lib/dates'
+import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Badge, Button, Field, Input } from '@/components/ui'
 import styles from './participants.module.css'
@@ -26,6 +29,7 @@ export function ParticipantDetail({
 }) {
   const t = useTranslations()
   const locale = useLocale()
+  const dateFmt = useDateFormatPrefs()
 
   const [editing, setEditing] = useState(false)
   const [firstName, setFirstName] = useState(participant.first_name ?? '')
@@ -154,7 +158,7 @@ export function ParticipantDetail({
                 .map((q) => (
                   <div key={q.id}>
                     <dt>{lt(q.label, locale)}</dt>
-                    <dd>{renderAnswer(participant.answers?.[q.id], q, locale, t)}</dd>
+                    <dd>{renderAnswer(participant.answers?.[q.id], q, locale, t, dateFmt)}</dd>
                   </div>
                 ))}
             </dl>
@@ -183,8 +187,13 @@ export function ParticipantDetail({
   )
 }
 
-function renderAnswer(value, question, locale, t) {
+function renderAnswer(value, question, locale, t, dateFmt) {
   if (value == null || value === '') return '—'
+  // Structured answers (name / address / phone) are objects — render them as
+  // text instead of letting them fall through to String() → "[object Object]".
+  const structured = formatStructuredAnswer(question, value)
+  if (structured !== null) return structured || '—'
+  if (question.type === 'date') return formatDateValue(value, locale, dateFmt) || '—'
   if (question.type === 'checkbox') return value ? t('status.confirmed') : '—'
   if (Array.isArray(value)) {
     if (value.length === 0) return '—'

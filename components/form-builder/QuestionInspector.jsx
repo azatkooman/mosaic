@@ -10,10 +10,6 @@ import {
   NativeSelect,
   Checkbox,
   Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
 } from '@/components/ui'
 import styles from './builder.module.css'
 
@@ -27,11 +23,19 @@ export function QuestionInspector({
   allQuestions,
   participantTypes,
   defaultLocale,
+  supportedLocales,
+  localeNames,
+  editLocale,
   onChange,
 }) {
   const t = useTranslations('console')
   const tr = useTranslations('runtime')
-  const [editLocale, setEditLocale] = useState(defaultLocale)
+  // Author only in the languages this event offers; fall back to the full
+  // set if the caller didn't scope them.
+  const locales = supportedLocales?.length ? supportedLocales : LOCALES
+  // Display name for a language code — custom languages aren't in LOCALE_NAMES,
+  // so fall back to the map passed from the event, then the raw code.
+  const nameOf = (l) => localeNames?.[l] ?? LOCALE_NAMES[l] ?? l
 
   function setAddressPart(key, patch) {
     const current = q.addressParts ?? DEFAULT_ADDRESS_PARTS
@@ -92,37 +96,26 @@ export function QuestionInspector({
   return (
     <div className={styles.inspectorBody}>
       {/* Localized text */}
-      <Tabs value={editLocale} onValueChange={setEditLocale}>
-        <TabsList>
-          {LOCALES.map((l) => (
-            <TabsTrigger key={l} value={l}>{l.toUpperCase()}</TabsTrigger>
-          ))}
-        </TabsList>
-        {LOCALES.map((l) => (
-          <TabsContent key={l} value={l}>
-            <div className={styles.inspectorSection}>
-              <Field label={`${t('questionLabel')} (${LOCALE_NAMES[l]})`}>
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    value={q.label?.[l] ?? ''}
-                    onChange={(e) => setLocalized('label', e.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={`${t('helpText')} (${LOCALE_NAMES[l]})`}>
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    value={q.help?.[l] ?? ''}
-                    onChange={(e) => setLocalized('help', e.target.value)}
-                  />
-                )}
-              </Field>
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      <div className={styles.inspectorSection}>
+        <Field label={`${t('questionLabel')} (${nameOf(editLocale)})`}>
+          {({ id }) => (
+            <Input
+              id={id}
+              value={q.label?.[editLocale] ?? ''}
+              onChange={(e) => setLocalized('label', e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={`${t('helpText')} (${nameOf(editLocale)})`}>
+          {({ id }) => (
+            <Input
+              id={id}
+              value={q.help?.[editLocale] ?? ''}
+              onChange={(e) => setLocalized('help', e.target.value)}
+            />
+          )}
+        </Field>
+      </div>
 
       {/* Required */}
       {q.type !== 'section' && (

@@ -2,7 +2,7 @@
 
 import { Fragment } from 'react'
 import { useTranslations } from 'next-intl'
-import { lt } from '@/lib/i18n/locales'
+import { lt, eventLocales } from '@/lib/i18n/locales'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
 import { eventMediaUrl } from '@/lib/storage'
 import { StatIcon } from './stat-icons'
@@ -136,12 +136,23 @@ function RegisterCta({ editable, registerHref, label }) {
  * The public event landing page. Rendered by the public route AND by the
  * console's Event Page tab (editable=true adds hover pencils per section).
  */
-export function EventPageView({ event, locale, registerHref, editable = false, onEditSection }) {
+export function EventPageView({
+  event,
+  locale,
+  contentLocale,
+  registerHref,
+  editable = false,
+  onEditSection,
+}) {
   const t = useTranslations('event')
   const content = event.page_content ?? {}
   const dl = event.default_locale
+  // `locale` is a real platform locale (used for dates/number formatting);
+  // `contentLocale` is what the organizer's text is resolved in — may be a
+  // custom language code that Intl doesn't know, so it never touches dates.
+  const cl = contentLocale || locale
 
-  const L = (map) => lt(map, locale, dl)
+  const L = (map) => lt(map, cl, dl)
 
   const theme = content.theme ?? {}
   const hero = content.hero ?? {}
@@ -212,6 +223,8 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const pageStyle = {}
   if (theme.page_bg) pageStyle['--ep-bg'] = theme.page_bg
   if (theme.text_color) pageStyle['--ep-text'] = theme.text_color
+  if (theme.primary_color) pageStyle['--ep-primary'] = theme.primary_color
+  if (theme.accent_color) pageStyle['--ep-accent'] = theme.accent_color
   if (theme.btn_bg) pageStyle['--ep-btn-bg'] = theme.btn_bg
   if (theme.btn_text) pageStyle['--ep-btn-text'] = theme.btn_text
   if (theme.body_font && FONT_FAMILIES[theme.body_font]) {
@@ -250,6 +263,54 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   )
   const registerButton = (
     <RegisterCta editable={editable} registerHref={registerHref} label={t('register')} />
+  )
+
+  // Logo + language switcher bar. Position controls horizontal alignment,
+  // placement puts the bar at the top or bottom of the hero.
+  const logo = content.logo ?? {}
+  const logoUrl = eventMediaUrl(logo.path)
+  const logoPos = ['left', 'center', 'right'].includes(logo.position) ? logo.position : 'left'
+  const logoAtBottom = logo.placement === 'bottom'
+  // Custom (organizer-defined) languages, e.g. { code: 'pt', name: 'Português' }.
+  const customLangs = Array.isArray(content.i18n?.custom) ? content.i18n.custom : []
+  const customCodes = customLangs.map((c) => c.code)
+  // Shared with the editor and the rest of the console so every surface agrees
+  // on which languages the event offers.
+  const availableLocales = eventLocales(event)
+  const showLangSwitch = availableLocales.length > 1
+  const eventSlug = event.slug
+  const isCustom = (code) => customCodes.includes(code)
+  const langLabel = (code) =>
+    isCustom(code) ? customLangs.find((c) => c.code === code)?.name || code : code.toUpperCase()
+  // Built-in locales get their own route; custom ones ride on the current
+  // route locale via a ?lang= param (they aren't platform routes).
+  const langHref = (code) =>
+    isCustom(code) ? `/${locale}/events/${eventSlug}?lang=${code}` : `/${code}/events/${eventSlug}`
+
+  const heroTopBar = (logoUrl || showLangSwitch) && (
+    <div className={styles.heroTopBar} data-logo-pos={logoPos}>
+      {logoUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img className={styles.heroLogo} src={logoUrl} alt="" />
+      ) : (
+        <span />
+      )}
+      {showLangSwitch && (
+        <nav className={styles.langSwitch} aria-label="Language">
+          {availableLocales.map((l) =>
+            editable ? (
+              <span key={l} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
+              </span>
+            ) : (
+              <a key={l} href={langHref(l)} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
+              </a>
+            )
+          )}
+        </nav>
+      )}
+    </div>
   )
 
   const countdownTone = coverUrl
@@ -563,10 +624,16 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
       style={pageStyle}
       data-custom-bg={theme.page_bg ? '' : undefined}
       data-custom-text={theme.text_color ? '' : undefined}
+      data-scale={theme.text_scale && theme.text_scale !== 'normal' ? theme.text_scale : undefined}
+      data-radius={theme.radius && theme.radius !== 'normal' ? theme.radius : undefined}
+      data-width={theme.width && theme.width !== 'normal' ? theme.width : undefined}
+      data-density={theme.density && theme.density !== 'normal' ? theme.density : undefined}
+      data-btn-style={theme.btn_style && theme.btn_style !== 'fill' ? theme.btn_style : undefined}
     >
       {/* ---- Hero ---- */}
       {heroVariant === 'split' ? (
         <Section section="hero" className={styles.heroSplit} {...sectionProps}>
+          {!logoAtBottom && heroTopBar}
           <div className={`container ${styles.heroSplitInner}`}>
             <div className={styles.heroSplitText}>{heroBody}</div>
             <div className={styles.heroSplitMedia}>
@@ -578,6 +645,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
               )}
             </div>
           </div>
+          {logoAtBottom && heroTopBar}
         </Section>
       ) : (
         <Section
@@ -600,12 +668,14 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
           {coverUrl && heroTint && (
             <div className={styles.heroTint} style={{ background: heroTint }} aria-hidden="true" />
           )}
+          {!logoAtBottom && heroTopBar}
           <div
             className={`container ${styles.heroInner}`}
             data-align={theme.title_align || undefined}
           >
             {heroBody}
           </div>
+          {logoAtBottom && heroTopBar}
         </Section>
       )}
 
