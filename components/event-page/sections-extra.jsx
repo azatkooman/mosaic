@@ -70,9 +70,16 @@ function useSectionProps(editable, onEditSection) {
   return { editable, onEditSection, editLabel: t('edit') }
 }
 
-function Heading({ text, style, centered }) {
+function Heading({ text, style, centered, defaultAlign }) {
+  const align = style?.textAlign || defaultAlign || (centered ? 'center' : undefined)
   return (
-    <h2 className={`${styles.title} ${centered ? styles.centered : ''}`} style={style}>
+    <h2
+      className={styles.title}
+      style={{
+        ...style,
+        ...(align ? { textAlign: align } : {}),
+      }}
+    >
       {text}
     </h2>
   )
@@ -82,7 +89,7 @@ const headingStyle = (hs) => textStyle(hs ?? {})
 
 /* ---------------- Tracks ---------------- */
 
-export function TracksSection({ content = {}, locale, defaultLocale, editable, onEditSection }) {
+export function TracksSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
@@ -97,7 +104,7 @@ export function TracksSection({ content = {}, locale, defaultLocale, editable, o
       {...sp}
     >
       <div className="container">
-        <Heading text={L(content.heading) || t('tracksDefault')} style={headingStyle(content.heading_style)} />
+        <Heading text={L(content.heading) || t('tracksDefault')} style={headingStyle(content.heading_style)} defaultAlign={defaultAlign} />
         <div className={styles.trackGrid}>
           {items.map((it, i) => {
             const color = it.color || TRACK_COLORS[i % TRACK_COLORS.length]
@@ -119,7 +126,7 @@ export function TracksSection({ content = {}, locale, defaultLocale, editable, o
 
 /* ---------------- Testimonials ---------------- */
 
-export function TestimonialsSection({ content = {}, locale, defaultLocale, editable, onEditSection }) {
+export function TestimonialsSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
   const items = content.items ?? []
@@ -138,7 +145,7 @@ export function TestimonialsSection({ content = {}, locale, defaultLocale, edita
     >
       <div className="container">
         {headingText && (
-          <Heading text={headingText} style={headingStyle(content.heading_style)} centered />
+          <Heading text={headingText} style={headingStyle(content.heading_style)} centered defaultAlign={defaultAlign} />
         )}
         {minimal ? (
           <div className={styles.quoteMinimalList}>
@@ -156,7 +163,7 @@ export function TestimonialsSection({ content = {}, locale, defaultLocale, edita
         ) : (
           <div className={styles.quoteGrid}>
             {items.map((it) => (
-              <figure key={it.id} className={styles.quoteCard}>
+              <figure key={it.id} className={styles.quoteCard} style={content.card_bg ? { background: content.card_bg } : undefined}>
                 <blockquote className={styles.quoteText}>{L(it.quote)}</blockquote>
                 <figcaption className={styles.quoteMeta}>
                   {it.author && <strong>{it.author}</strong>}
@@ -173,7 +180,7 @@ export function TestimonialsSection({ content = {}, locale, defaultLocale, edita
 
 /* ---------------- Gallery ---------------- */
 
-export function GallerySection({ content = {}, locale, defaultLocale, editable, onEditSection }) {
+export function GallerySection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
@@ -188,7 +195,7 @@ export function GallerySection({ content = {}, locale, defaultLocale, editable, 
       {...sp}
     >
       <div className="container">
-        <Heading text={L(content.heading) || t('galleryDefault')} style={headingStyle(content.heading_style)} />
+        <Heading text={L(content.heading) || t('galleryDefault')} style={headingStyle(content.heading_style)} defaultAlign={defaultAlign} />
         <div className={styles.galleryGrid}>
           {items.map((it, i) => {
             const video = videoEmbedSrc(it.video_url)
@@ -220,7 +227,7 @@ export function GallerySection({ content = {}, locale, defaultLocale, editable, 
 
 /* ---------------- FAQ ---------------- */
 
-export function FaqSection({ content = {}, locale, defaultLocale, editable, onEditSection }) {
+export function FaqSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
@@ -239,6 +246,7 @@ export function FaqSection({ content = {}, locale, defaultLocale, editable, onEd
           text={L(content.heading) || t('faqDefault')}
           style={headingStyle(content.heading_style)}
           centered
+          defaultAlign={defaultAlign}
         />
         <div className={styles.faqList}>
           {items.map((it) => (
@@ -258,7 +266,7 @@ export function FaqSection({ content = {}, locale, defaultLocale, editable, onEd
 
 /* ---------------- Map / Location ---------------- */
 
-export function MapSection({ content = {}, locale, defaultLocale, editable, onEditSection }) {
+export function MapSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
   const L = (m) => lt(m, locale, defaultLocale)
@@ -276,7 +284,7 @@ export function MapSection({ content = {}, locale, defaultLocale, editable, onEd
       {...sp}
     >
       <div className="container">
-        <Heading text={L(content.heading) || t('mapDefault')} style={headingStyle(content.heading_style)} />
+        <Heading text={L(content.heading) || t('mapDefault')} style={headingStyle(content.heading_style)} defaultAlign={defaultAlign} />
         <div className={styles.mapGrid}>
           <div className={styles.mapText}>
             {address && <p className={styles.mapAddress}>{address}</p>}
