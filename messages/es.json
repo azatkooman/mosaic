@@ -16,7 +16,8 @@
     "search": "Buscar",
     "actions": "Acciones",
     "optional": "opcional",
-    "toggleTheme": "Cambiar entre modo claro y oscuro"
+    "toggleTheme": "Cambiar entre modo claro y oscuro",
+    "menu": "Menú"
   },
   "nav": {
     "events": "Eventos",

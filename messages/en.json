@@ -16,7 +16,8 @@
     "search": "Search",
     "actions": "Actions",
     "optional": "optional",
-    "toggleTheme": "Switch between light and dark mode"
+    "toggleTheme": "Switch between light and dark mode",
+    "menu": "Menu"
   },
   "nav": {
     "events": "Events",
