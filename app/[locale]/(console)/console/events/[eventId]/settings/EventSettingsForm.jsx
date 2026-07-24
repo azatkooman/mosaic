@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -38,7 +38,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [customLangs, setCustomLangs] = useState(
     Array.isArray(event.page_content?.i18n?.custom) ? event.page_content.i18n.custom : []
   )
-  const [newLangName, setNewLangName] = useState(null) // null = add form closed
+  // Add-language picker: search over the Google-supported languages.
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [langQuery, setLangQuery] = useState('')
+  const [allLanguages, setAllLanguages] = useState([])
   const [slug, setSlug] = useState(event.slug)
   const [timezone, setTimezone] = useState(event.timezone)
   const [startsAt, setStartsAt] = useState(toLocalInput(event.starts_at, event.timezone))
@@ -56,6 +59,17 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [publishError, setPublishError] = useState(null)
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
+
+  // Load the languages Google Translate supports (fetched + cached server-side)
+  // for the add-language picker. Falls back to an empty list on failure.
+  useEffect(() => {
+    let active = true
+    fetch('/api/translate-languages')
+      .then((r) => (r.ok ? r.json() : { languages: [] }))
+      .then((d) => { if (active) setAllLanguages(d.languages ?? []) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   // Serialize the Save-button fields so we can tell whether there are unsaved
   // edits (participant types persist immediately and are excluded). Slug is
@@ -103,23 +117,36 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     )
   }
 
-  // Add an organizer-defined language: derive a unique code from the name and
-  // stage it. It's persisted into page_content.i18n on save.
-  function addCustomLang(rawName) {
-    const name = (rawName || '').trim()
-    if (!name) return
-    const taken = new Set([...LOCALES, ...customLangs.map((c) => c.code)])
-    const base = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'lang'
-    let code = base
-    let n = 2
-    while (taken.has(code)) code = `${base}${n++}`
-    setCustomLangs((prev) => [...prev, { code, name }])
-    setNewLangName(null)
+  // Add an organizer-picked language from the Google-supported list. Its code
+  // is the real Google code (e.g. 'tg', 'yo'), so auto-translate works as-is.
+  // Persisted into page_content.i18n on save.
+  function addCustomLang(lang) {
+    if (!lang?.code || LOCALES.includes(lang.code)) return
+    setCustomLangs((prev) =>
+      prev.some((c) => c.code === lang.code)
+        ? prev
+        : [...prev, { code: lang.code, name: lang.name }]
+    )
+    setLangQuery('')
   }
 
   function removeCustomLang(code) {
     setCustomLangs((prev) => prev.filter((c) => c.code !== code))
   }
+
+  // Languages available to add: Google-supported, minus the built-ins (managed
+  // by the checklist) and any already added, filtered by the search query.
+  const takenCodes = new Set([...LOCALES, ...customLangs.map((c) => c.code)])
+  const langQ = langQuery.trim().toLowerCase()
+  const languageChoices = allLanguages
+    .filter((l) => !takenCodes.has(l.code))
+    .filter(
+      (l) =>
+        !langQ ||
+        l.name.toLowerCase().includes(langQ) ||
+        l.code.toLowerCase().includes(langQ)
+    )
+    .slice(0, 50)
 
   async function save(slugValue = slug) {
     setSlugWarnOpen(false)
@@ -271,30 +298,53 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
               </Button>
             </div>
           ))}
-          {newLangName === null ? (
-            <Button variant="secondary" size="sm" onClick={() => setNewLangName('')}>
+          {!pickerOpen ? (
+            <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
               {t('addLanguage')}
             </Button>
           ) : (
-            <div className={styles.addLangForm}>
+            <div className={styles.langPicker}>
               <Input
                 autoFocus
-                placeholder={t('languageNamePlaceholder')}
-                value={newLangName}
-                onChange={(e) => setNewLangName(e.target.value)}
+                placeholder={t('searchLanguages')}
+                value={langQuery}
+                onChange={(e) => setLangQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') addCustomLang(newLangName)
-                  if (e.key === 'Escape') setNewLangName(null)
+                  if (e.key === 'Escape') {
+                    setPickerOpen(false)
+                    setLangQuery('')
+                  }
                 }}
               />
-              <div className={styles.addLangActions}>
-                <Button size="sm" disabled={!newLangName.trim()} onClick={() => addCustomLang(newLangName)}>
-                  {t('addLanguageConfirm')}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setNewLangName(null)}>
-                  {t('cancel')}
-                </Button>
+              <div className={styles.langResults}>
+                {languageChoices.length === 0 ? (
+                  <p className="field-help" style={{ padding: 'var(--s-2)' }}>
+                    {t('noLanguageMatches')}
+                  </p>
+                ) : (
+                  languageChoices.map((l) => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      className={styles.langResult}
+                      onClick={() => addCustomLang(l)}
+                    >
+                      <span>{l.name}</span>
+                      <span className={styles.langCode}>{l.code}</span>
+                    </button>
+                  ))
+                )}
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setPickerOpen(false)
+                  setLangQuery('')
+                }}
+              >
+                {t('done')}
+              </Button>
             </div>
           )}
           <p className="field-help">{t('customLanguageHelp')}</p>

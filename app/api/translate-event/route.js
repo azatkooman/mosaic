@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-
-const SUPPORTED = new Set(['en', 'es', 'fr', 'ru', 'uk'])
+import { getTranslateLanguages } from '@/lib/i18n/translate-languages'
 
 // Google Cloud Translation v2 HTML-escapes some characters even in text mode.
 function unescapeHtml(s) {
@@ -64,12 +63,16 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
+  // Gate against the languages Google actually supports (fetched + cached), so
+  // any organizer-picked language works without maintaining a hardcoded list.
+  const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
+
   const { strings, source, targets } = body ?? {}
   if (
     !Array.isArray(strings) ||
     typeof source !== 'string' ||
     !Array.isArray(targets) ||
-    !SUPPORTED.has(source)
+    !supported.has(source)
   ) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
@@ -83,7 +86,7 @@ export async function POST(request) {
   const translations = {}
   try {
     for (const target of targets) {
-      if (!SUPPORTED.has(target) || target === source) continue
+      if (!supported.has(target) || target === source) continue
       translations[target] = await translateBatch(strings, source, target, apiKey)
     }
   } catch (e) {
