@@ -29,11 +29,15 @@ export function ProfileForm({ userId, initialProfile }) {
 
   // Keep the Appearance dropdown in sync with the header toggle. If an
   // explicit theme is currently applied (the cookie/attribute the toggle
-  // sets), reflect it here; otherwise honor the saved profile preference.
+  // sets), reflect it here AND heal the saved preference so the database
+  // matches what's actually applied. Otherwise honor the saved preference.
   useEffect(() => {
     const applied = document.documentElement.dataset.theme
     if (applied === 'light' || applied === 'dark') {
       setTheme(applied)
+      if (applied !== initialProfile.theme) {
+        supabase.from('profiles').update({ theme: applied }).eq('id', userId)
+      }
     } else {
       applyThemeClient(initialProfile.theme ?? 'system')
     }
@@ -41,6 +45,7 @@ export function ProfileForm({ userId, initialProfile }) {
       dateFormat: initialProfile.date_format ?? 'auto',
       timeFormat: initialProfile.time_format ?? 'auto',
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProfile.theme, initialProfile.date_format, initialProfile.time_format])
 
   // Preview the theme live as the user picks it, before saving.
