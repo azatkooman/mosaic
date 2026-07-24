@@ -48,6 +48,19 @@ export function ProfileForm({ userId, initialProfile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProfile.theme, initialProfile.date_format, initialProfile.time_format])
 
+  // Live-follow the header toggle: when it changes the applied theme
+  // (the data-theme attribute), reflect it in this dropdown immediately,
+  // no page refresh needed.
+  useEffect(() => {
+    const el = document.documentElement
+    const observer = new MutationObserver(() => {
+      const applied = el.dataset.theme
+      setTheme(applied === 'light' || applied === 'dark' ? applied : 'system')
+    })
+    observer.observe(el, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+
   // Preview the theme live as the user picks it, before saving.
   function pickTheme(next) {
     setTheme(next)
