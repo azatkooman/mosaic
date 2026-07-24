@@ -86,6 +86,9 @@ export function FormBuilder({
             definition,
             source: defaultLocale,
             targets: [editLocale],
+            // Tell the route the event's full language set so custom-language
+            // content maps (e.g. {en, pt}) are recognized and translated.
+            locales: supportedLocales,
           }),
         })
         const data = await res.json().catch(() => ({}))
@@ -204,7 +207,7 @@ export function FormBuilder({
           <FormRenderer
             definition={definition}
             participantTypeKey={previewTypeKey}
-            locale={locale}
+            locale={editLocale}
             defaultLocale={defaultLocale}
             answers={previewAnswers}
             onChange={(questionId, value) =>
@@ -314,7 +317,7 @@ export function FormBuilder({
                 <SortableQuestionCard
                   key={q.id}
                   question={q}
-                  locale={locale}
+                  locale={editLocale}
                   defaultLocale={defaultLocale}
                   typeLabel={tq(q.type)}
                   participantTypes={participantTypes}
