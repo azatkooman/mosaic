@@ -2088,6 +2088,24 @@ export function EventPageEditor({ initialEvent }) {
           <span className={styles.linkLabel}>{t('publicLink')}</span>
           <code className={styles.link}>{publicUrl}</code>
           <div className={styles.linkActions}>
+            <div className={styles.localeSwitch} role="tablist" aria-label={t('previewDevice')} style={{ marginInlineStart: 0, marginRight: 'var(--s-2)' }}>
+              <button
+                type="button"
+                data-active={previewDevice === 'desktop'}
+                aria-label={t('deviceDesktop')}
+                onClick={() => setPreviewDevice('desktop')}
+              >
+                {t('deviceDesktop')}
+              </button>
+              <button
+                type="button"
+                data-active={previewDevice === 'mobile'}
+                aria-label={t('deviceMobile')}
+                onClick={() => setPreviewDevice('mobile')}
+              >
+                {t('deviceMobile')}
+              </button>
+            </div>
             <Button variant="secondary" size="sm" onClick={copyLink}>
               {copied ? t('linkCopied') : t('copyLink')}
             </Button>
@@ -2106,24 +2124,6 @@ export function EventPageEditor({ initialEvent }) {
             {t('customize')}
           </Button>
           <p className={styles.hint}>{t('pagePreviewHint')}</p>
-          <div className={styles.localeSwitch} role="tablist" aria-label={t('previewDevice')}>
-            <button
-              type="button"
-              data-active={previewDevice === 'desktop'}
-              aria-label={t('deviceDesktop')}
-              onClick={() => setPreviewDevice('desktop')}
-            >
-              {t('deviceDesktop')}
-            </button>
-            <button
-              type="button"
-              data-active={previewDevice === 'mobile'}
-              aria-label={t('deviceMobile')}
-              onClick={() => setPreviewDevice('mobile')}
-            >
-              {t('deviceMobile')}
-            </button>
-          </div>
           {availableLocales.length > 1 && (
             <div className={styles.localeSwitch} role="tablist" aria-label="Preview language">
               {availableLocales.map((l) => (
