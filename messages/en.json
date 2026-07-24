@@ -572,6 +572,9 @@
     "cancel": "Cancel",
     "languageNamePlaceholder": "Language name (e.g. Portuguese)",
     "customLanguageHelp": "Custom languages: you fill in all the text yourself in a new tab. Fixed platform buttons stay in the default language.",
+    "customLanguages": "Custom Languages",
+    "noCustomLanguages": "No custom languages added yet.",
+    "addLanguagesInSettings": "Add or manage languages in Settings",
     "languages": "Languages",
     "languagesHelp": "Choose which languages this event and its registration form are offered in. Attendees can switch between them; the default is used when a translation is missing.",
     "defaultLanguageHelp": "Used as a fallback wherever a translation is missing."

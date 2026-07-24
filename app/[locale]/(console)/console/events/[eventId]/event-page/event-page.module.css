@@ -247,12 +247,19 @@
   grid-column: 1 / -1;
 }
 
-/* Custom language row + add-language form */
-.customLangRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Read-only language info (control lives in Settings) */
+.langInfo {
+  display: grid;
   gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.langDefault {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.customLangRow {
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -261,12 +268,12 @@
   font-weight: 600;
 }
 
-.addLangForm {
-  display: grid;
-  gap: var(--s-2);
-  padding: var(--s-3);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r-md);
+.langSettingsLink {
+  display: inline-block;
+  margin-bottom: var(--s-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--pine-deep);
 }
 
 /* Section reorder list */

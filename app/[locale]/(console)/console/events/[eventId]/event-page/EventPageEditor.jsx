@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useRouter } from '@/lib/i18n/navigation'
+import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
 import { eventMediaUrl } from '@/lib/storage'
@@ -1023,8 +1023,25 @@ export function EventPageEditor({ initialEvent }) {
 
         {/* ---- Languages ---- */}
         <h4 className={styles.panelSubhead}>{t('groupLanguages')}</h4>
-        {/* Which languages this event offers (built-in + custom) is managed in
-            event Settings; here organizers author the content for each. */}
+        {/* Which languages this event offers is managed in event Settings; this
+            is read-only here, with a link back to Settings to change it. */}
+        <div className={styles.langInfo}>
+          <span className="field-label">{t('defaultLanguage')}</span>
+          <span className={styles.langDefault}>{localeName(event.default_locale)}</span>
+        </div>
+        {customLangs.length > 0 ? (
+          <div className={styles.langInfo}>
+            <span className="field-label">{t('customLanguages')}</span>
+            {customLangs.map((c) => (
+              <span key={c.code} className={styles.customLangRow}>{c.name}</span>
+            ))}
+          </div>
+        ) : (
+          <p className="field-help">{t('noCustomLanguages')}</p>
+        )}
+        <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
+          {t('addLanguagesInSettings')}
+        </Link>
         <Button
           variant="secondary"
           size="sm"

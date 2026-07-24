@@ -572,6 +572,9 @@
     "cancel": "Annuler",
     "languageNamePlaceholder": "Nom de la langue (p. ex. Portugais)",
     "customLanguageHelp": "Langues personnalisées : vous saisissez tout le texte dans un nouvel onglet. Les boutons fixes de la plateforme restent dans la langue par défaut.",
+    "customLanguages": "Langues personnalisées",
+    "noCustomLanguages": "Aucune langue personnalisée ajoutée pour le moment.",
+    "addLanguagesInSettings": "Ajouter ou gérer les langues dans les Paramètres",
     "languages": "Langues",
     "languagesHelp": "Choisissez les langues dans lesquelles cet événement et son formulaire d'inscription sont proposés. Les participants peuvent basculer entre elles ; la langue par défaut est utilisée lorsqu'une traduction manque.",
     "defaultLanguageHelp": "Utilisée comme solution de repli lorsqu'une traduction manque."
