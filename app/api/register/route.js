@@ -187,5 +187,29 @@ export async function POST(request) {
     return NextResponse.json({ error: 'internal' }, { status: 500 })
   }
 
+  // Capture the registrant's name for their profile if we still don't have
+  // one. Magic-link sign-ins carry no name metadata, and a user who arrives
+  // via an event link registers on /events/... where the welcome dialog is
+  // suppressed — so this is often the only moment their name is given. Only
+  // in single mode is the sole participant definitively the account holder.
+  if (mode === 'single' && rpcParticipants[0]) {
+    const selfName = [rpcParticipants[0].first_name, rpcParticipants[0].last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+    if (selfName) {
+      const { data: me } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!me?.full_name?.trim()) {
+        // RLS lets a user update only their own profile; ignore failures —
+        // this is a best-effort convenience, not part of the registration.
+        await supabase.from('profiles').update({ full_name: selfName }).eq('id', user.id)
+      }
+    }
+  }
+
   return NextResponse.json(data)
 }

@@ -40,7 +40,9 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
     if (!email) return
     setError(null)
     setNotice(null)
-    const { error } = await supabase.rpc('grant_global_role', {
+    // Grants immediately for an existing user; queues a pending invite (applied
+    // on their first sign-in) for an email with no account yet.
+    const { data: result, error } = await supabase.rpc('invite_global_role', {
       p_email: email,
       p_role: inviteRole,
     })
@@ -48,38 +50,53 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
       setError(error.message)
       return
     }
-    // Fire-and-forget notification email — don't block the UI on it.
-    fetch('/api/notify-role', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role: inviteRole }),
-    }).catch(() => {})
+    const invited = result === 'invited'
+    // The invite/grant is already saved; the email is a best-effort
+    // notification. Surface a send failure but never roll back the invite.
+    const emailed = await notifyRole(email, inviteRole, invited ? 'invite' : 'granted')
     setInviteEmail('')
-    setNotice(t('roleGranted'))
+    if (emailed) {
+      setNotice(invited ? t('inviteSentPending') : t('roleGranted'))
+    } else {
+      setError(invited ? t('inviteRecordedNoEmail') : t('roleGrantedNoEmail'))
+    }
     router.refresh()
+  }
+
+  // POST the notification email; returns true only if it actually sent.
+  async function notifyRole(email, role, mode) {
+    try {
+      const res = await fetch('/api/notify-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role, mode }),
+      })
+      return res.ok
+    } catch {
+      return false
+    }
   }
 
   async function changeGlobalRole(user, role) {
     if (role === 'none') {
       run(supabase.rpc('revoke_global_role', { p_user_id: user.id }))
-    } else {
-      setError(null)
-      const { error } = await supabase.rpc('grant_global_role', {
-        p_email: user.email,
-        p_role: role,
-      })
-      if (error) {
-        setError(error.message)
-      } else {
-        // Fire-and-forget notification email — don't block the UI on it.
-        fetch('/api/notify-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email, role }),
-        }).catch(() => {})
-        router.refresh()
-      }
+      return
     }
+    setError(null)
+    setNotice(null)
+    const { error } = await supabase.rpc('grant_global_role', {
+      p_email: user.email,
+      p_role: role,
+    })
+    if (error) {
+      setError(error.message)
+      return
+    }
+    // Grant is saved; surface (but don't roll back on) an email failure.
+    const emailed = await notifyRole(user.email, role, 'granted')
+    if (emailed) setNotice(t('roleGranted'))
+    else setError(t('roleGrantedNoEmail'))
+    router.refresh()
   }
 
   function transferSuperAdmin(user) {

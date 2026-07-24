@@ -7,7 +7,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { fromLocalInput } from '@/lib/dates'
 import { DEFAULT_PARTICIPANT_TYPE } from '@/lib/participant-type-presets'
 import { defaultFormQuestions } from '@/lib/form-defaults'
-import { Button, Dialog, Field, Input, NativeSelect } from '@/components/ui'
+import { Button, Dialog, Field, Input, NativeSelect, PreferenceDateInput } from '@/components/ui'
 import styles from './console.module.css'
 
 function slugify(name) {
@@ -115,11 +115,20 @@ export function NewEventButton({ label }) {
         p_form_id: form.id,
       })
       // New forms start with name + email questions (removable in the builder).
+      // Publish this first version immediately so the event is registerable
+      // out of the box — an event can't be published without a published form.
       if (versionId) {
         await supabase
           .from('form_versions')
           .update({ definition: { questions: defaultFormQuestions() } })
           .eq('id', versionId)
+        // p_creator_published:false — this failsafe publish keeps a fallback
+        // form available but must NOT satisfy the "creator published a form"
+        // guard; the creator still has to publish a form themselves.
+        await supabase.rpc('publish_form_version', {
+          p_version_id: versionId,
+          p_creator_published: false,
+        })
       }
       await supabase.from('participant_types').insert({
         event_id: event.id,
@@ -162,23 +171,23 @@ export function NewEventButton({ label }) {
         <div className={styles.newEventDates}>
           <Field label={t('startsAt')} required>
             {({ id }) => (
-              <Input
+              <PreferenceDateInput
                 id={id}
                 type="datetime-local"
                 required
                 value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
+                onChange={setStartsAt}
               />
             )}
           </Field>
           <Field label={t('endsAt')} required>
             {({ id }) => (
-              <Input
+              <PreferenceDateInput
                 id={id}
                 type="datetime-local"
                 required
                 value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
+                onChange={setEndsAt}
               />
             )}
           </Field>

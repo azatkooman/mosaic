@@ -6,6 +6,7 @@ import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { Button, Checkbox, Input } from '@/components/ui'
 import { PRIVILEGES, roleLabel, sortRoles } from './roleUtils'
+import styles from './RoleMatrix.module.css'
 
 const EMPTY_DRAFT = Object.fromEntries(PRIVILEGES.map((p) => [p.key, !!p.locked]))
 
@@ -72,23 +73,39 @@ export function RoleMatrix({ roles, orgId, eventId = null }) {
     }
   }
 
+  // value shown for a role's privilege, accounting for unsaved edits
+  const isChecked = (role, key) => edits[role.id]?.[key] ?? role[key]
+
+  const rows = sortRoles(roles).map((role) => {
+    const isPreset = !!role.preset_key
+    // roles are editable only in their own matrix: global roles (presets
+    // included) in the admin console, event roles on their event's team page
+    const editable = eventId ? role.event_id === eventId : role.event_id == null
+    const dirty = !!edits[role.id] && Object.keys(edits[role.id] ?? {}).length > 0
+    const subtitle =
+      isPreset ? t('standardRole') : eventId && role.event_id == null ? t('rolesGlobalGroup') : null
+    return { role, isPreset, editable, dirty, subtitle }
+  })
+
   return (
     <div style={{ display: 'grid', gap: 'var(--s-3)' }}>
       {error && <p className="alert alert-error">{error}</p>}
-      <div className="table-wrap" style={{ overflowX: 'hidden' }}>
+
+      {/* Wide screens: full matrix */}
+      <div className={`table-wrap ${styles.tableView}`} style={{ overflowX: 'auto' }}>
         <table className="table" style={{ tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '20%' }} />
+            <col style={{ width: '18%' }} />
             {PRIVILEGES.map((p) => (
-              <col key={p.key} style={{ width: `${72 / PRIVILEGES.length}%` }} />
+              <col key={p.key} style={{ width: `${70 / PRIVILEGES.length}%` }} />
             ))}
-            <col style={{ width: '8%' }} />
+            <col style={{ width: '12%' }} />
           </colgroup>
           <thead>
             <tr>
               <th>{t('roleName')}</th>
               {PRIVILEGES.map((p) => (
-                <th key={p.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', whiteSpace: 'normal', lineHeight: '1.3', wordBreak: 'break-word' }}>
+                <th key={p.key} style={{ textAlign: 'center', fontSize: 'var(--text-xs)', whiteSpace: 'normal', lineHeight: '1.25', overflowWrap: 'break-word', letterSpacing: 0, padding: 'var(--s-3) var(--s-1)' }}>
                   {t(p.label)}
                 </th>
               ))}
@@ -96,20 +113,14 @@ export function RoleMatrix({ roles, orgId, eventId = null }) {
             </tr>
           </thead>
           <tbody>
-            {sortRoles(roles).map((role) => {
-              const isPreset = !!role.preset_key
-              // roles are editable only in their own matrix: global roles
-              // (presets included) in the admin console, event roles on their
-              // event's team page
-              const editable = eventId ? role.event_id === eventId : role.event_id == null
-              const dirty = !!edits[role.id] && Object.keys(edits[role.id] ?? {}).length > 0
+            {rows.map(({ role, isPreset, editable, dirty, subtitle }) => {
               return (
                 <tr key={role.id}>
                   <td>
                     <strong>{roleLabel(role, t)}</strong>
-                    {(isPreset || (eventId && role.event_id == null)) && (
+                    {subtitle && (
                       <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
-                        {isPreset ? t('standardRole') : t('rolesGlobalGroup')}
+                        {subtitle}
                       </div>
                     )}
                   </td>
@@ -117,7 +128,7 @@ export function RoleMatrix({ roles, orgId, eventId = null }) {
                     <td key={p.key} style={{ textAlign: 'center' }}>
                       <Checkbox
                         aria-label={`${roleLabel(role, t)} — ${t(p.label)}`}
-                        checked={edits[role.id]?.[p.key] ?? role[p.key]}
+                        checked={isChecked(role, p.key)}
                         disabled={!editable || p.locked}
                         onCheckedChange={() => toggle(role, p.key)}
                       />
@@ -167,6 +178,96 @@ export function RoleMatrix({ roles, orgId, eventId = null }) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* Narrow screens: one card per role, privileges as a toggle list */}
+      <div className={styles.cardView}>
+        {rows.map(({ role, isPreset, editable, dirty, subtitle }) => (
+          <div key={role.id} className={styles.card}>
+            <div className={styles.cardHead}>
+              <div>
+                <strong>{roleLabel(role, t)}</strong>
+                {subtitle && <div className={styles.sub}>{subtitle}</div>}
+              </div>
+              {editable && (dirty || !isPreset) && (
+                <div className={styles.cardActions}>
+                  {dirty && (
+                    <Button size="sm" onClick={() => save(role)}>
+                      {t('saveRole')}
+                    </Button>
+                  )}
+                  {!isPreset && (
+                    <Button variant="ghost" size="sm" onClick={() => remove(role)}>
+                      {t('deleteRole')}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className={styles.privList}>
+              {PRIVILEGES.map((p) => {
+                const disabled = !editable || p.locked
+                const checked = isChecked(role, p.key)
+                const rowId = `${role.id}-${p.key}`
+                return (
+                  <label
+                    key={p.key}
+                    className="choice-row"
+                    htmlFor={rowId}
+                    data-checked={checked || undefined}
+                    data-disabled={disabled || undefined}
+                  >
+                    <Checkbox
+                      id={rowId}
+                      checked={checked}
+                      disabled={disabled}
+                      onCheckedChange={() => toggle(role, p.key)}
+                    />
+                    <span>{t(p.label)}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Create a new role */}
+        <div className={styles.card}>
+          <Input
+            aria-label={t('roleName')}
+            placeholder={t('newRole')}
+            value={newName}
+            maxLength={60}
+            onChange={(e) => setNewName(e.target.value)}
+          />
+          <div className={styles.privList}>
+            {PRIVILEGES.map((p) => {
+              const rowId = `new-${p.key}`
+              return (
+                <label
+                  key={p.key}
+                  className="choice-row"
+                  htmlFor={rowId}
+                  data-checked={draft[p.key] || undefined}
+                  data-disabled={p.locked || undefined}
+                >
+                  <Checkbox
+                    id={rowId}
+                    checked={draft[p.key]}
+                    disabled={!!p.locked}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, [p.key]: !!v }))}
+                  />
+                  <span>{t(p.label)}</span>
+                </label>
+              )
+            })}
+          </div>
+          <div>
+            <Button size="sm" onClick={create} disabled={!newName.trim()}>
+              {t('createRole')}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -6,6 +6,9 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
+import { formatDateValue } from '@/lib/dates'
+import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
+import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Field, Input, NativeSelect } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
@@ -34,6 +37,7 @@ export function ParticipantsTable({
 }) {
   const t = useTranslations()
   const locale = useLocale()
+  const dateFmt = useDateFormatPrefs()
   const supabase = getSupabaseBrowserClient()
   const queryClient = useQueryClient()
 
@@ -41,6 +45,7 @@ export function ParticipantsTable({
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
+  const [sort, setSort] = useState({ column: null, dir: 'desc' }) // null = created_at desc
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState(null) // participant row for the drawer
   const [statusError, setStatusError] = useState('')
@@ -54,7 +59,7 @@ export function ParticipantsTable({
     ['select', 'radio', 'multiselect', 'checkbox', 'text', 'email', 'phone'].includes(q.type)
   )
 
-  const filters = { search, statusFilter, typeFilter, answerFilters, page }
+  const filters = { search, statusFilter, typeFilter, answerFilters, sort, page }
   const { data, isLoading, error } = useQuery({
     queryKey: ['participants', eventId, filters],
     queryFn: async () => {
@@ -62,31 +67,15 @@ export function ParticipantsTable({
         .from('participants')
         .select('id, first_name, last_name, email, status, answers, created_at, participant_type_id, form_version_id', { count: 'exact' })
         .eq('event_id', eventId)
-        .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
-      if (statusFilter) q = q.eq('status', statusFilter)
-      if (typeFilter) q = q.eq('participant_type_id', typeFilter)
-      if (search.trim()) {
-        // .or() takes raw PostgREST syntax: commas separate clauses and
-        // parentheses group them, so both must be stripped from user input
-        // or a search like "Smith (guest)" breaks the whole query.
-        const s = search.trim().replace(/[(),]/g, ' ').replace(/\s+/g, ' ')
-        q = q.or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%`)
-      }
-      for (const [qid, value] of Object.entries(answerFilters)) {
-        if (value === '' || value == null) continue
-        const question = questions.find((x) => x.id === qid)
-        if (question?.type === 'multiselect') {
-          q = q.contains('answers', { [qid]: [value] })
-        } else if (question?.type === 'checkbox') {
-          q = q.contains('answers', { [qid]: value === 'true' })
-        } else if (['select', 'radio'].includes(question?.type)) {
-          q = q.eq(`answers->>${qid}`, value)
-        } else {
-          q = q.ilike(`answers->>${qid}`, `%${value}%`)
-        }
-      }
+      // Same filter + sort logic the export uses, so the download matches.
+      q = applyParticipantFilters(
+        q,
+        { status: statusFilter, typeId: typeFilter, search, answerFilters },
+        questions
+      )
+      q = applyParticipantSort(q, sort, questions)
 
       const { data, error, count } = await q
       if (error) throw error
@@ -114,7 +103,27 @@ export function ParticipantsTable({
     const params = new URLSearchParams({ eventId, format, locale })
     if (statusFilter) params.set('status', statusFilter)
     if (typeFilter) params.set('typeId', typeFilter)
+    if (search.trim()) params.set('q', search.trim())
+    const cleanAnswers = Object.fromEntries(
+      Object.entries(answerFilters).filter(([, v]) => v !== '' && v != null)
+    )
+    if (Object.keys(cleanAnswers).length) params.set('answers', JSON.stringify(cleanAnswers))
+    if (sort.column) {
+      params.set('sort', sort.column)
+      params.set('dir', sort.dir)
+    }
     return `/api/export?${params}`
+  }
+
+  // Click a column header: same column toggles direction, a new one starts
+  // ascending (A→Z / oldest / lowest).
+  function toggleSort(column) {
+    setSort((s) =>
+      s.column === column
+        ? { column, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { column, dir: 'asc' }
+    )
+    setPage(0)
   }
 
   const rows = data?.rows ?? []
@@ -177,13 +186,13 @@ export function ParticipantsTable({
         <table className="table">
           <thead>
             <tr>
-              <th>{t('wizard.firstName')}</th>
-              <th>{t('wizard.lastName')}</th>
-              <th>{t('wizard.email')}</th>
-              <th>{t('console.byType')}</th>
-              <th>{t('console.byStatus')}</th>
+              <SortHeader label={t('wizard.firstName')} column="first_name" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('wizard.lastName')} column="last_name" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('wizard.email')} column="email" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
               {questions.slice(0, 6).map((q) => (
-                <th key={q.id}>{lt(q.label, locale)}</th>
+                <SortHeader key={q.id} label={lt(q.label, locale)} column={`q:${q.id}`} sort={sort} onSort={toggleSort} />
               ))}
               <th>{t('common.actions')}</th>
             </tr>
@@ -214,7 +223,7 @@ export function ParticipantsTable({
                   <td>{lt(typeById.get(p.participant_type_id)?.name, locale)}</td>
                   <td><Badge tone={p.status}>{t(`status.${p.status}`)}</Badge></td>
                   {questions.slice(0, 6).map((q) => (
-                    <td key={q.id}>{formatAnswer(p.answers?.[q.id], q, locale)}</td>
+                    <td key={q.id}>{formatAnswer(p.answers?.[q.id], q, locale, dateFmt)}</td>
                   ))}
                   <td>
                     <div className={styles.rowActions}>
@@ -275,10 +284,30 @@ export function ParticipantsTable({
   )
 }
 
-function formatAnswer(value, question, locale) {
+function SortHeader({ label, column, sort, onSort }) {
+  const active = sort.column === column
+  return (
+    <th aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        className={styles.sortHeader}
+        onClick={() => onSort(column)}
+        title={label}
+      >
+        <span>{label}</span>
+        <span className={styles.sortArrow} aria-hidden="true">
+          {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+        </span>
+      </button>
+    </th>
+  )
+}
+
+function formatAnswer(value, question, locale, dateFmt) {
   if (value == null) return ''
   const structured = formatStructuredAnswer(question, value)
   if (structured !== null) return structured
+  if (question.type === 'date') return formatDateValue(value, locale, dateFmt)
   if (question.type === 'checkbox') return value ? '✓' : ''
   if (Array.isArray(value)) {
     return value

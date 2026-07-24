@@ -52,6 +52,12 @@ export const useBuilderStore = create((set, get) => ({
     })
   },
 
+  replaceDefinition(nextDefinition) {
+    const { definition } = get()
+    if (definition === nextDefinition) return
+    get()._commit(nextDefinition)
+  },
+
   removeQuestion(id) {
     const def = get().definition
     // Also strip visibility rules that reference the deleted question —

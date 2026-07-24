@@ -453,3 +453,42 @@
   top: 50%;
   transform: translateY(-50%);
 }
+
+/* Preference-aware date / datetime field (components/ui/PreferenceDateInput):
+   a read-only text proxy displays the value in the user's chosen format while
+   a hidden native input drives the OS picker via showPicker(). */
+.pref-date {
+  position: relative;
+  display: block;
+}
+.pref-date-text {
+  padding-right: 2.2rem;
+  cursor: pointer;
+  caret-color: transparent;
+}
+.pref-date-text::placeholder {
+  color: var(--ink-faint, #9aa0a6);
+}
+.pref-date-icon {
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+/* Rendered (not display:none, so showPicker works) but visually hidden and
+   anchored near the calendar icon so the picker pops up there. */
+.pref-date-native {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

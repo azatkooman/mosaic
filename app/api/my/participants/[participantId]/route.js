@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
+import { extractIdentity } from '@/lib/form-engine/identity'
 
 /**
  * Self-service edit: the person who submitted a registration updates one of
@@ -36,7 +38,7 @@ export async function PATCH(request, { params }) {
   // version is a published version of the event's form, also readable.
   const { data: participant, error: loadError } = await supabase
     .from('participants')
-    .select('id, participant_type_id, form_version_id, participant_types ( key ), form_versions ( definition ), registrations!inner ( registered_by )')
+    .select('id, event_id, participant_type_id, form_version_id, participant_types ( key ), form_versions ( definition ), registrations!inner ( registered_by )')
     .eq('id', participantId)
     .maybeSingle()
   if (loadError || !participant) {
@@ -62,12 +64,39 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: 'validation', details: errors }, { status: 422 })
   }
 
-  const { error } = await supabase.rpc('update_own_participant', {
+  // File answers must point at objects THIS user uploaded for THIS event
+  // (registration-files paths are {event_id}/{user_id}/...), mirroring
+  // /api/register — otherwise a registrant could attach someone else's upload.
+  const eventId = participant.event_id
+  for (const q of definition?.questions ?? []) {
+    if (q.type === 'file' && cleaned[q.id] != null) {
+      if (!String(cleaned[q.id]).startsWith(`${eventId}/${user.id}/`)) {
+        return NextResponse.json(
+          { error: 'validation', details: { [q.id]: 'invalid' } },
+          { status: 422 }
+        )
+      }
+    }
+  }
+
+  // Identity comes from the form's name/email questions when present, exactly
+  // like /api/register — otherwise editing the name question would leave the
+  // stored first_name/last_name columns stale.
+  const identity = extractIdentity(definition, typeKey, cleaned)
+
+  // update_own_participant is service-role-only (0027); the registrant id is
+  // passed explicitly after the cookie-verified ownership check above.
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+  const { error } = await admin.rpc('update_own_participant', {
     p_participant_id: participantId,
-    p_first_name: asString(body?.firstName),
-    p_last_name: asString(body?.lastName),
-    p_email: asString(body?.email) || null,
+    p_first_name: identity.firstName || asString(body?.firstName),
+    p_last_name: identity.lastName || asString(body?.lastName),
+    p_email: identity.email || asString(body?.email) || null,
     p_answers: cleaned,
+    p_registered_by: user.id,
   })
   if (error) {
     if (error.code === '42501') {

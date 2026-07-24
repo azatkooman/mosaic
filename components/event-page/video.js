@@ -18,6 +18,9 @@ export function videoEmbedSrc(url) {
   const vimeo = u.match(/vimeo\.com\/(\d+)/i)
   if (vimeo) return { type: 'iframe', src: `https://player.vimeo.com/video/${vimeo[1]}` }
 
+  const drive = u.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|docs\.google\.com\/file\/d\/)([\w-]+)/i)
+  if (drive) return { type: 'iframe', src: `https://drive.google.com/file/d/${drive[1]}/preview` }
+
   if (/\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(u)) return { type: 'video', src: u }
 
   return null

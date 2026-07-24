@@ -13,6 +13,7 @@ import {
   CheckboxRow,
   RadioGroup,
   RadioRow,
+  PreferenceDateInput,
 } from '@/components/ui'
 import { FileUploadField } from './FileUploadField'
 
@@ -250,13 +251,13 @@ export function QuestionField({
       return (
         <Field {...common}>
           {({ id, describedBy, invalid }) => (
-            <Input
+            <PreferenceDateInput
               id={id}
               type="date"
               value={value ?? ''}
-              aria-describedby={describedBy}
-              aria-invalid={invalid}
-              onChange={(e) => onChange(e.target.value)}
+              describedBy={describedBy}
+              invalid={invalid}
+              onChange={onChange}
             />
           )}
         </Field>

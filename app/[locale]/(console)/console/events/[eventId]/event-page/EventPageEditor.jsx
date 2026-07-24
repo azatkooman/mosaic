@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useRouter } from '@/lib/i18n/navigation'
+import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales'
+import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
 import { eventMediaUrl } from '@/lib/storage'
 import { Button, CheckboxRow, Field, Input, NativeSelect, Textarea } from '@/components/ui'
 import {
@@ -17,7 +17,6 @@ import styles from './event-page.module.css'
 
 const SECTIONS = [
   'theme',
-  'basics',
   'hero',
   'about',
   'speakers',
@@ -31,6 +30,112 @@ const SECTIONS = [
   'contact',
 ]
 const TRACK_COLORS = ['#3d7ea6', '#e8a33d', '#e2725b', '#146b5c']
+
+// One-click theme presets applied over the current theme.
+const THEME_PRESETS = {
+  light: {
+    page_bg: '#ffffff',
+    text_color: '#111111',
+    title_color: '#111111',
+    hero_bg: '#111111',
+    primary_color: '#111111',
+    accent_color: '#e8a33d',
+  },
+  dark: {
+    page_bg: '#14161b',
+    text_color: '#eceae4',
+    title_color: '#ffffff',
+    hero_bg: '#0e5044',
+    primary_color: '#3ba58f',
+    accent_color: '#e8a33d',
+  },
+  brand: {
+    page_bg: '#faf9f6',
+    text_color: '#20242b',
+    title_color: '#146b5c',
+    hero_bg: '#0e5044',
+    primary_color: '#146b5c',
+    accent_color: '#e8a33d',
+    btn_bg: '#e8a33d',
+    btn_text: '#2b1f08',
+  },
+}
+
+// --- Machine translation of typed content -------------------------------
+// Localized fields are stored as {en: "...", es: "..."} maps. These helpers
+// walk the content, gather source-language strings, and write translations
+// back into empty target-language slots (never overwriting existing text).
+const LOCALE_SET = new Set(LOCALES)
+
+// `codes` bounds which keys count as language codes. It defaults to the
+// built-in locales, but callers pass the event's full set (built-ins + custom
+// codes) so a field that already has a custom-language slot ({en, es, sq}) is
+// still recognized as translatable instead of being skipped.
+function isLocaleMap(v, codes = LOCALE_SET) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false
+  const keys = Object.keys(v)
+  return (
+    keys.length > 0 &&
+    keys.every((k) => codes.has(k)) &&
+    Object.values(v).every((x) => x == null || typeof x === 'string')
+  )
+}
+
+function collectSourceStrings(node, source, out, codes = LOCALE_SET) {
+  if (isLocaleMap(node, codes)) {
+    const s = node[source]
+    if (s && s.trim()) out.add(s)
+    return
+  }
+  if (Array.isArray(node)) node.forEach((n) => collectSourceStrings(n, source, out, codes))
+  else if (node && typeof node === 'object') {
+    Object.values(node).forEach((n) => collectSourceStrings(n, source, out, codes))
+  }
+}
+
+// dict: { [target]: Map(sourceString -> translated) }. Returns a new node with
+// empty target slots filled.
+function applyTranslations(node, source, targets, dict, codes = LOCALE_SET) {
+  if (isLocaleMap(node, codes)) {
+    const s = node[source]
+    if (!s || !s.trim()) return node
+    const next = { ...node }
+    for (const tgt of targets) {
+      if (!next[tgt] || !next[tgt].trim()) {
+        const tr = dict[tgt]?.get(s)
+        if (tr) next[tgt] = tr
+      }
+    }
+    return next
+  }
+  if (Array.isArray(node)) return node.map((n) => applyTranslations(n, source, targets, dict, codes))
+  if (node && typeof node === 'object') {
+    const o = {}
+    for (const [k, v] of Object.entries(node)) o[k] = applyTranslations(v, source, targets, dict, codes)
+    return o
+  }
+  return node
+}
+
+// Relative luminance → WCAG contrast ratio between two hex colors.
+function contrastRatio(a, b) {
+  const lum = (hex) => {
+    if (!hex) return null
+    const h = hex.replace('#', '')
+    const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+    const ch = [0, 2, 4].map((i) => {
+      const v = parseInt(f.slice(i, i + 2), 16) / 255
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+    })
+    if (ch.some(Number.isNaN)) return null
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+  }
+  const l1 = lum(a)
+  const l2 = lum(b)
+  if (l1 == null || l2 == null) return null
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1]
+  return (hi + 0.05) / (lo + 0.05)
+}
 const SIZE_OPTIONS = ['', 'sm', 'md', 'lg', 'xl']
 
 function newId() {
@@ -228,6 +333,7 @@ export function EventPageEditor({ initialEvent }) {
   const [previewLocale, setPreviewLocale] = useState(
     LOCALES.includes(uiLocale) ? uiLocale : initialEvent.default_locale
   )
+  const [previewDevice, setPreviewDevice] = useState('desktop') // desktop | mobile
   const [panelSection, setPanelSection] = useState(null) // null = closed
   const [dirty, setDirty] = useState(false)
   const [saveState, setSaveState] = useState('idle')
@@ -236,6 +342,8 @@ export function EventPageEditor({ initialEvent }) {
   const [uploading, setUploading] = useState(0)
   const [uploadError, setUploadError] = useState('')
   const [saveErrorMsg, setSaveErrorMsg] = useState('')
+  const [translateState, setTranslateState] = useState('idle') // idle|working|done|error
+  const [translateMsg, setTranslateMsg] = useState('')
   const coverInputRef = useRef(null)
   const aboutImgInputRef = useRef(null)
   const agendaImgInputRef = useRef(null)
@@ -246,6 +354,10 @@ export function EventPageEditor({ initialEvent }) {
   const galleryInputRef = useRef(null)
   const galleryUploadTarget = useRef(null)
   const mapImgInputRef = useRef(null)
+  const logoInputRef = useRef(null)
+  const faviconInputRef = useRef(null)
+
+
 
   useEffect(() => {
     setOrigin(window.location.origin)
@@ -253,6 +365,28 @@ export function EventPageEditor({ initialEvent }) {
 
   const publicUrl = `${origin}/${previewLocale}/events/${event.slug}`
   const content = event.page_content ?? {}
+
+  // Organizer-defined custom languages: [{ code, name }]. Their content lives
+  // in the same locale maps under `code`; the public page serves them via a
+  // ?lang= param (they aren't platform routes).
+  const customLangs = Array.isArray(content.i18n?.custom) ? content.i18n.custom : []
+  const localeName = (code) =>
+    LOCALE_NAMES[code] || customLangs.find((c) => c.code === code)?.name || code
+
+  // Languages this event is offered in. Shared with the public page and the
+  // rest of the console via eventLocales() so every surface agrees. It honors
+  // the legacy supported_locales column, which the old hand-rolled version
+  // here ignored — hiding the language switcher until a name had been typed in
+  // each language, i.e. exactly when the organizer needs it to add that text.
+  const availableLocales = eventLocales(event)
+
+  // If the previewed language is no longer available (e.g. just unchecked),
+  // fall back to the default language.
+  useEffect(() => {
+    if (!availableLocales.includes(previewLocale)) {
+      setPreviewLocale(event.default_locale)
+    }
+  }, [availableLocales, previewLocale, event.default_locale])
 
   // ---- state helpers -------------------------------------------------------
 
@@ -264,6 +398,75 @@ export function EventPageEditor({ initialEvent }) {
   function patchEvent(patch) {
     setEvent((prev) => ({ ...prev, ...patch }))
     markDirty()
+  }
+
+  // Fill empty target-language slots by machine-translating the default
+  // language's text. Applied to state; the user then saves.
+  async function translateAll(availableLocales) {
+    const source = event.default_locale
+    const targets = availableLocales.filter((l) => l !== source)
+    if (!targets.length) {
+      setTranslateState('error')
+      setTranslateMsg(t('translateNoTargets'))
+      return
+    }
+    const bundle = {
+      name: event.name,
+      description: event.description,
+      location: event.location,
+      page_content: event.page_content ?? {},
+    }
+    // Recognize locale maps keyed by any of the event's languages — built-ins
+    // plus custom codes — so fields that already have a custom-language slot
+    // aren't skipped on subsequent translations.
+    const codes = new Set([...LOCALES, ...availableLocales])
+    const set = new Set()
+    collectSourceStrings(bundle, source, set, codes)
+    const strings = [...set]
+    if (!strings.length) {
+      setTranslateState('error')
+      setTranslateMsg(t('translateNothing'))
+      return
+    }
+    setTranslateState('working')
+    setTranslateMsg('')
+    try {
+      const res = await fetch('/api/translate-event', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ strings, source, targets }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setTranslateState('error')
+        setTranslateMsg(data?.error === 'no_api_key' ? t('translateNoKey') : t('translateError'))
+        return
+      }
+      const dict = {}
+      for (const tgt of targets) {
+        const arr = data.translations?.[tgt]
+        if (Array.isArray(arr)) {
+          const m = new Map()
+          strings.forEach((s, i) => m.set(s, arr[i]))
+          dict[tgt] = m
+        }
+      }
+      const out = applyTranslations(bundle, source, targets, dict, codes)
+      setEvent((prev) => ({
+        ...prev,
+        name: out.name,
+        description: out.description,
+        location: out.location,
+        page_content: out.page_content,
+      }))
+      markDirty()
+      setTranslateState('done')
+      setTranslateMsg(t('translateDone'))
+      window.alert(t('translateFinished'))
+    } catch {
+      setTranslateState('error')
+      setTranslateMsg(t('translateError'))
+    }
   }
 
   // Functional updates: colors/text can change in quick succession, so always
@@ -365,7 +568,16 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+  const ALLOWED_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/avif',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+  ]
 
   async function upload(file, prefix) {
     setUploadError('')
@@ -373,13 +585,15 @@ export function EventPageEditor({ initialEvent }) {
       setUploadError(t('uploadBadType'))
       return null
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
+    const isVideo = file.type.startsWith('video/')
+    const maxBytes = isVideo ? 30 * 1024 * 1024 : MAX_UPLOAD_BYTES
+    if (file.size > maxBytes) {
       setUploadError(t('uploadTooLarge'))
       return null
     }
     setUploading((n) => n + 1)
     try {
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const ext = (file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase()
       const path = `${event.id}/${prefix}-${Date.now().toString(36)}.${ext}`
       const { error } = await supabase.storage.from('event-covers').upload(path, file)
       if (error) {
@@ -396,7 +610,10 @@ export function EventPageEditor({ initialEvent }) {
     const file = e.target.files?.[0]
     if (file) {
       const path = await upload(file, 'cover')
-      if (path) patchEvent({ cover_image_path: path })
+      if (path) {
+        patchEvent({ cover_image_path: path })
+        patchContent('hero', { video_url: undefined })
+      }
     }
     e.target.value = ''
   }
@@ -404,8 +621,15 @@ export function EventPageEditor({ initialEvent }) {
   async function onAboutImgFile(e) {
     const file = e.target.files?.[0]
     if (file) {
-      const path = await upload(file, 'about')
-      if (path) patchContent('about', { enabled: true, image_path: path })
+      const isVideo = file.type.startsWith('video/')
+      const path = await upload(file, isVideo ? 'about-video' : 'about')
+      if (path) {
+        if (isVideo) {
+          patchContent('about', { enabled: true, video_url: path, image_path: null })
+        } else {
+          patchContent('about', { enabled: true, image_path: path, video_url: null })
+        }
+      }
     }
     e.target.value = ''
   }
@@ -425,6 +649,32 @@ export function EventPageEditor({ initialEvent }) {
     if (file && id) {
       const path = await upload(file, `gallery-${id}`)
       if (path) patchItem('gallery', id, { image_path: path })
+    }
+    e.target.value = ''
+  }
+
+  async function onLogoFile(e) {
+    const file = e.target.files?.[0]
+    if (file) {
+      const path = await upload(file, 'logo')
+      if (path) patchContent('logo', { path })
+    }
+    e.target.value = ''
+  }
+
+  function setTopLevel(key, value) {
+    setEvent((prev) => ({
+      ...prev,
+      page_content: { ...(prev.page_content ?? {}), [key]: value },
+    }))
+    markDirty()
+  }
+
+  async function onFaviconFile(e) {
+    const file = e.target.files?.[0]
+    if (file) {
+      const path = await upload(file, 'favicon')
+      if (path) setTopLevel('favicon_path', path)
     }
     e.target.value = ''
   }
@@ -558,8 +808,37 @@ export function EventPageEditor({ initialEvent }) {
   function renderTheme() {
     const theme = content.theme ?? {}
     const setTheme = (patch) => patchContent('theme', patch)
+    const logo = content.logo ?? {}
+    // Contrast check on the effective page text vs background.
+    const bg = theme.page_bg || (isDark ? '#14161b' : '#ffffff')
+    const fg = theme.text_color || (isDark ? '#eceae4' : '#111111')
+    const ratio = contrastRatio(fg, bg)
+    const lowContrast = ratio != null && ratio < 4.5
+
     return (
       <>
+
+        {/* ---- Colors & brand ---- */}
+        <h4 className={styles.panelSubhead}>{t('groupColors')}</h4>
+        <div className={styles.colorPair}>
+          <ColorField
+            label={t('primaryColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.primary_color}
+            defaultValue={isDark ? '#3ba58f' : '#146b5c'}
+            onChange={(c) => setTheme({ primary_color: c ?? undefined })}
+          />
+          <ColorField
+            label={t('accentColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.accent_color}
+            defaultValue="#e8a33d"
+            onChange={(c) => setTheme({ accent_color: c ?? undefined })}
+          />
+        </div>
+        <p className="field-help">{t('primaryColorHelp')}</p>
         <div className={styles.colorPair}>
           <ColorField
             label={t('pageBackground')}
@@ -578,34 +857,10 @@ export function EventPageEditor({ initialEvent }) {
             onChange={(c) => setTheme({ text_color: c ?? undefined })}
           />
         </div>
-        <div className={styles.colorField}>
-          <span className="field-label">{t('pageFont')}</span>
-          <FontSelect t={t} value={theme.body_font} onChange={(f) => setTheme({ body_font: f })} />
-        </div>
-        <h4 className={styles.panelSubhead}>{t('heroTitleStyle')}</h4>
-        <ColorField
-          label={t('heroBackground')}
-          addLabel={t('addColor')}
-          resetLabel={t('resetColor')}
-          value={theme.hero_bg}
-          defaultValue={isDark ? '#000000' : '#ffffff'}
-          onChange={(c) => setTheme({ hero_bg: c ?? undefined })}
-        />
-        {theme.hero_bg && event.cover_image_path && (
-          <div className={styles.colorField}>
-            <span className="field-label">
-              {t('heroOpacity')}: {theme.hero_opacity ?? 100}%
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={theme.hero_opacity ?? 100}
-              onChange={(e) => setTheme({ hero_opacity: Number(e.target.value) })}
-            />
-            <p className="field-help">{t('heroOpacityHelp')}</p>
-          </div>
+        {lowContrast && (
+          <p className={`alert alert-error ${styles.uploadNote}`}>
+            {t('contrastWarning', { ratio: ratio.toFixed(1) })}
+          </p>
         )}
         <ColorField
           label={t('titleColor')}
@@ -623,23 +878,20 @@ export function EventPageEditor({ initialEvent }) {
         >
           {t('applyToAllTitles')}
         </Button>
-        <StyleSelects
-          t={t}
-          style={{ size: theme.title_size, font: theme.title_font }}
-          onChange={(s) => setTheme({ title_size: s.size, title_font: s.font })}
-        />
+
+        {/* ---- Buttons ---- */}
+        <h4 className={styles.panelSubhead}>{t('registerButtonStyle')}</h4>
         <div className={styles.colorField}>
-          <span className="field-label">{t('titleAlign')}</span>
+          <span className="field-label">{t('buttonStyle')}</span>
           <NativeSelect
-            value={theme.title_align ?? 'left'}
-            onChange={(e) => setTheme({ title_align: e.target.value })}
+            value={theme.btn_style ?? 'fill'}
+            onChange={(e) => setTheme({ btn_style: e.target.value })}
           >
-            <option value="left">{t('alignLeft')}</option>
-            <option value="center">{t('alignCenter')}</option>
-            <option value="right">{t('alignRight')}</option>
+            <option value="fill">{t('btnFill')}</option>
+            <option value="outline">{t('btnOutline')}</option>
+            <option value="pill">{t('btnPill')}</option>
           </NativeSelect>
         </div>
-        <h4 className={styles.panelSubhead}>{t('registerButtonStyle')}</h4>
         <div className={styles.colorPair}>
           <ColorField
             label={t('buttonBackground')}
@@ -659,6 +911,159 @@ export function EventPageEditor({ initialEvent }) {
           />
         </div>
 
+        {/* ---- Typography ---- */}
+        <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('titleFontLabel')}</span>
+          <FontSelect t={t} value={theme.title_font} onChange={(f) => setTheme({ title_font: f })} />
+        </div>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('bodyFontLabel')}</span>
+          <FontSelect t={t} value={theme.body_font} onChange={(f) => setTheme({ body_font: f })} />
+        </div>
+        <p className="field-help">{t('fontScopeHelp')}</p>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('textScale')}</span>
+          <NativeSelect
+            value={theme.text_scale ?? 'normal'}
+            onChange={(e) => setTheme({ text_scale: e.target.value })}
+          >
+            <option value="compact">{t('scaleCompact')}</option>
+            <option value="normal">{t('scaleNormal')}</option>
+            <option value="large">{t('scaleLarge')}</option>
+          </NativeSelect>
+        </div>
+
+        {/* ---- Shape & layout ---- */}
+        <h4 className={styles.panelSubhead}>{t('groupLayout')}</h4>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('cornerRadius')}</span>
+          <NativeSelect
+            value={theme.radius ?? 'normal'}
+            onChange={(e) => setTheme({ radius: e.target.value })}
+          >
+            <option value="square">{t('radiusSquare')}</option>
+            <option value="normal">{t('radiusNormal')}</option>
+            <option value="round">{t('radiusRound')}</option>
+          </NativeSelect>
+        </div>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('contentWidth')}</span>
+          <NativeSelect
+            value={theme.width ?? 'normal'}
+            onChange={(e) => setTheme({ width: e.target.value })}
+          >
+            <option value="narrow">{t('widthNarrow')}</option>
+            <option value="normal">{t('widthNormal')}</option>
+            <option value="wide">{t('widthWide')}</option>
+          </NativeSelect>
+        </div>
+        <div className={styles.colorField}>
+          <span className="field-label">{t('sectionDensity')}</span>
+          <NativeSelect
+            value={theme.density ?? 'normal'}
+            onChange={(e) => setTheme({ density: e.target.value })}
+          >
+            <option value="compact">{t('densityCompact')}</option>
+            <option value="normal">{t('densityNormal')}</option>
+            <option value="spacious">{t('densitySpacious')}</option>
+          </NativeSelect>
+        </div>
+
+        {/* ---- Identity: logo + favicon ---- */}
+        <h4 className={styles.panelSubhead}>{t('groupIdentity')}</h4>
+        <input ref={logoInputRef} type="file" accept="image/*" hidden onChange={onLogoFile} />
+        {logo.path && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img className={styles.panelThumb} src={eventMediaUrl(logo.path)} alt="" />
+        )}
+        <div className={styles.panelRow}>
+          <Button variant="secondary" size="sm" onClick={() => logoInputRef.current?.click()}>
+            {logo.path ? t('changeLogo') : t('uploadLogo')}
+          </Button>
+          {logo.path && (
+            <Button variant="ghost" size="sm" onClick={() => patchContent('logo', { path: null })}>
+              {t('remove')}
+            </Button>
+          )}
+        </div>
+        {logo.path && (
+          <div className={styles.colorPair}>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('logoPosition')}</span>
+              <NativeSelect
+                value={logo.position ?? 'left'}
+                onChange={(e) => patchContent('logo', { position: e.target.value })}
+              >
+                <option value="left">{t('alignLeft')}</option>
+                <option value="center">{t('alignCenter')}</option>
+                <option value="right">{t('alignRight')}</option>
+              </NativeSelect>
+            </div>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('logoPlacement')}</span>
+              <NativeSelect
+                value={logo.placement ?? 'top'}
+                onChange={(e) => patchContent('logo', { placement: e.target.value })}
+              >
+                <option value="top">{t('placementTop')}</option>
+                <option value="bottom">{t('placementBottom')}</option>
+              </NativeSelect>
+            </div>
+          </div>
+        )}
+        <input ref={faviconInputRef} type="file" accept="image/*" hidden onChange={onFaviconFile} />
+        <div className={styles.panelRow}>
+          <Button variant="secondary" size="sm" onClick={() => faviconInputRef.current?.click()}>
+            {content.favicon_path ? t('changeFavicon') : t('uploadFavicon')}
+          </Button>
+          {content.favicon_path && (
+            <Button variant="ghost" size="sm" onClick={() => setTopLevel('favicon_path', undefined)}>
+              {t('remove')}
+            </Button>
+          )}
+        </div>
+        <p className="field-help">{t('faviconHelp')}</p>
+
+        {/* ---- Languages ---- */}
+        <h4 className={styles.panelSubhead}>{t('groupLanguages')}</h4>
+        {/* Which languages this event offers is managed in event Settings; this
+            is read-only here, with a link back to Settings to change it. */}
+        <div className={styles.langInfo}>
+          <span className="field-label">{t('defaultLanguage')}</span>
+          <span className={styles.langDefault}>{localeName(event.default_locale)}</span>
+        </div>
+        {customLangs.length > 0 ? (
+          <div className={styles.langInfo}>
+            <span className="field-label">{t('customLanguages')}</span>
+            {customLangs.map((c) => (
+              <span key={c.code} className={styles.customLangRow}>{c.name}</span>
+            ))}
+          </div>
+        ) : (
+          <p className="field-help">{t('noCustomLanguages')}</p>
+        )}
+        <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
+          {t('addLanguagesInSettings')}
+        </Link>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={translateState === 'working'}
+          onClick={() => translateAll(availableLocales)}
+        >
+          {translateState === 'working' ? t('translating') : t('translateAll')}
+        </Button>
+        <p className="field-help">{t('translateAllHelp')}</p>
+        {translateMsg && (
+          <p
+            className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}
+          >
+            {translateMsg}
+          </p>
+        )}
+
+        {/* ---- Section order ---- */}
         <h4 className={styles.panelSubhead}>{t('sectionOrder')}</h4>
         <p className="field-help">{t('sectionOrderHelp')}</p>
         <div className={styles.orderList}>
@@ -692,9 +1097,14 @@ export function EventPageEditor({ initialEvent }) {
     )
   }
 
-  function renderBasics() {
+
+  function renderHero() {
+    const hero = content.hero ?? {}
+    const theme = content.theme ?? {}
+    const setTheme = (patch) => patchContent('theme', patch)
     return (
       <>
+        <h4 className={styles.panelSubhead}>{t('groupEventDetails')}</h4>
         <Field label={`${t('eventName')} (${previewLocale})`} required>
           {({ id }) => (
             <Input
@@ -731,14 +1141,8 @@ export function EventPageEditor({ initialEvent }) {
             />
           )}
         </Field>
-      </>
-    )
-  }
 
-  function renderHero() {
-    const hero = content.hero ?? {}
-    return (
-      <>
+        <h4 className={styles.panelSubhead}>{t('groupHero')}</h4>
         <div className={styles.colorField}>
           <span className="field-label">{t('heroLayout')}</span>
           <NativeSelect
@@ -750,18 +1154,36 @@ export function EventPageEditor({ initialEvent }) {
             <option value="split">{t('heroLayoutSplit')}</option>
           </NativeSelect>
         </div>
-        <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={onCoverFile} />
+        {content.theme?.hero_variant === 'split' && (
+          <div className={styles.colorField}>
+            <span className="field-label">{t('imageSide')}</span>
+            <NativeSelect
+              value={hero.image_side ?? 'right'}
+              onChange={(e) => patchContent('hero', { image_side: e.target.value })}
+              aria-label={t('imageSide')}
+            >
+              <option value="right">{t('imageSideRight')}</option>
+              <option value="left">{t('imageSideLeft')}</option>
+            </NativeSelect>
+            <p className="field-help">{t('imageSideHelp')}</p>
+          </div>
+        )}
+        <input ref={coverInputRef} type="file" accept="image/*,video/*" hidden onChange={onCoverFile} />
         {event.cover_image_path && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            className={styles.panelThumb}
-            src={eventMediaUrl(event.cover_image_path)}
-            alt=""
-          />
+          /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(event.cover_image_path) ? (
+            <video className={styles.panelThumb} src={eventMediaUrl(event.cover_image_path)} controls style={{ width: '100%', maxHeight: '150px', objectFit: 'contain' }} />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              className={styles.panelThumb}
+              src={eventMediaUrl(event.cover_image_path)}
+              alt=""
+            />
+          )
         )}
         <div className={styles.panelRow}>
           <Button variant="secondary" size="sm" onClick={() => coverInputRef.current?.click()}>
-            {event.cover_image_path ? t('changeImage') : t('uploadImage')}
+            {event.cover_image_path ? t('changeImageOrVideo') : t('uploadImageOrVideo')}
           </Button>
           {event.cover_image_path && (
             <Button variant="ghost" size="sm" onClick={() => patchEvent({ cover_image_path: null })}>
@@ -782,6 +1204,64 @@ export function EventPageEditor({ initialEvent }) {
           />
         )}
         <p className="field-help">{t('coverHelp')}</p>
+        <Field label={t('videoUrl')} help={t('videoHelp')}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={hero.video_url && /^https?:\/\//i.test(hero.video_url) ? hero.video_url : ''}
+              onChange={(e) => {
+                const val = e.target.value || undefined
+                patchContent('hero', { video_url: val })
+                if (val) patchEvent({ cover_image_path: null })
+              }}
+            />
+          )}
+        </Field>
+
+        {/* ---- Hero title styling (background, opacity, title size/font/align) ---- */}
+        <h4 className={styles.panelSubhead}>{t('heroTitleStyle')}</h4>
+        <ColorField
+          label={t('heroBackground')}
+          addLabel={t('addColor')}
+          resetLabel={t('resetColor')}
+          value={theme.hero_bg}
+          defaultValue={isDark ? '#000000' : '#ffffff'}
+          onChange={(c) => setTheme({ hero_bg: c ?? undefined })}
+        />
+        {theme.hero_bg && (event.cover_image_path || theme.hero_variant === 'split') && (
+          <div className={styles.colorField}>
+            <span className="field-label">
+              {t('heroOpacity')}: {theme.hero_opacity ?? 100}%
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={theme.hero_opacity ?? 100}
+              onChange={(e) => setTheme({ hero_opacity: Number(e.target.value) })}
+            />
+            <p className="field-help">{t('heroOpacityHelp')}</p>
+          </div>
+        )}
+        <StyleSelects
+          t={t}
+          style={{ size: theme.title_size, font: theme.title_font }}
+          onChange={(s) => setTheme({ title_size: s.size, title_font: s.font })}
+        />
+        <div className={styles.colorField}>
+          <span className="field-label">{t('titleAlign')}</span>
+          <NativeSelect
+            value={theme.title_align ?? 'left'}
+            onChange={(e) => setTheme({ title_align: e.target.value })}
+          >
+            <option value="left">{t('alignLeft')}</option>
+            <option value="center">{t('alignCenter')}</option>
+            <option value="right">{t('alignRight')}</option>
+          </NativeSelect>
+        </div>
 
         <h4 className={styles.panelSubhead}>{t('dateLocationChip')}</h4>
         <CheckboxRow
@@ -894,6 +1374,11 @@ export function EventPageEditor({ initialEvent }) {
             >
               {t('useTitleColor')}
             </Button>
+            <CheckboxRow
+              label={t('countdownDivider')}
+              checked={hero.countdown_divider !== false}
+              onCheckedChange={(checked) => patchContent('hero', { countdown_divider: !!checked })}
+            />
           </>
         )}
       </>
@@ -917,17 +1402,20 @@ export function EventPageEditor({ initialEvent }) {
             />
           )}
         </Field>
-        <input ref={aboutImgInputRef} type="file" accept="image/*" hidden onChange={onAboutImgFile} />
+        <input ref={aboutImgInputRef} type="file" accept="image/*,video/*" hidden onChange={onAboutImgFile} />
         {about.image_path && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img className={styles.panelThumb} src={eventMediaUrl(about.image_path)} alt="" />
         )}
+        {about.video_url && !/^https?:\/\//i.test(about.video_url) && (
+          <video className={styles.panelThumb} src={eventMediaUrl(about.video_url)} controls style={{ width: '100%', maxHeight: '150px', objectFit: 'contain' }} />
+        )}
         <div className={styles.panelRow}>
           <Button variant="secondary" size="sm" onClick={() => aboutImgInputRef.current?.click()}>
-            {about.image_path ? t('changeImage') : t('uploadImage')}
+            {about.image_path || about.video_url ? t('changeImageOrVideo') : t('uploadImageOrVideo')}
           </Button>
-          {about.image_path && (
-            <Button variant="ghost" size="sm" onClick={() => patchContent('about', { image_path: null })}>
+          {(about.image_path || about.video_url) && (
+            <Button variant="ghost" size="sm" onClick={() => patchContent('about', { image_path: null, video_url: null })}>
               {t('remove')}
             </Button>
           )}
@@ -952,8 +1440,8 @@ export function EventPageEditor({ initialEvent }) {
               id={id}
               type="url"
               placeholder="https://www.youtube.com/watch?v=..."
-              value={about.video_url ?? ''}
-              onChange={(e) => patchContent('about', { video_url: e.target.value || undefined })}
+              value={about.video_url && /^https?:\/\//i.test(about.video_url) ? about.video_url : ''}
+              onChange={(e) => patchContent('about', { video_url: e.target.value || undefined, image_path: e.target.value ? null : about.image_path })}
             />
           )}
         </Field>
@@ -1225,6 +1713,14 @@ export function EventPageEditor({ initialEvent }) {
                   patchItem('agenda', it.id, { description: setLv(it.description, e.target.value) })
                 }
               />
+              <ColorField
+                label={t('sessionColor')}
+                addLabel={t('addColor')}
+                resetLabel={t('resetColor')}
+                value={it.color}
+                defaultValue={isDark ? '#ffffff' : '#000000'}
+                onChange={(color) => patchItem('agenda', it.id, { color: color ?? undefined })}
+              />
             </div>
             <Button variant="ghost" size="sm" onClick={() => removeItem('agenda', it.id)}>
               ✕
@@ -1401,6 +1897,16 @@ export function EventPageEditor({ initialEvent }) {
         <p className="field-help">{t('testimonialHeadingHelp')}</p>
         {headingEditor('testimonials')}
         {sectionBgField('testimonials')}
+        {(testimonials.layout ?? 'cards') !== 'quote' && (
+          <ColorField
+            label={t('cardBg')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={testimonials.card_bg}
+            defaultValue={isDark ? '#14161b' : '#f9f9f9'}
+            onChange={(color) => patchContent('testimonials', { card_bg: color ?? undefined })}
+          />
+        )}
         {items.map((it) => (
           <div key={it.id} className={styles.panelItem}>
             <div className={styles.panelItemFields}>
@@ -1570,7 +2076,6 @@ export function EventPageEditor({ initialEvent }) {
 
   const sectionRenderers = {
     theme: renderTheme,
-    basics: renderBasics,
     hero: renderHero,
     about: renderAbout,
     speakers: renderSpeakers,
@@ -1592,6 +2097,24 @@ export function EventPageEditor({ initialEvent }) {
           <span className={styles.linkLabel}>{t('publicLink')}</span>
           <code className={styles.link}>{publicUrl}</code>
           <div className={styles.linkActions}>
+            <div className={styles.localeSwitch} role="tablist" aria-label={t('previewDevice')} style={{ marginInlineStart: 0, marginRight: 'var(--s-2)' }}>
+              <button
+                type="button"
+                data-active={previewDevice === 'desktop'}
+                aria-label={t('deviceDesktop')}
+                onClick={() => setPreviewDevice('desktop')}
+              >
+                {t('deviceDesktop')}
+              </button>
+              <button
+                type="button"
+                data-active={previewDevice === 'mobile'}
+                aria-label={t('deviceMobile')}
+                onClick={() => setPreviewDevice('mobile')}
+              >
+                {t('deviceMobile')}
+              </button>
+            </div>
             <Button variant="secondary" size="sm" onClick={copyLink}>
               {copied ? t('linkCopied') : t('copyLink')}
             </Button>
@@ -1610,20 +2133,22 @@ export function EventPageEditor({ initialEvent }) {
             {t('customize')}
           </Button>
           <p className={styles.hint}>{t('pagePreviewHint')}</p>
-          <div className={styles.localeSwitch} role="tablist" aria-label="Preview language">
-            {LOCALES.map((l) => (
-              <button
-                key={l}
-                type="button"
-                role="tab"
-                aria-selected={previewLocale === l}
-                data-active={previewLocale === l}
-                onClick={() => setPreviewLocale(l)}
-              >
-                {LOCALE_NAMES[l]}
-              </button>
-            ))}
-          </div>
+          {availableLocales.length > 1 && (
+            <div className={styles.localeSwitch} role="tablist" aria-label="Preview language">
+              {availableLocales.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={previewLocale === l}
+                  data-active={previewLocale === l}
+                  onClick={() => setPreviewLocale(l)}
+                >
+                  {localeName(l)}
+                </button>
+              ))}
+            </div>
+          )}
           <div className={styles.saveStatus} aria-live="polite">
             {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
             {saveState === 'error' && <span className="badge badge-cancelled">{t('saveError')}</span>}
@@ -1648,13 +2173,16 @@ export function EventPageEditor({ initialEvent }) {
 
       {/* ---- preview + panel ---- */}
       <div className={`${styles.split} ${panelSection ? styles.splitOpen : ''}`}>
-        <section className={styles.frame}>
-          <EventPageView
-            event={event}
-            locale={previewLocale}
-            editable
-            onEditSection={(s) => setPanelSection(s)}
-          />
+        <section className={styles.frame} data-device={previewDevice}>
+          <div className={styles.frameInner}>
+            <EventPageView
+              event={event}
+              locale={LOCALES.includes(previewLocale) ? previewLocale : event.default_locale}
+              contentLocale={previewLocale}
+              editable
+              onEditSection={(s) => setPanelSection(s)}
+            />
+          </div>
         </section>
 
         {panelSection && (

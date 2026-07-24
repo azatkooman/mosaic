@@ -2,9 +2,10 @@
 
 import { Fragment } from 'react'
 import { useTranslations } from 'next-intl'
-import { lt } from '@/lib/i18n/locales'
+import { lt, eventLocales } from '@/lib/i18n/locales'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
 import { eventMediaUrl } from '@/lib/storage'
+import { externalHref } from '@/lib/url'
 import { StatIcon } from './stat-icons'
 import { Countdown } from './Countdown'
 import { textStyle, TITLE_SIZES, FONT_FAMILIES } from './text-style'
@@ -81,13 +82,14 @@ function PencilIcon() {
 // them a new component identity each render, forcing React to remount the
 // whole section subtree on every parent update.
 
-function Section({ id, section, className, style, dataFlat, editable, onEditSection, editLabel, children }) {
+function Section({ id, section, className, style, dataFlat, dataHasBg, editable, onEditSection, editLabel, children }) {
   return (
     <section
       id={id}
       className={`${className ?? ''} ${editable ? styles.editable : ''}`}
       style={style}
       data-flat-hero={dataFlat ? '' : undefined}
+      data-has-bg={dataHasBg ? '' : undefined}
     >
       {children}
       {editable && (
@@ -105,11 +107,15 @@ function Section({ id, section, className, style, dataFlat, editable, onEditSect
   )
 }
 
-function SectionHeading({ text, headingStyle, centered }) {
+function SectionHeading({ text, headingStyle, centered, defaultAlign }) {
+  const align = headingStyle?.align || defaultAlign || (centered ? 'center' : undefined)
   return (
     <h2
-      className={`${styles.sectionTitle} ${centered ? styles.centered : ''}`}
-      style={textStyle(headingStyle)}
+      className={styles.sectionTitle}
+      style={{
+        ...textStyle(headingStyle),
+        ...(align ? { textAlign: align } : {}),
+      }}
     >
       {text}
     </h2>
@@ -136,12 +142,23 @@ function RegisterCta({ editable, registerHref, label }) {
  * The public event landing page. Rendered by the public route AND by the
  * console's Event Page tab (editable=true adds hover pencils per section).
  */
-export function EventPageView({ event, locale, registerHref, editable = false, onEditSection }) {
+export function EventPageView({
+  event,
+  locale,
+  contentLocale,
+  registerHref,
+  editable = false,
+  onEditSection,
+}) {
   const t = useTranslations('event')
   const content = event.page_content ?? {}
   const dl = event.default_locale
+  // `locale` is a real platform locale (used for dates/number formatting);
+  // `contentLocale` is what the organizer's text is resolved in — may be a
+  // custom language code that Intl doesn't know, so it never touches dates.
+  const cl = contentLocale || locale
 
-  const L = (map) => lt(map, locale, dl)
+  const L = (map) => lt(map, cl, dl)
 
   const theme = content.theme ?? {}
   const hero = content.hero ?? {}
@@ -189,7 +206,11 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
     }
     return s
   }
-  const aboutVideo = videoEmbedSrc(about.video_url)
+  const aboutVideo = videoEmbedSrc(
+    about.video_url && !/^https?:\/\//i.test(about.video_url)
+      ? eventMediaUrl(about.video_url)
+      : about.video_url
+  )
   const showAbout =
     about.enabled && (L(about.body) || about.image_path || aboutVideo || about.stats?.length)
   const showSpeakers = speakers.enabled && speakers.items?.length > 0
@@ -203,6 +224,12 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const closed = closesAt != null && now > closesAt
 
   const coverUrl = eventMediaUrl(event.cover_image_path)
+  const coverIsVideo = event.cover_image_path && /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(event.cover_image_path)
+  const heroVideo = videoEmbedSrc(
+    hero.video_url
+      ? ( /^https?:\/\//i.test(hero.video_url) ? hero.video_url : eventMediaUrl(hero.video_url) )
+      : ( coverIsVideo ? coverUrl : null )
+  )
   const name = L(event.name)
   const description = L(event.description)
   const location = L(event.location)
@@ -212,6 +239,8 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const pageStyle = {}
   if (theme.page_bg) pageStyle['--ep-bg'] = theme.page_bg
   if (theme.text_color) pageStyle['--ep-text'] = theme.text_color
+  if (theme.primary_color) pageStyle['--ep-primary'] = theme.primary_color
+  if (theme.accent_color) pageStyle['--ep-accent'] = theme.accent_color
   if (theme.btn_bg) pageStyle['--ep-btn-bg'] = theme.btn_bg
   if (theme.btn_text) pageStyle['--ep-btn-text'] = theme.btn_text
   if (theme.body_font && FONT_FAMILIES[theme.body_font]) {
@@ -227,6 +256,8 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   // cover image; with no image the color fills the hero solid (a translucent
   // fill would just blend with the page behind it and look washed out/white).
   const heroTint = coverUrl ? hexToRgba(theme.hero_bg, theme.hero_opacity) : null
+  // Split hero: the chosen hero color (with opacity) fills the text side.
+  const splitBg = theme.hero_bg ? hexToRgba(theme.hero_bg, theme.hero_opacity) : undefined
 
   // With no cover image, let the hero adopt the chosen colors so theme changes
   // are visible at the very top of the page (otherwise it keeps its default
@@ -246,10 +277,65 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
       text={L(sectionData.heading) || fallback}
       headingStyle={sectionData.heading_style}
       centered={centered}
+      defaultAlign={theme.title_align}
     />
   )
   const registerButton = (
     <RegisterCta editable={editable} registerHref={registerHref} label={t('register')} />
+  )
+
+  // Logo + language switcher bar. Position controls horizontal alignment,
+  // placement puts the bar at the top or bottom of the hero.
+  const logo = content.logo ?? {}
+  const logoUrl = eventMediaUrl(logo.path)
+  const logoPos = ['left', 'center', 'right'].includes(logo.position) ? logo.position : 'left'
+  const logoAtBottom = logo.placement === 'bottom'
+  // Custom (organizer-defined) languages, e.g. { code: 'pt', name: 'Português' }.
+  const customLangs = Array.isArray(content.i18n?.custom) ? content.i18n.custom : []
+  const customCodes = customLangs.map((c) => c.code)
+  // Shared with the editor and the rest of the console so every surface agrees
+  // on which languages the event offers.
+  const availableLocales = eventLocales(event)
+  const showLangSwitch = availableLocales.length > 1
+  const eventSlug = event.slug
+  const isCustom = (code) => customCodes.includes(code)
+  // Show the language code as an acronym (e.g. "EN", "PT") for every language,
+  // built-in and custom alike, so the switcher stays compact.
+  const langLabel = (code) => code.toUpperCase()
+  // Built-in locales get their own route; custom ones ride on the current
+  // route locale via a ?lang= param (they aren't platform routes).
+  const langHref = (code) =>
+    isCustom(code) ? `/${locale}/events/${eventSlug}?lang=${code}` : `/${code}/events/${eventSlug}`
+
+  const heroTopBar = (logoUrl || showLangSwitch) && (
+    <div
+      className={styles.heroTopBar}
+      data-logo-pos={logoPos}
+      data-bottom={logoAtBottom ? '' : undefined}
+      data-lang-side={heroVariant === 'split' && hero.image_side === 'left' ? 'left' : 'right'}
+    >
+      {logoUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img className={styles.heroLogo} src={logoUrl} alt="" />
+      ) : (
+        <span />
+      )}
+      {showLangSwitch && (
+        <nav className={styles.langSwitch} aria-label="Language">
+          {availableLocales.map((l) =>
+            editable ? (
+              <span key={l} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
+              </span>
+            ) : (
+              <a key={l} href={langHref(l)} data-active={l === cl ? '' : undefined}>
+                {langLabel(l)}
+              </a>
+            )
+          )}
+        </nav>
+      )}
+    </div>
   )
 
   const countdownTone = coverUrl
@@ -311,7 +397,10 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         )}
       </div>
       {hero.show_countdown !== false && !closed && countdownTarget && (
-        <div className={styles.heroCountdown}>
+        <div
+          className={styles.heroCountdown}
+          data-no-divider={hero.countdown_divider === false ? '' : undefined}
+        >
           <Countdown
             targetIso={countdownTarget}
             tone={countdownTone}
@@ -329,8 +418,11 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
   const sectionNodes = {
     about: showAbout && (
       <Section section="about" className={styles.about} style={sectionBg(about)} {...sectionProps}>
-        <div className={`container ${styles.aboutGrid}`}>
-          <div className={styles.aboutText}>
+        <div
+          className={`container ${styles.aboutGrid}`}
+          data-no-media={!(aboutVideo || about.image_path) ? '' : undefined}
+        >
+          <div>
             {heading(about, t('aboutDefault'))}
             {L(about.body) && <p className={styles.aboutBody}>{L(about.body)}</p>}
             {about.stats?.length > 0 && (
@@ -427,6 +519,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -444,7 +537,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
             <ol className={styles.agendaList}>
               {agenda.items.map((item) => (
                 <li key={item.id} className={styles.agendaItem}>
-                  <div className={styles.agendaMarker} aria-hidden="true" />
+                  <div className={styles.agendaMarker} style={item.color ? { background: item.color } : undefined} aria-hidden="true" />
                   <div className={styles.agendaBody}>
                     <h3>{L(item.title)}</h3>
                     {L(item.time) && <p className={styles.agendaTime}>{L(item.time)}</p>}
@@ -465,6 +558,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -475,6 +569,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -523,6 +618,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -533,6 +629,7 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
+        defaultAlign={theme.title_align}
       />
     ),
 
@@ -544,8 +641,8 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
             {contact.name && <span>{contact.name}</span>}
             {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
             {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-            {contact.website && (
-              <a href={contact.website} target="_blank" rel="noreferrer">
+            {externalHref(contact.website) && (
+              <a href={externalHref(contact.website)} target="_blank" rel="noreferrer">
                 {contact.website}
               </a>
             )}
@@ -563,14 +660,39 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
       style={pageStyle}
       data-custom-bg={theme.page_bg ? '' : undefined}
       data-custom-text={theme.text_color ? '' : undefined}
+      data-scale={theme.text_scale && theme.text_scale !== 'normal' ? theme.text_scale : undefined}
+      data-radius={theme.radius && theme.radius !== 'normal' ? theme.radius : undefined}
+      data-width={theme.width && theme.width !== 'normal' ? theme.width : undefined}
+      data-density={theme.density && theme.density !== 'normal' ? theme.density : undefined}
+      data-btn-style={theme.btn_style && theme.btn_style !== 'fill' ? theme.btn_style : undefined}
     >
       {/* ---- Hero ---- */}
       {heroVariant === 'split' ? (
-        <Section section="hero" className={styles.heroSplit} {...sectionProps}>
-          <div className={`container ${styles.heroSplitInner}`}>
+        <Section
+          section="hero"
+          className={styles.heroSplit}
+          style={splitBg ? { background: splitBg } : undefined}
+          dataHasBg={!!theme.hero_bg}
+          {...sectionProps}
+        >
+          {heroTopBar}
+          <div className={styles.heroSplitInner} data-image-side={hero.image_side === 'left' ? 'left' : 'right'}>
             <div className={styles.heroSplitText}>{heroBody}</div>
             <div className={styles.heroSplitMedia}>
-              {coverUrl ? (
+              {heroVideo ? (
+                heroVideo.type === 'iframe' ? (
+                  <iframe
+                    src={heroVideo.src}
+                    title="hero video"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={imgAdjust(hero, 'cover')}
+                  />
+                ) : (
+                  <video src={heroVideo.src} autoPlay loop muted playsInline style={imgAdjust(hero, 'cover')} />
+                )
+              ) : coverUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={coverUrl} alt="" style={imgAdjust(hero, 'cover')} />
               ) : (
@@ -587,19 +709,35 @@ export function EventPageView({ event, locale, registerHref, editable = false, o
           dataFlat={flatHero}
           {...sectionProps}
         >
-          {coverUrl && (
+          {(heroVideo || coverUrl) && (
             <div
               className={styles.heroBg}
               data-custom-overlay={heroTint ? '' : undefined}
               aria-hidden="true"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={coverUrl} alt="" style={imgAdjust(hero, 'cover')} />
+              {heroVideo ? (
+                heroVideo.type === 'iframe' ? (
+                  <iframe
+                    src={heroVideo.src}
+                    title="hero video"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ ...imgAdjust(hero, 'cover'), pointerEvents: 'none' }}
+                  />
+                ) : (
+                  <video src={heroVideo.src} autoPlay loop muted playsInline style={imgAdjust(hero, 'cover')} />
+                )
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={coverUrl} alt="" style={imgAdjust(hero, 'cover')} />
+              )}
             </div>
           )}
-          {coverUrl && heroTint && (
+          {(coverUrl || heroVideo) && heroTint && (
             <div className={styles.heroTint} style={{ background: heroTint }} aria-hidden="true" />
           )}
+          {heroTopBar}
           <div
             className={`container ${styles.heroInner}`}
             data-align={theme.title_align || undefined}
