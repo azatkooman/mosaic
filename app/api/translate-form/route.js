@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { LOCALES } from '@/lib/i18n/locales'
+import { getTranslateLanguages } from '@/lib/i18n/translate-languages'
 import { applyLocalizedTranslations, collectLocalizedStrings } from '@/lib/form-localization'
-
-const SUPPORTED = new Set(LOCALES)
 
 function unescapeHtml(value) {
   return value
@@ -62,24 +61,31 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-  const { definition, source, targets } = body ?? {}
+  const { definition, source, targets, locales } = body ?? {}
+  // Languages Google can translate (custom event languages are picked from
+  // this same list); cached, falls back to the built-in locales without a key.
+  const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
   if (
     !definition ||
     typeof definition !== 'object' ||
     typeof source !== 'string' ||
     !Array.isArray(targets) ||
-    !SUPPORTED.has(source)
+    !supported.has(source)
   ) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-  const targetList = targets.filter((target) => SUPPORTED.has(target) && target !== source)
+  const targetList = targets.filter((target) => supported.has(target) && target !== source)
   if (targetList.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
   }
 
+  // Locale keys to recognize inside the definition: built-ins + the event's
+  // custom languages, so maps like {en, pt} are collected and filled.
+  const allowed = new Set([...LOCALES, ...(Array.isArray(locales) ? locales : [])])
+
   const sourceStrings = new Set()
-  collectLocalizedStrings(definition, source, sourceStrings)
+  collectLocalizedStrings(definition, source, sourceStrings, allowed)
   const strings = [...sourceStrings]
   if (strings.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
@@ -106,6 +112,6 @@ export async function POST(request) {
   }
 
   return NextResponse.json({
-    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict),
+    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict, allowed),
   })
 }

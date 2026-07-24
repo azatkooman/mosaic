@@ -86,6 +86,9 @@ export function FormBuilder({
             definition,
             source: defaultLocale,
             targets: [editLocale],
+            // Tell the route the event's full language set so custom-language
+            // content maps (e.g. {en, pt}) are recognized and translated.
+            locales: supportedLocales,
           }),
         })
         const data = await res.json().catch(() => ({}))
