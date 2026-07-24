@@ -27,10 +27,16 @@ export function ProfileForm({ userId, initialProfile }) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
 
-  // The profile row is the source of truth; reconcile the cookies to it on
-  // load so a choice made on another device applies here too.
+  // Keep the Appearance dropdown in sync with the header toggle. If an
+  // explicit theme is currently applied (the cookie/attribute the toggle
+  // sets), reflect it here; otherwise honor the saved profile preference.
   useEffect(() => {
-    applyThemeClient(initialProfile.theme ?? 'system')
+    const applied = document.documentElement.dataset.theme
+    if (applied === 'light' || applied === 'dark') {
+      setTheme(applied)
+    } else {
+      applyThemeClient(initialProfile.theme ?? 'system')
+    }
     applyDateFormatClient({
       dateFormat: initialProfile.date_format ?? 'auto',
       timeFormat: initialProfile.time_format ?? 'auto',
