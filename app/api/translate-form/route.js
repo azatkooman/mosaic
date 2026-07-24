@@ -75,13 +75,13 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-const MAX_TARGETS = 5
-const targetList = targets
-  .filter((target) => typeof target === 'string' && supported.has(target) && target !== source)
-  .slice(0, MAX_TARGETS)
-if (targetList.length === 0) {
-  return NextResponse.json({ translatedDefinition: definition })
-}
+  const MAX_TARGETS = 5
+  const targetList = targets
+    .filter((target) => typeof target === 'string' && supported.has(target) && target !== source)
+    .slice(0, MAX_TARGETS)
+  if (targetList.length === 0) {
+    return NextResponse.json({ translatedDefinition: definition })
+  }
 
   // Locale keys to recognize inside the definition: built-ins + the event's
   // custom languages, so maps like {en, pt} are collected and filled.
