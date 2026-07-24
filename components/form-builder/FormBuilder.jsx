@@ -207,7 +207,7 @@ export function FormBuilder({
           <FormRenderer
             definition={definition}
             participantTypeKey={previewTypeKey}
-            locale={locale}
+            locale={editLocale}
             defaultLocale={defaultLocale}
             answers={previewAnswers}
             onChange={(questionId, value) =>
@@ -317,7 +317,7 @@ export function FormBuilder({
                 <SortableQuestionCard
                   key={q.id}
                   question={q}
-                  locale={locale}
+                  locale={editLocale}
                   defaultLocale={defaultLocale}
                   typeLabel={tq(q.type)}
                   participantTypes={participantTypes}
