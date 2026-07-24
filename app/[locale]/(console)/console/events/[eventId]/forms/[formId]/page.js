@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { setRequestLocale } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { FormBuilder } from '@/components/form-builder/FormBuilder'
-import { eventLocales, LOCALES } from '@/lib/i18n/locales'
+import { eventLocales, localeName } from '@/lib/i18n/locales'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,10 @@ export default async function FormBuilderPage({ params }) {
       initialDefinition={version.definition ?? { questions: [] }}
       participantTypes={types ?? []}
       defaultLocale={event?.default_locale ?? 'en'}
-      supportedLocales={eventLocales(event).filter((l) => LOCALES.includes(l))}
+      supportedLocales={eventLocales(event)}
+      localeNames={Object.fromEntries(
+        eventLocales(event).map((code) => [code, localeName(event, code)])
+      )}
     />
   )
 }

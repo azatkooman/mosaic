@@ -37,6 +37,7 @@ export function FormBuilder({
   participantTypes,
   defaultLocale,
   supportedLocales,
+  localeNames,
 }) {
   const t = useTranslations('console')
   const tq = useTranslations('questionTypes')
@@ -270,6 +271,7 @@ export function FormBuilder({
             participantTypes={participantTypes}
             defaultLocale={defaultLocale}
             supportedLocales={supportedLocales}
+            localeNames={localeNames}
             onChange={(patch) => store.updateQuestion(selected.id, patch)}
           />
         ) : (

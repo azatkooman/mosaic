@@ -573,6 +573,9 @@
     "cancel": "Cancelar",
     "languageNamePlaceholder": "Nombre del idioma (p. ej. Portugués)",
     "customLanguageHelp": "Idiomas personalizados: tú escribes todo el texto en una pestaña nueva. Los botones fijos de la plataforma quedan en el idioma predeterminado.",
+    "customLanguages": "Idiomas personalizados",
+    "noCustomLanguages": "Aún no se han añadido idiomas personalizados.",
+    "addLanguagesInSettings": "Añade o gestiona idiomas en Configuración",
     "languages": "Idiomas",
     "languagesHelp": "Elige en qué idiomas se ofrecen este evento y su formulario de inscripción. Los asistentes pueden cambiar entre ellos; el idioma predeterminado se usa cuando falta una traducción.",
     "defaultLanguageHelp": "Se usa como alternativa cuando falta una traducción."

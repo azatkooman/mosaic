@@ -32,6 +32,13 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     eventLocales(event).filter((l) => LOCALES.includes(l))
   )
   const [defaultLocale, setDefaultLocale] = useState(event.default_locale ?? 'en')
+  // Organizer-defined languages beyond the five built-ins: [{ code, name }].
+  // Managed here (was on the Event Page tab); their per-language content is
+  // still authored on the Event Page and form-builder tabs.
+  const [customLangs, setCustomLangs] = useState(
+    Array.isArray(event.page_content?.i18n?.custom) ? event.page_content.i18n.custom : []
+  )
+  const [newLangName, setNewLangName] = useState(null) // null = add form closed
   const [slug, setSlug] = useState(event.slug)
   const [timezone, setTimezone] = useState(event.timezone)
   const [startsAt, setStartsAt] = useState(toLocalInput(event.starts_at, event.timezone))
@@ -58,7 +65,7 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     return JSON.stringify([
       slugValue, timezone,
       startsAt, endsAt, regOpens, regCloses, capacity, visibility, contact,
-      supportedLocales, defaultLocale,
+      supportedLocales, defaultLocale, customLangs,
     ])
   }
   // Baseline = last known saved state. Initialized to the values first loaded
@@ -96,20 +103,34 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     )
   }
 
+  // Add an organizer-defined language: derive a unique code from the name and
+  // stage it. It's persisted into page_content.i18n on save.
+  function addCustomLang(rawName) {
+    const name = (rawName || '').trim()
+    if (!name) return
+    const taken = new Set([...LOCALES, ...customLangs.map((c) => c.code)])
+    const base = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'lang'
+    let code = base
+    let n = 2
+    while (taken.has(code)) code = `${base}${n++}`
+    setCustomLangs((prev) => [...prev, { code, name }])
+    setNewLangName(null)
+  }
+
+  function removeCustomLang(code) {
+    setCustomLangs((prev) => prev.filter((c) => c.code !== code))
+  }
+
   async function save(slugValue = slug) {
     setSlugWarnOpen(false)
     setSaveState('saving')
-    // Language selection lives in page_content.i18n.available (shared with the
-    // Event Page editor). Preserve organizer-defined custom languages that are
-    // enabled there, and keep the legacy column + default locale in sync.
+    // Language selection lives in page_content.i18n (shared with the Event Page
+    // editor and the form builder). Settings owns both the built-in set and the
+    // organizer-defined custom languages; keep the legacy column + default
+    // locale in sync.
     const existingContent = event.page_content ?? {}
     const existingI18n = existingContent.i18n ?? {}
-    const customCodes = Array.isArray(existingI18n.custom)
-      ? existingI18n.custom.map((c) => c.code)
-      : []
-    const keptCustoms = (Array.isArray(existingI18n.available) ? existingI18n.available : [])
-      .filter((c) => customCodes.includes(c))
-    const nextAvailable = [...supportedLocales, ...keptCustoms]
+    const nextAvailable = [...supportedLocales, ...customLangs.map((c) => c.code)]
 
     const { error } = await supabase
       .from('events')
@@ -125,7 +146,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         contact,
         default_locale: defaultLocale,
         supported_locales: supportedLocales,
-        page_content: { ...existingContent, i18n: { ...existingI18n, available: nextAvailable } },
+        page_content: {
+          ...existingContent,
+          i18n: { ...existingI18n, available: nextAvailable, custom: customLangs },
+        },
       })
       .eq('id', event.id)
     if (error) {
@@ -231,6 +255,50 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             </NativeSelect>
           )}
         </Field>
+
+        <div className={styles.customLangs}>
+          <span className="field-label">{t('availableLanguages')}</span>
+          {customLangs.map((c) => (
+            <div key={c.code} className={styles.customLangRow}>
+              <span>{c.name}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={t('remove')}
+                onClick={() => removeCustomLang(c.code)}
+              >
+                ✕
+              </Button>
+            </div>
+          ))}
+          {newLangName === null ? (
+            <Button variant="secondary" size="sm" onClick={() => setNewLangName('')}>
+              {t('addLanguage')}
+            </Button>
+          ) : (
+            <div className={styles.addLangForm}>
+              <Input
+                autoFocus
+                placeholder={t('languageNamePlaceholder')}
+                value={newLangName}
+                onChange={(e) => setNewLangName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addCustomLang(newLangName)
+                  if (e.key === 'Escape') setNewLangName(null)
+                }}
+              />
+              <div className={styles.addLangActions}>
+                <Button size="sm" disabled={!newLangName.trim()} onClick={() => addCustomLang(newLangName)}>
+                  {t('addLanguageConfirm')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setNewLangName(null)}>
+                  {t('cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+          <p className="field-help">{t('customLanguageHelp')}</p>
+        </div>
       </section>
 
       <section className="card card-pad">

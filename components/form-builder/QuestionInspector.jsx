@@ -28,6 +28,7 @@ export function QuestionInspector({
   participantTypes,
   defaultLocale,
   supportedLocales,
+  localeNames,
   onChange,
 }) {
   const t = useTranslations('console')
@@ -35,6 +36,9 @@ export function QuestionInspector({
   // Author only in the languages this event offers; fall back to the full
   // set if the caller didn't scope them.
   const locales = supportedLocales?.length ? supportedLocales : LOCALES
+  // Display name for a language code — custom languages aren't in LOCALE_NAMES,
+  // so fall back to the map passed from the event, then the raw code.
+  const nameOf = (l) => localeNames?.[l] ?? LOCALE_NAMES[l] ?? l
   const [editLocale, setEditLocale] = useState(defaultLocale)
 
   function setAddressPart(key, patch) {
@@ -102,13 +106,13 @@ export function QuestionInspector({
       >
         <TabsList>
           {locales.map((l) => (
-            <TabsTrigger key={l} value={l}>{l.toUpperCase()}</TabsTrigger>
+            <TabsTrigger key={l} value={l}>{nameOf(l)}</TabsTrigger>
           ))}
         </TabsList>
         {locales.map((l) => (
           <TabsContent key={l} value={l}>
             <div className={styles.inspectorSection}>
-              <Field label={`${t('questionLabel')} (${LOCALE_NAMES[l]})`}>
+              <Field label={`${t('questionLabel')} (${nameOf(l)})`}>
                 {({ id }) => (
                   <Input
                     id={id}
@@ -117,7 +121,7 @@ export function QuestionInspector({
                   />
                 )}
               </Field>
-              <Field label={`${t('helpText')} (${LOCALE_NAMES[l]})`}>
+              <Field label={`${t('helpText')} (${nameOf(l)})`}>
                 {({ id }) => (
                   <Input
                     id={id}
