@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { AUTH_NEXT_COOKIE, safeNextPath } from '@/lib/url'
 import { Button, Field, Input, MosaicMark } from '@/components/ui'
 import styles from './login.module.css'
 
@@ -15,13 +16,27 @@ export function LoginForm({ oktaDomain }) {
   const [state, setState] = useState('idle') // idle | sending | sent | error
   const supabase = getSupabaseBrowserClient()
 
-  const next = searchParams.get('next') || `/${locale}`
-  // Computed lazily — window does not exist during server prerender.
-  const getRedirectTo = () =>
-    `${window.location.origin}/${locale}/auth/callback?next=${encodeURIComponent(next)}`
+  const next = safeNextPath(searchParams.get('next'), `/${locale}`)
+  // The callback route reports a failed code exchange this way; only surface it
+  // until the next attempt starts, so it never sits beside "check your email".
+  const exchangeFailed = searchParams.get('error') === 'auth' && state === 'idle'
+
+  // Deliberately bare. Supabase matches redirectTo against the project's
+  // Redirect URL allow-list query string and all, so a `?next=` here risks a
+  // silent fallback to Site URL that strands the user on the wrong page. The
+  // destination travels in a cookie instead. Computed lazily — window does not
+  // exist during server prerender.
+  const getRedirectTo = () => `${window.location.origin}/${locale}/auth/callback`
+
+  function rememberNext() {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie =
+      `${AUTH_NEXT_COOKIE}=${encodeURIComponent(next)}; Path=/; Max-Age=600; SameSite=Lax${secure}`
+  }
 
   async function oauth(provider) {
     setState('idle')
+    rememberNext()
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: getRedirectTo() },
@@ -30,6 +45,7 @@ export function LoginForm({ oktaDomain }) {
   }
 
   async function okta() {
+    rememberNext()
     const { data, error } = await supabase.auth.signInWithSSO({
       domain: oktaDomain,
       options: { redirectTo: getRedirectTo() },
@@ -41,6 +57,7 @@ export function LoginForm({ oktaDomain }) {
   async function magicLink(e) {
     e.preventDefault()
     setState('sending')
+    rememberNext()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: getRedirectTo() },
@@ -97,7 +114,9 @@ export function LoginForm({ oktaDomain }) {
           </form>
         )}
 
-        {state === 'error' && <p className="alert alert-error">{t('authError')}</p>}
+        {(state === 'error' || exchangeFailed) && (
+          <p className="alert alert-error">{t('authError')}</p>
+        )}
       </div>
     </div>
   )
