@@ -299,6 +299,8 @@
     "formKindFamily": "Formulario de respuesta grupal",
     "formModeSingle": "Individual",
     "formModeFamily": "Grupo",
+    "bucketIndividual": "Registros individuales",
+    "bucketGroup": "Registros de grupo",
     "formModeSingleHelp": "Se muestra cuando alguien se inscribe solo.",
     "formModeFamilyHelp": "Se muestra cuando alguien inscribe a un grupo.",
     "copyQuestionsFrom": "Copiar preguntas de",
