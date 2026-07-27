@@ -1830,6 +1830,12 @@ export function EventPageEditor({ initialEvent }) {
   function renderContact() {
     const contact = event.contact ?? {}
     const set = (key, value) => patchEvent({ contact: { ...contact, [key]: value } })
+    // Extra contacts beyond the primary one (which maps to the top-level fields
+    // and is also shown in the Settings tab).
+    const people = Array.isArray(contact.people) ? contact.people : []
+    const setPeople = (next) => patchEvent({ contact: { ...contact, people: next } })
+    const patchPerson = (id, patch) =>
+      setPeople(people.map((p) => (p.id === id ? { ...p, ...patch } : p)))
     return (
       <>
         {headingEditor('contact')}
@@ -1852,6 +1858,52 @@ export function EventPageEditor({ initialEvent }) {
             <Input id={id} type="url" value={contact.website ?? ''} onChange={(e) => set('website', e.target.value)} />
           )}
         </Field>
+
+        <h4 className={styles.panelSubhead}>{t('additionalContacts')}</h4>
+        {people.map((p) => (
+          <div key={p.id} className={styles.panelItem}>
+            <div className={styles.panelItemFields}>
+              <Input
+                placeholder={t('contactName')}
+                value={p.name ?? ''}
+                onChange={(e) => patchPerson(p.id, { name: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder={t('contactEmail')}
+                value={p.email ?? ''}
+                onChange={(e) => patchPerson(p.id, { email: e.target.value })}
+              />
+              <Input
+                type="tel"
+                placeholder={t('contactPhone')}
+                value={p.phone ?? ''}
+                onChange={(e) => patchPerson(p.id, { phone: e.target.value })}
+              />
+              <Input
+                type="url"
+                placeholder={t('contactWebsite')}
+                value={p.website ?? ''}
+                onChange={(e) => patchPerson(p.id, { website: e.target.value })}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={t('removeContact')}
+              onClick={() => setPeople(people.filter((x) => x.id !== p.id))}
+            >
+              ✕
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setPeople([...people, { id: newId(), name: '', email: '', phone: '', website: '' }])}
+        >
+          {t('addContact')}
+        </Button>
       </>
     )
   }
