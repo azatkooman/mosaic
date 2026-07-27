@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
+import { stripLocales } from '@/lib/form-localization'
 import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
@@ -59,10 +60,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   // Last persisted participant types, so save() knows which rows changed.
   // A ref (not the prop) because router.refresh() replaces initialTypes.
   const savedTypesRef = useRef(initialTypes)
+  // Languages as last persisted, so save() can tell which ones were dropped
+  // and purge their text. A ref for the same reason as savedTypesRef.
+  const savedLocalesRef = useRef(eventLocales(event))
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [publishBurst, setPublishBurst] = useState(null)
   const [slugWarnOpen, setSlugWarnOpen] = useState(false)
+  const [langWarnOpen, setLangWarnOpen] = useState(false)
   const [publishError, setPublishError] = useState(null)
 
   // Extra contacts beyond the primary one. Stored on contact.people[] — the
@@ -106,9 +111,41 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [savedSnap, setSavedSnap] = useState(() => snapshot())
   const dirty = snapshot() !== savedSnap
 
+  // Display name for a language code. Falls back to the event's *saved* custom
+  // list as well, because a just-removed language is already gone from
+  // customLangs state and the warning still has to name it.
+  function localeLabel(code) {
+    const saved = Array.isArray(event.page_content?.i18n?.custom)
+      ? event.page_content.i18n.custom
+      : []
+    return (
+      LOCALE_NAMES[code] ||
+      customLangs.find((c) => c.code === code)?.name ||
+      saved.find((c) => c.code === code)?.name ||
+      code
+    )
+  }
+
+  // Languages this save would drop. Their translated text is deleted with
+  // them, which is not something to do on an accidental click — hence the
+  // confirmation below.
+  function droppedLocales() {
+    const next = [...supportedLocales, ...customLangs.map((c) => c.code)]
+    return savedLocalesRef.current.filter((l) => !next.includes(l) && l !== defaultLocale)
+  }
+
+  function requestSave() {
+    if (droppedLocales().length) {
+      setLangWarnOpen(true)
+      return
+    }
+    continueSave()
+  }
+
   // Changing the slug breaks every existing link to this event's public page,
   // so confirm before committing a change. An unchanged slug saves directly.
-  function requestSave() {
+  function continueSave() {
+    setLangWarnOpen(false)
     if (slug !== event.slug) {
       setSlugWarnOpen(true)
       return
@@ -167,6 +204,37 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     )
     .slice(0, 50)
 
+  // Strip dropped languages from every draft form version of this event.
+  // Published versions are skipped on purpose: RLS makes them immutable, and
+  // they record what registrants actually saw.
+  async function purgeFormDrafts(removed, codes) {
+    const { data: formRows, error: formsError } = await supabase
+      .from('forms')
+      .select('id')
+      .eq('event_id', event.id)
+    if (formsError) return { error: formsError }
+    const formIds = (formRows ?? []).map((f) => f.id)
+    if (!formIds.length) return { error: null }
+
+    const { data: versions, error: versionsError } = await supabase
+      .from('form_versions')
+      .select('id, definition')
+      .in('form_id', formIds)
+      .is('published_at', null)
+    if (versionsError) return { error: versionsError }
+
+    for (const version of versions ?? []) {
+      const next = stripLocales(version.definition, removed, codes)
+      if (JSON.stringify(next) === JSON.stringify(version.definition)) continue
+      const { error } = await supabase
+        .from('form_versions')
+        .update({ definition: next })
+        .eq('id', version.id)
+      if (error) return { error }
+    }
+    return { error: null }
+  }
+
   async function save(slugValue = slug) {
     setSlugWarnOpen(false)
     setSaveState('saving')
@@ -177,6 +245,18 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     const existingContent = event.page_content ?? {}
     const existingI18n = existingContent.i18n ?? {}
     const nextAvailable = [...supportedLocales, ...customLangs.map((c) => c.code)]
+
+    // Languages dropped in this save. Their text has to go with them: machine
+    // translation only fills EMPTY slots, so anything left behind would come
+    // back — stale and un-overwritable — the moment the language is re-added.
+    // The default language can never be dropped, so it is never purged.
+    const removed = new Set(
+      savedLocalesRef.current.filter((l) => !nextAvailable.includes(l) && l !== defaultLocale)
+    )
+    // Recognize maps keyed by any language the event had *before* the removal,
+    // otherwise the ones holding a dropped code wouldn't be seen as locale maps.
+    const codes = new Set([...LOCALES, ...savedLocalesRef.current, ...nextAvailable])
+    const purge = (value) => (removed.size ? stripLocales(value, removed, codes) : value)
 
     const { error } = await supabase
       .from('events')
@@ -189,11 +269,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
         registration_closes_at: fromLocalInput(regCloses, timezone),
         capacity: capacity === '' ? null : Number(capacity),
         visibility,
-        contact,
+        contact: purge(contact),
         default_locale: defaultLocale,
         supported_locales: supportedLocales,
+        name: purge(event.name),
+        description: purge(event.description),
+        location: purge(event.location),
         page_content: {
-          ...existingContent,
+          ...purge(existingContent),
           i18n: { ...existingI18n, available: nextAvailable, custom: customLangs },
         },
       })
@@ -203,10 +286,27 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       return
     }
 
+    // The same purge across the event's forms. Only draft versions: RLS makes
+    // published ones immutable, and they are the record of what registrants
+    // actually saw, so rewriting them would be wrong even if it were allowed.
+    if (removed.size) {
+      const { error: purgeError } = await purgeFormDrafts(removed, codes)
+      if (purgeError) {
+        setSaveState('error')
+        return
+      }
+    }
+
+    // Participant-type names are localized too, so they get purged as well; the
+    // rewritten name then differs from the saved one and is picked up below.
+    const typesToSave = removed.size
+      ? types.map((pt) => ({ ...pt, name: purge(pt.name) }))
+      : types
+
     // Participant types: persist every row that differs from the last known
     // saved state. Sequential (not parallel) so a failure stops before later
     // rows and the error is surfaced instead of silently swallowed.
-    for (const pt of types) {
+    for (const pt of typesToSave) {
       const original = savedTypesRef.current.find((o) => o.id === pt.id)
       const changed =
         !original ||
@@ -226,8 +326,10 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     }
 
     setSaveState('saved')
-    savedTypesRef.current = types
-    setSavedSnap(snapshot(slugValue))
+    if (removed.size) setTypes(typesToSave)
+    savedTypesRef.current = typesToSave
+    savedLocalesRef.current = nextAvailable
+    setSavedSnap(snapshotOf(typesToSave, slugValue))
     router.refresh()
   }
 
@@ -686,6 +788,26 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
           </Button>
         </div>
       </div>
+
+      <Dialog
+        open={langWarnOpen}
+        onOpenChange={setLangWarnOpen}
+        title={t('langWarnTitle')}
+      >
+        <p className={styles.sectionHelp} style={{ marginBottom: 'var(--s-4)' }}>
+          {t('langWarnBody', {
+            langs: droppedLocales().map((l) => localeLabel(l)).join(', '),
+          })}
+        </p>
+        <div className={styles.slugWarnActions}>
+          <Dialog.Close asChild>
+            <Button variant="ghost">{tCommon('cancel')}</Button>
+          </Dialog.Close>
+          <Button onClick={continueSave} disabled={saveState === 'saving'}>
+            {t('langWarnConfirm')}
+          </Button>
+        </div>
+      </Dialog>
 
       <Dialog
         open={slugWarnOpen}
