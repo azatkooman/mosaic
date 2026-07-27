@@ -1610,15 +1610,21 @@ export function EventPageEditor({ initialEvent }) {
                 {i + 1}
               </div>
               <div className={styles.panelItemFields}>
-                <Field label={t('statValue')}>
-                  {({ id }) => (
-                    <Input
-                      id={id}
-                      placeholder="50+"
-                      value={s.value ?? ''}
-                      onChange={(e) => updateStat({ value: e.target.value })}
-                    />
-                  )}
+                 <Field label={`${t('statValue')} (${previewLocale})`}>
+                  {({ id }) => {
+                    const val = typeof s.value === 'object' ? lv(s.value) : (s.value ?? '')
+                    return (
+                      <Input
+                        id={id}
+                        placeholder="50+"
+                        value={val}
+                        onChange={(e) => {
+                          const currentVal = typeof s.value === 'object' ? s.value : { [event.default_locale || 'en']: s.value ?? '' }
+                          updateStat({ value: setLv(currentVal, e.target.value) })
+                        }}
+                      />
+                    )
+                  }}
                 </Field>
                 <Field label={`${t('statLabel')} (${previewLocale})`}>
                   {({ id }) => (

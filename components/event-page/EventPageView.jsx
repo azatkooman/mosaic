@@ -452,7 +452,7 @@ export function EventPageView({
                         </span>
                       )}
                       <span className={styles.statText}>
-                        <strong>{s.value}</strong>
+                        <strong>{L(s.value)}</strong>
                         <span>{L(s.label)}</span>
                       </span>
                     </div>
