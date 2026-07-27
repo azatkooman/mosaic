@@ -84,6 +84,8 @@
 
 /* Right form panel */
 .formPanel {
+  position: relative;
+  overflow: hidden;
   display: grid;
   place-items: center;
   padding: var(--s-6);
@@ -93,11 +95,44 @@
     var(--paper);
 }
 
+/* Faint mosaic tiles drifting behind the card — echoes the brand panel
+   without competing with the form. */
+.formTiles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.formTiles span {
+  position: absolute;
+  border-radius: 24%;
+  opacity: 0.13;
+  animation: loginFloat 12s ease-in-out infinite;
+}
+.formTiles span:nth-child(1) { width: 7rem;   height: 7rem;   right: 8%;  top: 10%;    background: var(--pine); }
+.formTiles span:nth-child(2) { width: 4rem;   height: 4rem;   left: 6%;   top: 22%;    background: var(--gold);  animation-delay: -3s; }
+.formTiles span:nth-child(3) { width: 5.5rem; height: 5.5rem; left: 10%;  bottom: 12%; background: var(--coral); animation-delay: -6s; }
+.formTiles span:nth-child(4) { width: 3rem;   height: 3rem;   right: 14%; bottom: 18%; background: var(--sky);   animation-delay: -9s; }
+
 .card {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
   width: min(100%, 25rem);
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  animation: brandRise 700ms ease-out 120ms both;
+}
+
+/* Brand gradient accent across the top of the card. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--pine), var(--gold), var(--coral), var(--sky));
 }
 
 .brand {
@@ -176,7 +211,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .brandTiles span,
-  .brandContent {
+  .brandContent,
+  .formTiles span,
+  .card {
     animation: none;
   }
 }
