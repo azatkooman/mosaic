@@ -365,7 +365,7 @@ export function EventPageView({
                 }
           }
         >
-          {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale)}
+          {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, cl)}
           {location ? ` · ${location}` : ''}
         </span>
       )}
@@ -386,7 +386,7 @@ export function EventPageView({
         ) : notOpenYet ? (
           <p className={styles.heroNotice}>
             {t('registrationNotOpen', {
-              date: formatEventDate(event.registration_opens_at, event.timezone, locale),
+              date: formatEventDate(event.registration_opens_at, event.timezone, cl),
             })}
           </p>
         ) : (
