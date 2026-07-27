@@ -19,6 +19,10 @@ import {
 } from '@/components/ui'
 import styles from './settings.module.css'
 
+function newContactId() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
 export function EventSettingsForm({ event, initialTypes, forms }) {
   const t = useTranslations('console')
   const tCommon = useTranslations('common')
@@ -60,6 +64,13 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [publishBurst, setPublishBurst] = useState(null)
   const [slugWarnOpen, setSlugWarnOpen] = useState(false)
   const [publishError, setPublishError] = useState(null)
+
+  // Extra contacts beyond the primary one. Stored on contact.people[] — the
+  // same list the Event Page tab edits — so both screens stay in sync.
+  const contactPeople = Array.isArray(contact.people) ? contact.people : []
+  const setContactPeople = (next) => setContact({ ...contact, people: next })
+  const patchPerson = (id, patch) =>
+    setContactPeople(contactPeople.map((p) => (p.id === id ? { ...p, ...patch } : p)))
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
 
@@ -496,6 +507,59 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             )}
           </Field>
         </div>
+
+        {/* Extra contacts. Same contact.people[] the Event Page tab edits, so
+            both screens always show the same list. */}
+        <h3 className={styles.contactsSubhead}>{t('additionalContacts')}</h3>
+        <div className={styles.contactList}>
+          {contactPeople.map((p) => (
+            <div key={p.id} className={styles.contactRow}>
+              <Input
+                placeholder={t('contactName')}
+                value={p.name ?? ''}
+                onChange={(e) => patchPerson(p.id, { name: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder={t('contactEmail')}
+                value={p.email ?? ''}
+                onChange={(e) => patchPerson(p.id, { email: e.target.value })}
+              />
+              <Input
+                type="tel"
+                placeholder={t('contactPhone')}
+                value={p.phone ?? ''}
+                onChange={(e) => patchPerson(p.id, { phone: e.target.value })}
+              />
+              <Input
+                type="url"
+                placeholder={t('contactWebsite')}
+                value={p.website ?? ''}
+                onChange={(e) => patchPerson(p.id, { website: e.target.value })}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={t('removeContact')}
+                onClick={() => setContactPeople(contactPeople.filter((x) => x.id !== p.id))}
+              >
+                ✕
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            setContactPeople([
+              ...contactPeople,
+              { id: newContactId(), name: '', email: '', phone: '', website: '' },
+            ])
+          }
+        >
+          {t('addContact')}
+        </Button>
       </section>
 
       <section className="card card-pad">
