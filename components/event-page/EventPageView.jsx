@@ -409,6 +409,10 @@ export function EventPageView({
             label={L(hero.countdown_label) || t('countdownLabel')}
             variant={hero.countdown_style || 'minimal'}
             color={hero.countdown_color}
+            labelDays={L(hero.countdown_days_label)}
+            labelHours={L(hero.countdown_hours_label)}
+            labelMinutes={L(hero.countdown_minutes_label)}
+            labelSeconds={L(hero.countdown_seconds_label)}
           />
         </div>
       )}

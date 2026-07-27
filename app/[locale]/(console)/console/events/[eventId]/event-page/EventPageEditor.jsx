@@ -1400,6 +1400,78 @@ export function EventPageEditor({ initialEvent }) {
                 />
               )}
             </Field>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownDaysLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="DAYS"
+                    value={hero.countdown_days_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_days_label: {
+                          ...(hero.countdown_days_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownHoursLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="HRS"
+                    value={hero.countdown_hours_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_hours_label: {
+                          ...(hero.countdown_hours_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownMinutesLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="MIN"
+                    value={hero.countdown_minutes_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_minutes_label: {
+                          ...(hero.countdown_minutes_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownSecondsLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="SEC"
+                    value={hero.countdown_seconds_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_seconds_label: {
+                          ...(hero.countdown_seconds_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
             <div className={styles.colorField}>
               <span className="field-label">{t('countdownTarget')}</span>
               <NativeSelect
