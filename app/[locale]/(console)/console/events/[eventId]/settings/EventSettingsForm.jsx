@@ -262,7 +262,11 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   }
 
   async function addType(preset) {
-    const base = preset ?? { key: `type_${Date.now().toString(36)}`, name: { en: 'New type' } }
+    const base = preset ?? {
+      key: `type_${Date.now().toString(36)}`,
+      // Seed the name in the event's default language, translated for the UI.
+      name: { [defaultLocale]: t('newTypeDefault') },
+    }
     const key = uniqueTypeKey(base.key, types.map((pt) => pt.key))
     const { data, error } = await supabase
       .from('participant_types')

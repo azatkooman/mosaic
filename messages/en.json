@@ -17,7 +17,10 @@
     "actions": "Actions",
     "optional": "optional",
     "toggleTheme": "Switch between light and dark mode",
-    "menu": "Menu"
+    "menu": "Menu",
+    "yes": "Yes",
+    "no": "No",
+    "mainNav": "Main"
   },
   "nav": {
     "events": "Events",
@@ -593,7 +596,25 @@
     "languages": "Languages",
     "languagesHelp": "Choose which languages this event and its registration form are offered in. Attendees can switch between them; the default is used when a translation is missing.",
     "defaultLanguageHelp": "Used as a fallback wherever a translation is missing.",
-    "translateSourceUnsupported": "Auto-translate needs the default language to be English, Spanish, French, Russian or Ukrainian."
+    "translateSourceUnsupported": "Auto-translate needs the default language to be English, Spanish, French, Russian or Ukrainian.",
+    "countdownDivider": "Show Divider Above Countdown",
+    "imageSide": "Image Side",
+    "imageSideRight": "Right",
+    "imageSideLeft": "Left",
+    "imageSideHelp": "Which side the cover image sits on in the split layout.",
+    "inspectorEmpty": "Select a question to edit it.",
+    "registeredAt": "Registered at",
+    "newTypeDefault": "New type",
+    "ariaSelectAll": "Select all",
+    "ariaEventNav": "Event",
+    "ariaPreviewLanguage": "Preview language",
+    "ariaEditLanguage": "Edit language",
+    "ariaReorder": "Reorder",
+    "ariaUndo": "Undo",
+    "ariaRedo": "Redo",
+    "ariaQuestion": "Question",
+    "ariaOperator": "Operator",
+    "ariaValue": "Value"
   },
   "questionTypes": {
     "text": "Short text",

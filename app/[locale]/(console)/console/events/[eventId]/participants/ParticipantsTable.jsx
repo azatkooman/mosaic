@@ -288,7 +288,7 @@ export function ParticipantsTable({
                   type="checkbox"
                   checked={rows.length > 0 && rows.every((r) => selectedIds.has(r.id))}
                   onChange={toggleSelectAll}
-                  aria-label="Select all"
+                  aria-label={t('console.ariaSelectAll')}
                 />
               </th>
               <SortHeader label={t('wizard.firstName')} column="first_name" sort={sort} onSort={toggleSort} />
