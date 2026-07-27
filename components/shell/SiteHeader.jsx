@@ -33,7 +33,7 @@ export async function SiteHeader() {
           <MosaicMark />
           <span>{t('common.appName')}</span>
         </Link>
-        <nav className={styles.nav} aria-label="Main">
+        <nav className={styles.nav} aria-label={t('common.mainNav')}>
           <NavLink href="/">{t('nav.home')}</NavLink>
           {user && <NavLink href="/my/registrations">{t('nav.myRegistrations')}</NavLink>}
           {/* All signed-in users can open the console: those without access

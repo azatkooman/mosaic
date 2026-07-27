@@ -2134,7 +2134,7 @@ export function EventPageEditor({ initialEvent }) {
           </Button>
           <p className={styles.hint}>{t('pagePreviewHint')}</p>
           {availableLocales.length > 1 && (
-            <div className={styles.localeSwitch} role="tablist" aria-label="Preview language">
+            <div className={styles.localeSwitch} role="tablist" aria-label={t('ariaPreviewLanguage')}>
               {availableLocales.map((l) => (
                 <button
                   key={l}

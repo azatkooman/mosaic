@@ -17,7 +17,10 @@
     "actions": "Actions",
     "optional": "facultatif",
     "toggleTheme": "Basculer entre le mode clair et sombre",
-    "menu": "Menu"
+    "menu": "Menu",
+    "yes": "Oui",
+    "no": "Non",
+    "mainNav": "Principal"
   },
   "nav": {
     "events": "Événements",
@@ -589,7 +592,25 @@
     "addLanguagesInSettings": "Ajouter ou gérer les langues dans les Paramètres",
     "languages": "Langues",
     "languagesHelp": "Choisissez les langues dans lesquelles cet événement et son formulaire d'inscription sont proposés. Les participants peuvent basculer entre elles ; la langue par défaut est utilisée lorsqu'une traduction manque.",
-    "defaultLanguageHelp": "Utilisée comme solution de repli lorsqu'une traduction manque."
+    "defaultLanguageHelp": "Utilisée comme solution de repli lorsqu'une traduction manque.",
+    "countdownDivider": "Afficher un séparateur au-dessus du compte à rebours",
+    "imageSide": "Côté de l'image",
+    "imageSideRight": "Droite",
+    "imageSideLeft": "Gauche",
+    "imageSideHelp": "Côté où se place l'image de couverture dans la mise en page divisée.",
+    "inspectorEmpty": "Sélectionnez une question pour la modifier.",
+    "registeredAt": "Date d'inscription",
+    "newTypeDefault": "Nouveau type",
+    "ariaSelectAll": "Tout sélectionner",
+    "ariaEventNav": "Événement",
+    "ariaPreviewLanguage": "Langue de l'aperçu",
+    "ariaEditLanguage": "Langue d'édition",
+    "ariaReorder": "Réorganiser",
+    "ariaUndo": "Annuler",
+    "ariaRedo": "Rétablir",
+    "ariaQuestion": "Question",
+    "ariaOperator": "Opérateur",
+    "ariaValue": "Valeur"
   },
   "questionTypes": {
     "text": "Texte court",

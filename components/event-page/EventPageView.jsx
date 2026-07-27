@@ -151,6 +151,7 @@ export function EventPageView({
   onEditSection,
 }) {
   const t = useTranslations('event')
+  const tCommon = useTranslations('common')
   const content = event.page_content ?? {}
   const dl = event.default_locale
   // `locale` is a real platform locale (used for dates/number formatting);
@@ -321,7 +322,7 @@ export function EventPageView({
         <span />
       )}
       {showLangSwitch && (
-        <nav className={styles.langSwitch} aria-label="Language">
+        <nav className={styles.langSwitch} aria-label={tCommon('language')}>
           {availableLocales.map((l) =>
             editable ? (
               <span key={l} data-active={l === cl ? '' : undefined}>
