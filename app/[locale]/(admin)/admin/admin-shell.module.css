@@ -57,6 +57,9 @@
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  /* Stay flush right even on mobile, where .topnav (flex:1) is hidden and can
+     no longer push this cluster to the edge. */
+  margin-inline-start: auto;
 }
 
 .main {
@@ -121,4 +124,37 @@
   justify-content: flex-end;
   gap: var(--s-2);
   flex-wrap: wrap;
+}
+
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* ---- Phone layout: fold the nav into the hamburger, tighten spacing ---- */
+@media (max-width: 640px) {
+  .topbar {
+    gap: var(--s-3);
+    padding-inline: var(--s-4);
+  }
+  .topnav,
+  .desktopActions {
+    display: none;
+  }
+  .brand span {
+    display: none;
+  }
+  .main {
+    padding: var(--s-5) var(--s-4);
+  }
+  .pageHead {
+    align-items: flex-start;
+  }
+  .searchBox {
+    inline-size: 100%;
+  }
+  .inviteRow input[type='email'] {
+    inline-size: 100%;
+  }
 }

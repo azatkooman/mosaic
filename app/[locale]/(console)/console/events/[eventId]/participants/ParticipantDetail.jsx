@@ -10,7 +10,7 @@ import { formatDateValue } from '@/lib/dates'
 import { formatRegNo } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
-import { Badge, Button, Field, Input } from '@/components/ui'
+import { Badge, Button, Field, Input, Portal } from '@/components/ui'
 import styles from './participants.module.css'
 
 /**
@@ -18,6 +18,10 @@ import styles from './participants.module.css'
  * viewers; editable (name/email + every answer) for can_add_registrants
  * roles. Editing reuses the registration FormRenderer against the version
  * the participant answered, so validation and conditional logic match.
+ *
+ * Rendered through a Portal: callers mount this next to the row that opened
+ * it (a table cell in the console, a card on My Registrations), and the
+ * overlay must not inherit those ancestors' clipping or transforms.
  */
 export function ParticipantDetail({
   participant,
@@ -105,7 +109,7 @@ export function ParticipantDetail({
   const shownQuestions = visibleQuestions(definition, typeKey, participant.answers ?? {})
 
   return (
-    <>
+    <Portal>
       <div className={styles.drawerOverlay} onClick={onClose} />
       <aside className={styles.drawer} role="dialog" aria-label={t('console.participantDetail')}>
         <header className={styles.drawerHead}>
@@ -197,7 +201,7 @@ export function ParticipantDetail({
           )}
         </footer>
       </aside>
-    </>
+    </Portal>
   )
 }
 
