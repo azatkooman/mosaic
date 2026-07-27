@@ -1,45 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getTranslateLanguages } from '@/lib/i18n/translate-languages'
+import { translateRequests } from '@/lib/i18n/google-translate'
 
-// Google Cloud Translation v2 HTML-escapes some characters even in text mode.
-function unescapeHtml(s) {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-}
-
-// Translate a batch of strings via Google Cloud Translation (v2, API key).
-// Google accepts up to 128 text segments per request, so chunk to be safe.
-async function translateBatch(strings, source, target, apiKey) {
-  const out = []
-  for (let i = 0; i < strings.length; i += 100) {
-    const chunk = strings.slice(i, i + 100)
-    const res = await fetch(
-      `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ q: chunk, source, target, format: 'text' }),
-      }
-    )
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      throw new Error(`Google Translate error ${res.status}: ${detail.slice(0, 200)}`)
-    }
-    const data = await res.json()
-    const items = data?.data?.translations
-    if (!Array.isArray(items) || items.length !== chunk.length) {
-      throw new Error('Unexpected translation response shape')
-    }
-    for (const it of items) out.push(unescapeHtml(it.translatedText ?? ''))
-  }
-  return out
-}
+// The event-page editor walks the content client-side (it already holds the
+// unsaved draft) and sends only the strings that still need translating, keyed
+// by target language: { requests: { es: ['Full name'], fr: [...] }, source }.
+// Per-target lists matter because the lists diverge sharply when a language is
+// added — the new one needs everything, the rest need only edited fields.
+const MAX_STRINGS_PER_TARGET = 300
 
 export async function POST(request) {
   // Require an authenticated organizer to avoid anonymous API abuse/cost.
@@ -67,34 +36,44 @@ export async function POST(request) {
   // any organizer-picked language works without maintaining a hardcoded list.
   const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
 
-  const { strings, source, targets } = body ?? {}
+  const { requests, source } = body ?? {}
   if (
-    !Array.isArray(strings) ||
+    !requests ||
+    typeof requests !== 'object' ||
+    Array.isArray(requests) ||
     typeof source !== 'string' ||
-    !Array.isArray(targets) ||
     !supported.has(source)
   ) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
-  if (strings.length === 0 || targets.length === 0) {
+
+  const entries = Object.entries(requests).filter(
+    ([target, strings]) =>
+      target !== source &&
+      supported.has(target) &&
+      Array.isArray(strings) &&
+      strings.length > 0 &&
+      strings.every((s) => typeof s === 'string')
+  )
+  if (entries.length === 0) {
     return NextResponse.json({ translations: {} })
   }
-  if (strings.length > 300) {
+  if (entries.some(([, strings]) => strings.length > MAX_STRINGS_PER_TARGET)) {
     return NextResponse.json({ error: 'too_many_strings' }, { status: 400 })
   }
 
-  const translations = {}
   try {
-    for (const target of targets) {
-      if (!supported.has(target) || target === source) continue
-      translations[target] = await translateBatch(strings, source, target, apiKey)
-    }
+    const translations = await translateRequests(
+      Object.fromEntries(entries),
+      source,
+      apiKey,
+      supported
+    )
+    return NextResponse.json({ translations })
   } catch (e) {
     return NextResponse.json(
       { error: 'translation_failed', detail: String(e.message) },
       { status: 502 }
     )
   }
-
-  return NextResponse.json({ translations })
 }
