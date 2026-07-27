@@ -566,6 +566,7 @@
     "faviconHelp": "Маленький значок во вкладке браузера.",
     "groupLanguages": "Параметры языка",
     "defaultLanguage": "Язык по умолчанию",
+    "defaultBadge": "По умолчанию",
     "availableLanguages": "Доступные языки",
     "availableLanguagesHelp": "Посетители могут переключаться между языками, которые вы включите здесь.",
     "previewDevice": "Устройство предпросмотра",

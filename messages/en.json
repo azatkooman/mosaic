@@ -566,6 +566,7 @@
     "faviconHelp": "The small icon shown in the browser tab.",
     "groupLanguages": "Language options",
     "defaultLanguage": "Default Language",
+    "defaultBadge": "Default",
     "availableLanguages": "Available Languages",
     "availableLanguagesHelp": "Visitors can switch between the languages you enable here.",
     "previewDevice": "Preview device",

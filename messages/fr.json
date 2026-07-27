@@ -566,6 +566,7 @@
     "faviconHelp": "La petite icône affichée dans l'onglet du navigateur.",
     "groupLanguages": "Options de langue",
     "defaultLanguage": "Langue par défaut",
+    "defaultBadge": "Par défaut",
     "availableLanguages": "Langues disponibles",
     "availableLanguagesHelp": "Les visiteurs peuvent basculer entre les langues que vous activez ici.",
     "previewDevice": "Appareil d'aperçu",

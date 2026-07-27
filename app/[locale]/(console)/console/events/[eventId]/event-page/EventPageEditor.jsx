@@ -1068,21 +1068,18 @@ export function EventPageEditor({ initialEvent }) {
         {/* ---- Languages ---- */}
         <h4 className={styles.panelSubhead}>{t('groupLanguages')}</h4>
         {/* Which languages this event offers is managed in event Settings; this
-            is read-only here, with a link back to Settings to change it. */}
-        <div className={styles.langInfo}>
-          <span className="field-label">{t('defaultLanguage')}</span>
-          <span className={styles.langDefault}>{localeName(event.default_locale)}</span>
-        </div>
-        {customLangs.length > 0 ? (
-          <div className={styles.langInfo}>
-            <span className="field-label">{t('customLanguages')}</span>
-            {customLangs.map((c) => (
-              <span key={c.code} className={styles.customLangRow}>{c.name}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="field-help">{t('noCustomLanguages')}</p>
-        )}
+            list is read-only here, with a link back to Settings to change it. */}
+        <ul className={styles.langList}>
+          {availableLocales.map((code) => (
+            <li key={code} className={styles.langRow}>
+              <span className={styles.langBadge}>{code.toUpperCase()}</span>
+              <span className={styles.langName}>{localeName(code)}</span>
+              {code === event.default_locale && (
+                <span className={styles.langTag}>{t('defaultBadge')}</span>
+              )}
+            </li>
+          ))}
+        </ul>
         <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
           {t('addLanguagesInSettings')}
         </Link>

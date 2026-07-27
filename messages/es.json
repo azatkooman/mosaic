@@ -566,6 +566,7 @@
     "faviconHelp": "El icono pequeño de la pestaña del navegador.",
     "groupLanguages": "Opciones de idioma",
     "defaultLanguage": "Idioma predeterminado",
+    "defaultBadge": "Predeterminado",
     "availableLanguages": "Idiomas disponibles",
     "availableLanguagesHelp": "Los visitantes pueden cambiar entre los idiomas que actives aquí.",
     "previewDevice": "Dispositivo de vista previa",
