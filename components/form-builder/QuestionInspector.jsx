@@ -279,6 +279,11 @@ export function QuestionInspector({
                   value={rule.questionId}
                   onChange={(e) => setRule(i, { questionId: e.target.value, value: '' })}
                 >
+                  {!refQ && (
+                    <option value={rule.questionId} disabled style={{ color: 'red' }}>
+                      ⚠️ Broken Question Reference ({rule.questionId})
+                    </option>
+                  )}
                   {priorQuestions.map((pq) => (
                     <option key={pq.id} value={pq.id}>
                       {lt(pq.label, editLocale, defaultLocale) || pq.id}

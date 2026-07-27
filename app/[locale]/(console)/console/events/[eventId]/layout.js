@@ -22,7 +22,7 @@ export default async function EventLayout({ children, params }) {
   if (!event) notFound()
 
   return (
-    <>
+    <div className={styles.eventContent}>
       <div className={styles.pageHead}>
         <h1 className="page-title">{lt(event.name, locale, event.default_locale)}</h1>
         <Badge tone={event.status}>{t(`status.${event.status}`)}</Badge>
@@ -39,6 +39,6 @@ export default async function EventLayout({ children, params }) {
         }}
       />
       {children}
-    </>
+    </div>
   )
 }

@@ -1,14 +1,92 @@
 .hero {
+  position: relative;
+  overflow: hidden;
   padding-block: var(--s-8) var(--s-7);
   background:
-    radial-gradient(50rem 24rem at 85% -30%, var(--pine-tint), transparent),
-    radial-gradient(36rem 18rem at 0% 130%, var(--gold-tint), transparent);
+    radial-gradient(52rem 26rem at 88% -25%, var(--pine-tint), transparent 70%),
+    radial-gradient(40rem 22rem at -5% 130%, var(--gold-tint), transparent 70%),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--pine-tint) 20%, transparent));
   border-bottom: 1px solid var(--line);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+}
+
+/* Decorative layer: soft glow blobs + a floating mosaic-tile cluster. */
+.heroDecor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.heroDecor::before,
+.heroDecor::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.5;
+}
+.heroDecor::before {
+  width: 26rem; height: 26rem;
+  right: -6rem; top: -10rem;
+  background: radial-gradient(circle, var(--pine) 0%, transparent 68%);
+  opacity: 0.22;
+}
+.heroDecor::after {
+  width: 20rem; height: 20rem;
+  left: 30%; bottom: -12rem;
+  background: radial-gradient(circle, var(--gold) 0%, transparent 68%);
+  opacity: 0.18;
+}
+
+.tiles {
+  position: absolute;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15rem;
+  height: 15rem;
+}
+.tiles span {
+  position: absolute;
+  border-radius: 26%;
+  opacity: 0.85;
+  animation: tileFloat 9s ease-in-out infinite;
+}
+.tiles span:nth-child(1) { width: 5.5rem; height: 5.5rem; right: 4rem;   top: 0;      background: var(--pine); }
+.tiles span:nth-child(2) { width: 3.5rem; height: 3.5rem; right: 0;      top: 4.5rem; background: var(--gold); animation-delay: -1.5s; }
+.tiles span:nth-child(3) { width: 4rem;   height: 4rem;   right: 6.5rem; top: 6rem;   background: var(--coral); animation-delay: -3s; }
+.tiles span:nth-child(4) { width: 3rem;   height: 3rem;   right: 2.5rem; top: 9.5rem; background: var(--sky); animation-delay: -4.5s; }
+
+@keyframes tileFloat {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-14px) rotate(4deg); }
+}
+
+@media (max-width: 48rem) {
+  .tiles { display: none; }
+}
+
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* A soft highlight band that sweeps across the headline, then rests. */
+@keyframes heroShine {
+  0%        { background-position: 160% 0; }
+  45%, 100% { background-position: -60% 0; }
 }
 
 .heroMark {
   font-size: var(--text-3xl);
   margin-bottom: var(--s-4);
+  opacity: 0;
+  animation: heroRise 650ms ease-out 40ms both;
 }
 
 .heroTitle {
@@ -17,6 +95,22 @@
   font-size: clamp(1.9rem, 4.5vw, 3.1rem);
   letter-spacing: -0.015em;
   max-inline-size: 22ch;
+  opacity: 0;
+  /* Mostly ink text with a moving brand-colored highlight → readable + motion */
+  background: linear-gradient(
+    100deg,
+    var(--ink) 0%, var(--ink) 42%,
+    var(--pine) 50%,
+    var(--ink) 58%, var(--ink) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 160% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: heroRise 650ms ease-out 160ms both,
+    heroShine 7s ease-in-out 1.1s infinite;
 }
 
 .heroSubtitle {
@@ -24,6 +118,23 @@
   color: var(--ink-soft);
   font-size: var(--text-lg);
   max-inline-size: 48ch;
+  opacity: 0;
+  animation: heroRise 650ms ease-out 300ms both;
+}
+
+/* Accessibility: honor reduced-motion — no animation, solid readable title. */
+@media (prefers-reduced-motion: reduce) {
+  .heroMark,
+  .heroTitle,
+  .heroSubtitle {
+    animation: none;
+    opacity: 1;
+  }
+  .heroTitle {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--ink);
+  }
 }
 
 .searchRow {
@@ -49,12 +160,66 @@
 
 .cardLink:hover article {
   border-color: var(--pine);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
 }
 
 .cardLink article {
   height: 100%;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+/* Brand accent strip along the top of each event card. */
+.cardLink article::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pine), var(--gold), var(--coral), var(--sky));
+}
+
+.cardLink:nth-child(n) article {
+  /* keep specificity room for future per-card tones */
+}
+
+/* Designed empty state instead of a bare line of text. */
+.empty {
+  margin-top: var(--s-5);
+  padding: var(--s-8) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(24rem 12rem at 50% -20%, var(--pine-tint), transparent 70%),
+    var(--surface);
+  color: var(--ink-soft);
+}
+
+.emptyMark {
+  font-size: var(--text-3xl);
+  animation: tileFloat 9s ease-in-out infinite;
+}
+
+.emptyTitle {
+  font-family: var(--font-display, inherit);
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiles span,
+  .emptyMark {
+    animation: none;
+  }
+  .cardLink:hover article {
+    transform: none;
+  }
 }
 
 .cardBody {

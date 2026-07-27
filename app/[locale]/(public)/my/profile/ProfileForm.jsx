@@ -27,15 +27,39 @@ export function ProfileForm({ userId, initialProfile }) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
 
-  // The profile row is the source of truth; reconcile the cookies to it on
-  // load so a choice made on another device applies here too.
+  // Keep the Appearance dropdown in sync with the header toggle. If an
+  // explicit theme is currently applied (the cookie/attribute the toggle
+  // sets), reflect it here AND heal the saved preference so the database
+  // matches what's actually applied. Otherwise honor the saved preference.
   useEffect(() => {
-    applyThemeClient(initialProfile.theme ?? 'system')
+    const applied = document.documentElement.dataset.theme
+    if (applied === 'light' || applied === 'dark') {
+      setTheme(applied)
+      if (applied !== initialProfile.theme) {
+        supabase.from('profiles').update({ theme: applied }).eq('id', userId)
+      }
+    } else {
+      applyThemeClient(initialProfile.theme ?? 'system')
+    }
     applyDateFormatClient({
       dateFormat: initialProfile.date_format ?? 'auto',
       timeFormat: initialProfile.time_format ?? 'auto',
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProfile.theme, initialProfile.date_format, initialProfile.time_format])
+
+  // Live-follow the header toggle: when it changes the applied theme
+  // (the data-theme attribute), reflect it in this dropdown immediately,
+  // no page refresh needed.
+  useEffect(() => {
+    const el = document.documentElement
+    const observer = new MutationObserver(() => {
+      const applied = el.dataset.theme
+      setTheme(applied === 'light' || applied === 'dark' ? applied : 'system')
+    })
+    observer.observe(el, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
 
   // Preview the theme live as the user picks it, before saving.
   function pickTheme(next) {
