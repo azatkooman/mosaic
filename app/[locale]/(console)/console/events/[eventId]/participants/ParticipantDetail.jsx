@@ -7,6 +7,7 @@ import { visibleQuestions, appliesToType } from '@/lib/form-engine/visibility'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue } from '@/lib/dates'
+import { formatRegNo } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Badge, Button, Field, Input } from '@/components/ui'
@@ -40,6 +41,17 @@ export function ParticipantDetail({
   const [saveState, setSaveState] = useState('idle') // idle | saving | error
 
   const typeKey = participant.participant_type_key
+
+  // Names come from optional form questions, so a participant may have none.
+  // Fall back to the registrant's profile name, then to the Reg. # — which is
+  // always present and is how the organizer got here in the first place.
+  const regNo = formatRegNo(participant)
+  const regNoTitle = regNo ? `${t('console.regNo')} ${regNo}` : ''
+  const title =
+    `${participant.first_name ?? ''} ${participant.last_name ?? ''}`.trim() ||
+    participant.profile_name ||
+    regNoTitle ||
+    '—'
 
   // Identity lives in the form's name/email questions when present (0016);
   // the drawer's own inputs are only a fallback for forms without them —
@@ -98,9 +110,11 @@ export function ParticipantDetail({
       <aside className={styles.drawer} role="dialog" aria-label={t('console.participantDetail')}>
         <header className={styles.drawerHead}>
           <div>
-            <h2 style={{ fontSize: 'var(--text-xl)' }}>
-              {`${participant.first_name ?? ''} ${participant.last_name ?? ''}`.trim() || '—'}
-            </h2>
+            <h2 style={{ fontSize: 'var(--text-xl)' }}>{title}</h2>
+            {/* Repeat the Reg. # below only when it is not already the title. */}
+            {regNo && title !== regNoTitle && (
+              <span className={styles.muted}>{regNoTitle} · </span>
+            )}
             <span className={styles.muted}>{lt(typeName, locale)}</span>{' '}
             <Badge tone={participant.status}>{t(`status.${participant.status}`)}</Badge>
           </div>

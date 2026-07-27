@@ -45,6 +45,28 @@
   text-decoration: underline;
 }
 
+/* Reg. # — the row's identifier and its view control. Tabular figures keep
+   the numbers aligned down the column. */
+.regLink {
+  composes: rowLink;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Long labels and answers clip to one line rather than wrapping the row to
+   several lines; the full value is in the title tooltip and the export. */
+.clipCell {
+  max-inline-size: 14rem;
+}
+
+.clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-inline-size: 14rem;
+}
+
 .rowActions {
   display: flex;
   align-items: center;

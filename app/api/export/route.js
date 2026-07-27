@@ -7,7 +7,7 @@ import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
+import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -82,9 +82,13 @@ export async function GET(request) {
   }
   const questions = [...questionById.values()]
 
+  // Column order mirrors the console list: Reg. # · answers · Type · Status ·
+  // profile. 'Registered at' has no column in the list but is kept here — a
+  // spreadsheet has room for it and organizers rely on it.
   const header = [
-    'First name', 'Last name', 'Email', 'Type', 'Status', 'Registered at',
+    'Reg. #',
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
+    'Type', 'Status', 'Profile Name', 'Profile Email', 'Registered at',
   ]
 
   // Page through all participants with the service client.
@@ -93,7 +97,9 @@ export async function GET(request) {
   for (let from = 0; ; from += PAGE) {
     let q = admin
       .from('participants')
-      .select('first_name, last_name, email, status, answers, created_at, participant_type_id')
+      .select(
+        'status, answers, created_at, participant_type_id, reg_seq, member_index, profile_name, profile_email'
+      )
       .eq('event_id', eventId)
       .range(from, from + PAGE - 1)
     // Same filters + sort as the console table, so the file matches the view.
@@ -103,13 +109,13 @@ export async function GET(request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     for (const p of data ?? []) {
       rows.push([
-        p.first_name,
-        p.last_name,
-        p.email ?? '',
+        formatRegNo(p),
+        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt)),
         typeName.get(p.participant_type_id) ?? '',
         p.status,
+        p.profile_name ?? '',
+        p.profile_email ?? '',
         formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
-        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt)),
       ])
     }
     if (!data || data.length < PAGE) break
