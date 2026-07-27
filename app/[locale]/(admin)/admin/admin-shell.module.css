@@ -57,6 +57,9 @@
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  /* Stay flush right even on mobile, where .topnav (flex:1) is hidden and can
+     no longer push this cluster to the edge. */
+  margin-inline-start: auto;
 }
 
 .main {
