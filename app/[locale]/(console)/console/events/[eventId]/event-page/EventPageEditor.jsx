@@ -1,7 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale, useTranslations, NextIntlClientProvider } from 'next-intl'
+import enMessages from '@/messages/en.json'
+import esMessages from '@/messages/es.json'
+import frMessages from '@/messages/fr.json'
+import ruMessages from '@/messages/ru.json'
+import ukMessages from '@/messages/uk.json'
 import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
@@ -148,6 +153,17 @@ const SIZE_OPTIONS = ['', 'sm', 'md', 'lg', 'xl']
 
 function newId() {
   return Math.random().toString(36).slice(2, 10)
+}
+
+// Message catalogs so the console preview can render fixed UI strings
+// (Register, DAYS, When/Where…) in the previewed language, not just the
+// console's own language.
+const PREVIEW_MESSAGES = {
+  en: enMessages,
+  es: esMessages,
+  fr: frMessages,
+  ru: ruMessages,
+  uk: ukMessages,
 }
 
 function useIsDarkMode() {
@@ -412,6 +428,11 @@ export function EventPageEditor({ initialEvent }) {
   // language's text. Applied to state; the user then saves.
   async function translateAll(availableLocales) {
     const source = event.default_locale
+    const customCodes = Array.isArray(content.i18n?.custom)
+      ? content.i18n.custom.map((c) => c.code)
+      : []
+    // Organizer-added languages come from the Google-supported list, so they
+    // are valid auto-translate targets too. The API drops any it can't handle.
     const targets = availableLocales.filter((l) => l !== source)
     if (!targets.length) {
       setTranslateState('error')
@@ -427,7 +448,7 @@ export function EventPageEditor({ initialEvent }) {
     // Recognize locale maps keyed by any of the event's languages — built-ins
     // plus custom codes — so fields that already have a custom-language slot
     // aren't skipped on subsequent translations.
-    const codes = new Set([...LOCALES, ...availableLocales])
+    const codes = new Set([...LOCALES, ...availableLocales, ...customCodes])
     const set = new Set()
     collectSourceStrings(bundle, source, set, codes)
     const strings = [...set]
@@ -553,9 +574,10 @@ export function EventPageEditor({ initialEvent }) {
         contact: event.contact,
         cover_image_path: event.cover_image_path,
         page_content: event.page_content,
-        // Deliberately not writing supported_locales: the event's languages are
-        // managed in Settings. Deriving them from which names happen to be
-        // filled in would silently re-add languages removed there.
+        // Which languages the event offers is owned by the Settings tab. This
+        // used to recompute supported_locales from "which names are filled in",
+        // which silently dropped languages the organizer had selected but not
+        // written content for yet.
       })
       .eq('id', event.id)
     if (error) {
@@ -1818,6 +1840,12 @@ export function EventPageEditor({ initialEvent }) {
   function renderContact() {
     const contact = event.contact ?? {}
     const set = (key, value) => patchEvent({ contact: { ...contact, [key]: value } })
+    // Extra contacts beyond the primary one (which maps to the top-level fields
+    // and is also shown in the Settings tab).
+    const people = Array.isArray(contact.people) ? contact.people : []
+    const setPeople = (next) => patchEvent({ contact: { ...contact, people: next } })
+    const patchPerson = (id, patch) =>
+      setPeople(people.map((p) => (p.id === id ? { ...p, ...patch } : p)))
     return (
       <>
         {headingEditor('contact')}
@@ -1840,6 +1868,52 @@ export function EventPageEditor({ initialEvent }) {
             <Input id={id} type="url" value={contact.website ?? ''} onChange={(e) => set('website', e.target.value)} />
           )}
         </Field>
+
+        <h4 className={styles.panelSubhead}>{t('additionalContacts')}</h4>
+        {people.map((p) => (
+          <div key={p.id} className={styles.panelItem}>
+            <div className={styles.panelItemFields}>
+              <Input
+                placeholder={t('contactName')}
+                value={p.name ?? ''}
+                onChange={(e) => patchPerson(p.id, { name: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder={t('contactEmail')}
+                value={p.email ?? ''}
+                onChange={(e) => patchPerson(p.id, { email: e.target.value })}
+              />
+              <Input
+                type="tel"
+                placeholder={t('contactPhone')}
+                value={p.phone ?? ''}
+                onChange={(e) => patchPerson(p.id, { phone: e.target.value })}
+              />
+              <Input
+                type="url"
+                placeholder={t('contactWebsite')}
+                value={p.website ?? ''}
+                onChange={(e) => patchPerson(p.id, { website: e.target.value })}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={t('removeContact')}
+              onClick={() => setPeople(people.filter((x) => x.id !== p.id))}
+            >
+              ✕
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setPeople([...people, { id: newId(), name: '', email: '', phone: '', website: '' }])}
+        >
+          {t('addContact')}
+        </Button>
       </>
     )
   }
@@ -2100,7 +2174,10 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   return (
-    <div className={styles.wrap}>
+    // data-wide-tab lets the console layouts drop their centered max-widths
+    // for this tab only (see console.module.css): the live preview sits beside
+    // the customize panel and is unusable squeezed into the narrow column.
+    <div className={styles.wrap} data-wide-tab>
       {/* ---- toolbar ---- */}
       <section className={`card card-pad ${styles.toolbar}`}>
         <div className={styles.linkRow}>
@@ -2175,13 +2252,25 @@ export function EventPageEditor({ initialEvent }) {
       <div className={`${styles.split} ${panelSection ? styles.splitOpen : ''}`}>
         <section className={styles.frame} data-device={previewDevice}>
           <div className={styles.frameInner}>
-            <EventPageView
-              event={event}
-              locale={LOCALES.includes(previewLocale) ? previewLocale : event.default_locale}
-              contentLocale={previewLocale}
-              editable
-              onEditSection={(s) => setPanelSection(s)}
-            />
+            {(() => {
+              // Render fixed UI strings in the previewed language (built-ins);
+              // custom languages fall back to the default locale's strings.
+              const uiLoc = LOCALES.includes(previewLocale) ? previewLocale : event.default_locale
+              return (
+                <NextIntlClientProvider
+                  locale={uiLoc}
+                  messages={PREVIEW_MESSAGES[uiLoc] ?? PREVIEW_MESSAGES.en}
+                >
+                  <EventPageView
+                    event={event}
+                    locale={uiLoc}
+                    contentLocale={previewLocale}
+                    editable
+                    onEditSection={(s) => setPanelSection(s)}
+                  />
+                </NextIntlClientProvider>
+              )
+            })()}
           </div>
         </section>
 
