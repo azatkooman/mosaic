@@ -6,6 +6,7 @@ import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { SignOutButton } from '@/components/shell/SignOutButton'
 import { NavLink } from '@/components/shell/NavLink'
 import { ThemeToggle } from '@/components/shell/ThemeToggle'
+import { MobileNav } from '@/components/shell/MobileNav'
 import styles from './admin-shell.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -51,11 +52,24 @@ export default async function AdminLayout({ children, params }) {
         </nav>
         <div className={styles.actions}>
           <ThemeToggle label={t('common.toggleTheme')} />
-          <LocaleSwitcher label={t('common.language')} />
-          <Link href="/my/profile" className="btn btn-ghost btn-sm">
-            {t('nav.profile')}
-          </Link>
-          <SignOutButton label={t('common.signOut')} />
+          {/* Desktop-only cluster; folded into the menu on phones. */}
+          <div className={styles.desktopActions}>
+            <LocaleSwitcher label={t('common.language')} />
+            <Link href="/my/profile" className="btn btn-ghost btn-sm">
+              {t('nav.profile')}
+            </Link>
+            <SignOutButton label={t('common.signOut')} />
+          </div>
+          <MobileNav label={t('common.menu')}>
+            <Link href="/">{t('console.navHome')} ↗</Link>
+            <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
+            <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
+            <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
+            <Link href="/console">{t('console.title')} ↗</Link>
+            <Link href="/my/profile">{t('nav.profile')}</Link>
+            <LocaleSwitcher label={t('common.language')} />
+            <SignOutButton label={t('common.signOut')} />
+          </MobileNav>
         </div>
       </header>
       <main className={styles.main}>{children}</main>

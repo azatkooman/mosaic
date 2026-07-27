@@ -145,6 +145,45 @@
   gap: var(--s-4);
 }
 
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* ---- Phone layout: fold the nav into the hamburger, tighten spacing ---- */
+@media (max-width: 640px) {
+  .topbar {
+    gap: var(--s-3);
+    padding-inline: var(--s-4);
+  }
+  .topnav,
+  .desktopActions {
+    display: none;
+  }
+  .brand span {
+    /* Keep the mark; the wordmark would crowd the bar on narrow phones. */
+    display: none;
+  }
+  .main {
+    padding: var(--s-5) var(--s-4);
+  }
+  .newEventDates {
+    grid-template-columns: 1fr;
+  }
+  .pageHead {
+    align-items: flex-start;
+    gap: var(--s-2);
+  }
+  .statGrid {
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: var(--s-3);
+  }
+  .newEventActions {
+    flex-wrap: wrap;
+  }
+}
+
 .newEventActions {
   display: flex;
   justify-content: flex-end;
