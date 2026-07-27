@@ -11,11 +11,18 @@ export function CancelParticipantButton({ participantId, label, confirmText }) {
   async function cancel() {
     if (!window.confirm(confirmText)) return
     setBusy(true)
-    const { error } = await getSupabaseBrowserClient().rpc('cancel_participant', {
-      p_participant_id: participantId,
-    })
-    setBusy(false)
-    if (!error) router.refresh()
+    try {
+      const res = await fetch('/api/participants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: [participantId], status: 'cancelled' }),
+      })
+      if (res.ok) router.refresh()
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
