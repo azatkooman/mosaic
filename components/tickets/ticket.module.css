@@ -1,0 +1,52 @@
+/* A ticket is a narrow, tall card — the shared dialog's 34rem would leave the
+   QR floating in empty space. `max-inline-size` (rather than `width`) wins
+   over .dialog-content's width regardless of stylesheet order. */
+.panel {
+  max-inline-size: 24rem;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.event {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+
+/* The QR keeps a light plate in both themes — dark-on-dark will not scan. */
+.qrPlate {
+  margin-block: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  line-height: 0;
+}
+
+.holder {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.muted {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
+}
