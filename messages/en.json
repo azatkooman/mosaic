@@ -137,6 +137,11 @@
     "registeredOn": "Registered {date}",
     "eventUnavailable": "Event no longer available"
   },
+  "ticket": {
+    "title": "Event ticket",
+    "view": "View ticket",
+    "id": "ID"
+  },
   "console": {
     "title": "Events Hub",
     "dashboard": "Dashboard",
