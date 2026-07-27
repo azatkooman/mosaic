@@ -151,6 +151,7 @@ export function EventPageView({
   onEditSection,
 }) {
   const t = useTranslations('event')
+  const tCommon = useTranslations('common')
   const content = event.page_content ?? {}
   const dl = event.default_locale
   // `locale` is a real platform locale (used for dates/number formatting);
@@ -234,7 +235,13 @@ export function EventPageView({
   const description = L(event.description)
   const location = L(event.location)
   const contact = event.contact ?? {}
-  const hasContact = contact.name || contact.email || contact.phone || contact.website
+  // The primary contact lives on the top-level fields (also edited in the
+  // Settings tab); any extras live in contact.people. Combine, then drop empties.
+  const contactPeople = [
+    { name: contact.name, email: contact.email, phone: contact.phone, website: contact.website },
+    ...(Array.isArray(contact.people) ? contact.people : []),
+  ].filter((c) => c && (c.name || c.email || c.phone || c.website))
+  const hasContact = contactPeople.length > 0
 
   const pageStyle = {}
   if (theme.page_bg) pageStyle['--ep-bg'] = theme.page_bg
@@ -321,7 +328,7 @@ export function EventPageView({
         <span />
       )}
       {showLangSwitch && (
-        <nav className={styles.langSwitch} aria-label="Language">
+        <nav className={styles.langSwitch} aria-label={tCommon('language')}>
           {availableLocales.map((l) =>
             editable ? (
               <span key={l} data-active={l === cl ? '' : undefined}>
@@ -515,7 +522,7 @@ export function EventPageView({
     tracks: (
       <TracksSection
         content={tracks}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -554,7 +561,7 @@ export function EventPageView({
     testimonials: (
       <TestimonialsSection
         content={testimonials}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -565,7 +572,7 @@ export function EventPageView({
     gallery: (
       <GallerySection
         content={gallery}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -614,7 +621,7 @@ export function EventPageView({
     faq: (
       <FaqSection
         content={faq}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -625,7 +632,7 @@ export function EventPageView({
     map: (
       <MapSection
         content={mapSection}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -638,14 +645,18 @@ export function EventPageView({
         <div className={`container-narrow ${styles.contactInner}`}>
           {heading(contactSection, t('contact'))}
           <div className={styles.contactList}>
-            {contact.name && <span>{contact.name}</span>}
-            {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
-            {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-            {externalHref(contact.website) && (
-              <a href={externalHref(contact.website)} target="_blank" rel="noreferrer">
-                {contact.website}
-              </a>
-            )}
+            {contactPeople.map((c, i) => (
+              <div key={i} className={styles.contactCard}>
+                {c.name && <span>{c.name}</span>}
+                {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>}
+                {c.phone && <a href={`tel:${c.phone}`}>{c.phone}</a>}
+                {externalHref(c.website) && (
+                  <a href={externalHref(c.website)} target="_blank" rel="noreferrer">
+                    {c.website}
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </Section>

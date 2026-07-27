@@ -1,9 +1,11 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/lib/i18n/navigation'
 import styles from '../../console.module.css'
 
 export function EventNav({ eventId, labels }) {
+  const t = useTranslations('console')
   const pathname = usePathname()
   const base = `/console/events/${eventId}`
   const items = [
@@ -16,7 +18,7 @@ export function EventNav({ eventId, labels }) {
   ]
 
   return (
-    <nav className={styles.eventNav} aria-label="Event">
+    <nav className={styles.eventNav} aria-label={t('ariaEventNav')}>
       {items.map((item) => (
         <Link
           key={item.href}

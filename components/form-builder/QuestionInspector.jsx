@@ -275,7 +275,7 @@ export function QuestionInspector({
             return (
               <div key={i} className={styles.ruleRow}>
                 <NativeSelect
-                  aria-label="Question"
+                  aria-label={t('ariaQuestion')}
                   value={rule.questionId}
                   onChange={(e) => setRule(i, { questionId: e.target.value, value: '' })}
                 >
@@ -291,7 +291,7 @@ export function QuestionInspector({
                   ))}
                 </NativeSelect>
                 <NativeSelect
-                  aria-label="Operator"
+                  aria-label={t('ariaOperator')}
                   value={rule.operator}
                   onChange={(e) => setRule(i, { operator: e.target.value })}
                 >
@@ -303,7 +303,7 @@ export function QuestionInspector({
                   (ARRAY_OPERATORS.includes(rule.operator) ? (
                     refHasOptions ? (
                       <NativeSelect
-                        aria-label="Value"
+                        aria-label={t('ariaValue')}
                         multiple
                         size={Math.min(4, (refQ.options ?? []).length || 1)}
                         value={Array.isArray(rule.value) ? rule.value : []}
@@ -322,7 +322,7 @@ export function QuestionInspector({
                     ) : (
                       // Free-text lists: comma-separated, stored as an array.
                       <Input
-                        aria-label="Value"
+                        aria-label={t('ariaValue')}
                         value={Array.isArray(rule.value) ? rule.value.join(', ') : ''}
                         onChange={(e) =>
                           setRule(i, {
@@ -336,7 +336,7 @@ export function QuestionInspector({
                     )
                   ) : refHasOptions ? (
                     <NativeSelect
-                      aria-label="Value"
+                      aria-label={t('ariaValue')}
                       value={rule.value ?? ''}
                       onChange={(e) => setRule(i, { value: e.target.value })}
                     >
@@ -349,7 +349,7 @@ export function QuestionInspector({
                     </NativeSelect>
                   ) : (
                     <Input
-                      aria-label="Value"
+                      aria-label={t('ariaValue')}
                       value={rule.value ?? ''}
                       onChange={(e) => setRule(i, { value: e.target.value })}
                     />

@@ -20,6 +20,7 @@ export function SortableQuestionCard({
   onRemove,
 }) {
   const t = useTranslations('console')
+  const tCommon = useTranslations('common')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: q.id })
 
@@ -48,7 +49,7 @@ export function SortableQuestionCard({
     >
       <button
         className={styles.dragHandle}
-        aria-label="Reorder"
+        aria-label={t('ariaReorder')}
         {...attributes}
         {...listeners}
       >
@@ -105,7 +106,7 @@ export function SortableQuestionCard({
           )}
         </div>
       </div>
-      <button className={styles.removeBtn} aria-label="Delete" onClick={onRemove}>
+      <button className={styles.removeBtn} aria-label={tCommon('delete')} onClick={onRemove}>
         ×
       </button>
     </li>

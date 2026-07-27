@@ -6,6 +6,7 @@ import { lt } from '@/lib/i18n/locales'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
+import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 
@@ -82,13 +83,18 @@ export async function GET(request) {
   }
   const questions = [...questionById.values()]
 
+  // Column headers and cell literals follow the requester's locale. The
+  // wizard namespace is no longer needed here: the first/last/email headers
+  // it supplied went away with the fixed name columns.
+  const tc = await getTranslations({ locale, namespace: 'console' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
   // Column order mirrors the console list: Reg. # · answers · Type · Status ·
   // profile. 'Registered at' has no column in the list but is kept here — a
   // spreadsheet has room for it and organizers rely on it.
   const header = [
-    'Reg. #',
+    tc('regNo'),
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
-    'Type', 'Status', 'Profile Name', 'Profile Email', 'Registered at',
+    tc('byType'), tc('byStatus'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
   ]
 
   // Page through all participants with the service client.
@@ -110,7 +116,8 @@ export async function GET(request) {
     for (const p of data ?? []) {
       rows.push([
         formatRegNo(p),
-        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt)),
+        // tCommon reaches plainAnswer for the localized yes/no on checkboxes.
+        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
         typeName.get(p.participant_type_id) ?? '',
         p.status,
         p.profile_name ?? '',
@@ -141,7 +148,7 @@ export async function GET(request) {
   }
 
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet('Participants')
+  const sheet = workbook.addWorksheet(tc('participants'))
   sheet.addRow(header)
   sheet.getRow(1).font = { bold: true }
   for (const r of rows) sheet.addRow(r)
@@ -162,12 +169,12 @@ export async function GET(request) {
   })
 }
 
-function plainAnswer(value, question, locale, dateFmt) {
+function plainAnswer(value, question, locale, dateFmt, tCommon) {
   if (value == null) return ''
   const structured = formatStructuredAnswer(question, value)
   if (structured !== null) return structured
   if (question.type === 'date') return formatDateValue(value, locale, dateFmt)
-  if (question.type === 'checkbox') return value ? 'yes' : 'no'
+  if (question.type === 'checkbox') return value ? tCommon('yes') : tCommon('no')
   if (Array.isArray(value)) {
     return value
       .map((v) => lt(question.options?.find((o) => o.value === v)?.label, locale) || v)
