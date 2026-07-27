@@ -51,15 +51,44 @@ export default async function EventOverview({ params }) {
       <div className="table-wrap" style={{ maxInlineSize: '36rem' }}>
         <table className="table">
           <tbody>
-            {(types ?? []).map((pt) => (
-              <tr key={pt.id}>
-                <td>{lt(pt.name, locale)}</td>
-                <td style={{ textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>
-                  {byType.get(pt.id) ?? 0}
-                  {pt.capacity != null && ` / ${pt.capacity}`}
-                </td>
-              </tr>
-            ))}
+            {(types ?? []).map((pt) => {
+              const count = byType.get(pt.id) ?? 0
+              const cap = pt.capacity
+              const pct = cap ? Math.min(100, Math.round((count / cap) * 100)) : 0
+              return (
+                <tr key={pt.id}>
+                  <td>
+                    <div>{lt(pt.name, locale)}</div>
+                    {cap != null && (
+                      <div
+                        style={{
+                          height: '4px',
+                          width: '100%',
+                          backgroundColor: 'var(--color-bg-subtle, #e5e7eb)',
+                          borderRadius: '2px',
+                          marginTop: '4px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${pct}%`,
+                            backgroundColor: pct >= 90 ? 'var(--color-danger, #ef4444)' : 'var(--color-primary, #2563eb)',
+                            borderRadius: '2px',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'end', fontVariantNumeric: 'tabular-nums', verticalAlign: 'top' }}>
+                    {count}
+                    {cap != null && ` / ${cap}`}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

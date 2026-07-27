@@ -6,7 +6,7 @@ import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
 import { formatEventDateRange } from '@/lib/dates'
 import { eventPhase, EVENT_PHASE_TONES } from '@/lib/event-phase'
-import { Badge, Input } from '@/components/ui'
+import { Badge, Input, MosaicMark } from '@/components/ui'
 import styles from './home.module.css'
 
 export function HomeEventsList({ events, dateFmt }) {
@@ -38,9 +38,14 @@ export function HomeEventsList({ events, dateFmt }) {
         />
       </div>
       {visible.length === 0 ? (
-        <p style={{ marginTop: 'var(--s-4)', color: 'var(--ink-soft)' }}>
-          {events.length === 0 ? t('noEvents') : t('noSearchResults')}
-        </p>
+        <div className={styles.empty}>
+          <div className={styles.emptyMark} aria-hidden="true">
+            <MosaicMark />
+          </div>
+          <p className={styles.emptyTitle}>
+            {events.length === 0 ? t('noEvents') : t('noSearchResults')}
+          </p>
+        </div>
       ) : (
         <ul className={styles.grid}>
           {visible.map((event) => {

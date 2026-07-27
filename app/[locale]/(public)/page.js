@@ -25,7 +25,12 @@ export default async function HomePage({ params }) {
   return (
     <>
       <section className={styles.hero}>
-        <div className="container">
+        <div className={styles.heroDecor} aria-hidden="true">
+          <div className={styles.tiles}>
+            <span /><span /><span /><span />
+          </div>
+        </div>
+        <div className={`container ${styles.heroContent}`}>
           <div className={styles.heroMark} aria-hidden="true">
             <MosaicMark />
           </div>

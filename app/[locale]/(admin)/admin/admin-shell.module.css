@@ -44,6 +44,15 @@
   color: var(--ink);
 }
 
+/* Underline the currently-selected nav item. */
+.topnav a[aria-current='page'] {
+  color: var(--pine-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--pine);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -63,6 +72,8 @@
   flex-direction: column;
   gap: var(--s-3);
   max-inline-size: 56rem;
+  width: 100%;
+  margin-inline: auto;
 }
 
 /* Wider variant for dense, wide content (e.g. the 8-column roles matrix)

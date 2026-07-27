@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { extractIdentity } from '@/lib/form-engine/identity'
+import { enforceRateLimit } from '@/lib/rate-limit'
+import { sendRegistrationConfirmationEmail } from '@/lib/email'
 
 /**
  * Authoritative registration endpoint — the ONLY caller of the
@@ -15,6 +17,9 @@ import { extractIdentity } from '@/lib/form-engine/identity'
  *   participantTypeKey, firstName, lastName, email, answers }] }
  */
 export async function POST(request) {
+  const rateLimitRes = enforceRateLimit(request, { limit: 15, windowMs: 60000, keyPrefix: 'register' })
+  if (rateLimitRes) return rateLimitRes
+
   const supabase = await getSupabaseServerClient()
   const {
     data: { user },
@@ -160,10 +165,7 @@ export async function POST(request) {
   // Atomic insert with capacity enforcement. Service role is required (the
   // RPC accepts no other caller); the registrant id is passed explicitly
   // after cookie-verified authentication above.
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
+  const admin = getSupabaseAdminClient()
   const { data, error } = await admin.rpc('submit_registration', {
     p_event_id: eventId,
     p_locale: typeof locale === 'string' ? locale : 'en',
@@ -185,6 +187,30 @@ export async function POST(request) {
     }
     console.error('submit_registration failed:', error.message)
     return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
+  // Dispatch confirmation email asynchronously (non-blocking)
+  try {
+    const { data: eventData } = await admin
+      .from('events')
+      .select('name, default_locale')
+      .eq('id', eventId)
+      .single()
+
+    const eventName =
+      (eventData?.name && (eventData.name[locale] || eventData.name[eventData.default_locale])) ||
+      'Event'
+
+    sendRegistrationConfirmationEmail({
+      recipientEmail: user.email,
+      recipientName: user.user_metadata?.full_name || user.email,
+      eventName,
+      participants: rpcParticipants,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL || '',
+      locale: typeof locale === 'string' ? locale : 'en',
+    }).catch((err) => console.error('Failed to send confirmation email async:', err))
+  } catch (emailErr) {
+    console.error('Error initiating confirmation email:', emailErr)
   }
 
   // Capture the registrant's name for their profile if we still don't have

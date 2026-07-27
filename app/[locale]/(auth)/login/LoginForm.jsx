@@ -10,6 +10,7 @@ import styles from './login.module.css'
 
 export function LoginForm({ oktaDomain }) {
   const t = useTranslations('auth')
+  const tHome = useTranslations('home')
   const locale = useLocale()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -67,6 +68,19 @@ export function LoginForm({ oktaDomain }) {
 
   return (
     <div className={styles.wrap}>
+      <aside className={styles.brandPanel}>
+        <div className={styles.brandTiles} aria-hidden="true">
+          <span /><span /><span /><span />
+        </div>
+        <div className={styles.brandContent}>
+          <div className={styles.brandMark} aria-hidden="true">
+            <MosaicMark />
+          </div>
+          <h2 className={styles.brandHeadline}>{tHome('heroTitle')}</h2>
+          <p className={styles.brandSub}>{tHome('heroSubtitle')}</p>
+        </div>
+      </aside>
+      <div className={styles.formPanel}>
       <div className={`card card-pad ${styles.card}`}>
         <div className={styles.brand}>
           <MosaicMark />
@@ -117,6 +131,7 @@ export function LoginForm({ oktaDomain }) {
         {(state === 'error' || exchangeFailed) && (
           <p className="alert alert-error">{t('authError')}</p>
         )}
+      </div>
       </div>
     </div>
   )
