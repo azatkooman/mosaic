@@ -49,6 +49,9 @@ export function ParticipantsTable({
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState(null) // participant row for the drawer
   const [statusError, setStatusError] = useState('')
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkStatus, setBulkStatus] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const typeById = useMemo(
     () => new Map(participantTypes.map((pt) => [pt.id, pt])),
@@ -81,10 +84,60 @@ export function ParticipantsTable({
       if (error) throw error
       return { rows: data ?? [], count: count ?? 0 }
     },
-    // v5 API — the old `keepPreviousData: true` option was removed and
-    // silently ignored, which made every filter/page change flash empty.
     placeholderData: keepPreviousData,
   })
+
+  const rows = data?.rows ?? []
+
+  function toggleSelectAll() {
+    const pageIds = rows.map((r) => r.id)
+    const allSelected = pageIds.every((id) => selectedIds.has(id))
+    const next = new Set(selectedIds)
+    if (allSelected) {
+      pageIds.forEach((id) => next.delete(id))
+    } else {
+      pageIds.forEach((id) => next.add(id))
+    }
+    setSelectedIds(next)
+  }
+
+  function toggleSelectOne(id) {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  async function handleBulkStatusChange() {
+    if (!bulkStatus || selectedIds.size === 0) return
+    setStatusError('')
+    setBulkBusy(true)
+    let failures = 0
+    for (const pid of selectedIds) {
+      const { error } = await supabase.rpc('transition_participant_status', {
+        p_participant_id: pid,
+        p_new_status: bulkStatus,
+      })
+      if (error) failures++
+    }
+    setBulkBusy(false)
+    if (failures > 0) {
+      setStatusError(`Failed to update ${failures} participant(s).`)
+    } else {
+      setSelectedIds(new Set())
+      setBulkStatus('')
+    }
+    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
+  }
+
+  function handleCopyEmails() {
+    const selectedRows = rows.filter((r) => selectedIds.has(r.id))
+    const emails = [...new Set(selectedRows.map((r) => r.email).filter(Boolean))].join(', ')
+    if (emails) {
+      navigator.clipboard.writeText(emails)
+      alert(`Copied ${selectedRows.length} email address(es) to clipboard!`)
+    }
+  }
 
   async function changeStatus(participantId, status) {
     setStatusError('')
@@ -126,7 +179,6 @@ export function ParticipantsTable({
     setPage(0)
   }
 
-  const rows = data?.rows ?? []
   const total = data?.count ?? 0
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -178,6 +230,51 @@ export function ParticipantsTable({
           {t('console.exportCsv')}
         </a>
       </div>
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+            padding: 'var(--s-3) var(--s-4)',
+            backgroundColor: 'var(--surface-subtle, #f8fafc)',
+            border: '1px solid var(--line, #e2e8f0)',
+            borderRadius: '6px',
+            marginBottom: 'var(--s-2)',
+          }}
+        >
+          <strong>{selectedIds.size} selected</strong>
+          {canChangeStatus && (
+            <>
+              <NativeSelect
+                value={bulkStatus}
+                onChange={(e) => setBulkStatus(e.target.value)}
+                style={{ width: 'auto' }}
+              >
+                <option value="">Bulk set status...</option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{t(`status.${s}`)}</option>
+                ))}
+              </NativeSelect>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!bulkStatus || bulkBusy}
+                onClick={handleBulkStatusChange}
+              >
+                {bulkBusy ? t('common.loading') : 'Apply Status'}
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" size="sm" onClick={handleCopyEmails}>
+            Copy Emails
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            Deselect All
+          </Button>
+        </div>
+      )}
+
       {statusError && (
         <p className="alert alert-error" role="alert">{statusError}</p>
       )}
@@ -186,6 +283,14 @@ export function ParticipantsTable({
         <table className="table">
           <thead>
             <tr>
+              <th style={{ width: '2.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={rows.length > 0 && rows.every((r) => selectedIds.has(r.id))}
+                  onChange={toggleSelectAll}
+                  aria-label="Select all"
+                />
+              </th>
               <SortHeader label={t('wizard.firstName')} column="first_name" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('wizard.lastName')} column="last_name" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('wizard.email')} column="email" sort={sort} onSort={toggleSort} />
@@ -213,6 +318,14 @@ export function ParticipantsTable({
             ) : (
               rows.map((p) => (
                 <tr key={p.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelectOne(p.id)}
+                      aria-label={`Select ${p.first_name} ${p.last_name}`}
+                    />
+                  </td>
                   <td>
                     <button className={styles.rowLink} onClick={() => setSelected(p)}>
                       {p.first_name}

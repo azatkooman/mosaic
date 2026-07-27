@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { lt } from '@/lib/i18n/locales'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
+import { enforceRateLimit } from '@/lib/rate-limit'
 import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
 
 export const runtime = 'nodejs'
@@ -20,6 +21,9 @@ export const maxDuration = 60
  * version this event ever published, with labels in the requester's locale.
  */
 export async function GET(request) {
+  const rateLimitRes = enforceRateLimit(request, { limit: 10, windowMs: 60000, keyPrefix: 'export' })
+  if (rateLimitRes) return rateLimitRes
+
   const url = new URL(request.url)
   const eventId = url.searchParams.get('eventId')
   const format = url.searchParams.get('format') === 'csv' ? 'csv' : 'xlsx'
@@ -48,10 +52,7 @@ export async function GET(request) {
   const { data: canView } = await userClient.rpc('can_view_event_api', { eid: eventId })
   if (!canView) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
+  const admin = getSupabaseAdminClient()
 
   const [{ data: event }, { data: types }, { data: versions }, { data: requesterProfile }] =
     await Promise.all([

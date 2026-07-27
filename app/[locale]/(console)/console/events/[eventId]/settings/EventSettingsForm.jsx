@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -48,6 +48,9 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [visibility, setVisibility] = useState(event.visibility ?? 'public')
   const [contact, setContact] = useState(event.contact ?? {})
   const [types, setTypes] = useState(initialTypes)
+  // Last persisted participant types, so save() knows which rows changed.
+  // A ref (not the prop) because router.refresh() replaces initialTypes.
+  const savedTypesRef = useRef(initialTypes)
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [saveErrorMsg, setSaveErrorMsg] = useState('')
@@ -69,15 +72,20 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   }, [])
 
   // Serialize the Save-button fields so we can tell whether there are unsaved
-  // edits (participant types persist immediately and are excluded). Slug is
-  // passed explicitly because "revert & save" writes a value the state hasn't
-  // caught up to yet.
-  function snapshot(slugValue = slug) {
+  // edits. Participant-type edits are included: they used to write per
+  // keystroke and were excluded here, which left Save disabled (and dropped
+  // edits when a write raced or failed silently). Slug is passed explicitly
+  // because "revert & save" writes a value the state hasn't caught up to yet.
+  function snapshotOf(typeList, slugValue = slug) {
     return JSON.stringify([
       slugValue, timezone,
       startsAt, endsAt, regOpens, regCloses, capacity, visibility, contact,
       langs, defaultLocale,
+      typeList.map((pt) => [pt.id, pt.key, pt.name, pt.capacity, pt.form_id]),
     ])
+  }
+  function snapshot(slugValue = slug) {
+    return snapshotOf(types, slugValue)
   }
   // Baseline = last known saved state. Initialized to the values first loaded
   // from the event; reset after every successful save.
@@ -172,7 +180,31 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       setSaveErrorMsg(error.code === '23514' ? t('defaultLanguageNeedsName') : '')
       return
     }
+
+    // Participant types: persist every row that differs from the last known
+    // saved state. Sequential (not parallel) so a failure stops before later
+    // rows and the error is surfaced instead of silently swallowed.
+    for (const pt of types) {
+      const original = savedTypesRef.current.find((o) => o.id === pt.id)
+      const changed =
+        !original ||
+        original.key !== pt.key ||
+        original.capacity !== pt.capacity ||
+        original.form_id !== pt.form_id ||
+        JSON.stringify(original.name) !== JSON.stringify(pt.name)
+      if (!changed) continue
+      const { error: typeError } = await supabase
+        .from('participant_types')
+        .update({ key: pt.key, name: pt.name, capacity: pt.capacity, form_id: pt.form_id })
+        .eq('id', pt.id)
+      if (typeError) {
+        setSaveState('error')
+        return
+      }
+    }
+
     setSaveState('saved')
+    savedTypesRef.current = types
     setSavedSnap(snapshot(slugValue))
     router.refresh()
   }
@@ -221,18 +253,32 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       })
       .select('*')
       .single()
-    if (!error && data) setTypes((prev) => [...prev, data])
+    // Add/remove are discrete actions that persist immediately; re-baseline
+    // the dirty snapshot so they don't leave Save spuriously enabled.
+    if (!error && data) {
+      const next = [...types, data]
+      setTypes(next)
+      savedTypesRef.current = next
+      setSavedSnap(snapshotOf(next))
+    }
     setTypePickerOpen(false)
   }
 
-  async function updateType(id, patch) {
+  // Local edit only — persisted by save() together with the event fields.
+  // (Writing per keystroke silently lost edits when a request failed or a
+  // later keystroke's write raced an earlier one.)
+  function updateType(id, patch) {
     setTypes((prev) => prev.map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)))
-    await supabase.from('participant_types').update(patch).eq('id', id)
   }
 
   async function removeType(id) {
     const { error } = await supabase.from('participant_types').delete().eq('id', id)
-    if (!error) setTypes((prev) => prev.filter((pt) => pt.id !== id))
+    if (!error) {
+      const next = types.filter((pt) => pt.id !== id)
+      setTypes(next)
+      savedTypesRef.current = next
+      setSavedSnap(snapshotOf(next))
+    }
   }
 
   return (
