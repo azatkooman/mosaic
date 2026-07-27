@@ -1,9 +1,5 @@
 'use client'
 
-// Plain next/navigation on purpose: option hrefs are fully-formed paths that
-// already include the locale segment, so next-intl's router would prefix twice.
-import { useRouter } from 'next/navigation'
-
 /**
  * Language switcher for the languages an event is offered in — used by the
  * console editors and the public event/register pages.
@@ -15,6 +11,11 @@ import { useRouter } from 'next/navigation'
  * `options` is a plain array of { value, label, href? } so this can be rendered
  * straight from a server component — hence data, not callbacks, for the hrefs.
  * An option with an `href` navigates on select; otherwise `onChange` fires.
+ *
+ * Navigation is a plain location assign rather than next/navigation's router:
+ * switching language swaps the whole page's content anyway, and keeping the
+ * hook out means this renders under a bare renderToStaticMarkup with no
+ * app-router context (which is how the event page is tested).
  */
 export function LanguagePicker({
   options,
@@ -25,13 +26,12 @@ export function LanguagePicker({
   variant,
   className = '',
 }) {
-  const router = useRouter()
   if (!Array.isArray(options) || options.length < 2) return null
 
   function handleChange(e) {
     const next = e.target.value
     const href = options.find((o) => o.value === next)?.href
-    if (href) router.push(href)
+    if (href) window.location.assign(href)
     else onChange?.(next)
   }
 
