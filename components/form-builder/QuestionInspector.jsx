@@ -5,6 +5,12 @@ import { useTranslations } from 'next-intl'
 import { LOCALES, LOCALE_NAMES, lt } from '@/lib/i18n/locales'
 import { ADDRESS_PART_KEYS, DEFAULT_ADDRESS_PARTS } from '@/lib/form-engine/address'
 import {
+  operatorsForType,
+  operatorLabelKey,
+  isOperatorAllowed,
+  defaultOperatorFor,
+} from '@/lib/form-engine/operators'
+import {
   Field,
   Input,
   NativeSelect,
@@ -13,7 +19,6 @@ import {
 } from '@/components/ui'
 import styles from './builder.module.css'
 
-const OPERATORS = ['eq', 'neq', 'in', 'notIn', 'gt', 'gte', 'lt', 'lte', 'isEmpty', 'isNotEmpty', 'contains']
 const NO_VALUE_OPERATORS = ['isEmpty', 'isNotEmpty']
 // The rule engine requires an ARRAY value for these operators.
 const ARRAY_OPERATORS = ['in', 'notIn']
@@ -30,6 +35,7 @@ export function QuestionInspector({
 }) {
   const t = useTranslations('console')
   const tr = useTranslations('runtime')
+  const tOp = useTranslations('operators')
   // Author only in the languages this event offers. An unscoped caller falls
   // back to the default locale alone — falling back to all five would offer
   // translation tabs for languages the event was never set up for.
@@ -80,13 +86,26 @@ export function QuestionInspector({
     onChange({ visibleIf: { op: q.visibleIf?.op ?? 'and', rules: next } })
   }
 
+  // Switching which question a rule watches can invalidate its operator —
+  // "contains" means nothing once the rule points at a date. Keep it when the
+  // new type still supports it, otherwise fall back to that type's first.
+  function pointAtQuestion(questionId, operator) {
+    const type = priorQuestions.find((x) => x.id === questionId)?.type
+    return {
+      questionId,
+      operator: isOperatorAllowed(operator, type) ? operator : defaultOperatorFor(type),
+      value: '',
+    }
+  }
+
   function addRule() {
     const first = priorQuestions[0]
     if (!first) return
     onChange({
       visibleIf: {
         op: q.visibleIf?.op ?? 'and',
-        rules: [...rules, { questionId: first.id, operator: 'eq', value: '' }],
+        // 'eq' isn't valid everywhere (a multiselect can only use 'contains').
+        rules: [...rules, pointAtQuestion(first.id, 'eq')],
       },
     })
   }
@@ -282,7 +301,7 @@ export function QuestionInspector({
                 <NativeSelect
                   aria-label={t('ariaQuestion')}
                   value={rule.questionId}
-                  onChange={(e) => setRule(i, { questionId: e.target.value, value: '' })}
+                  onChange={(e) => setRule(i, pointAtQuestion(e.target.value, rule.operator))}
                 >
                   {!refQ && (
                     <option value={rule.questionId} disabled style={{ color: 'red' }}>
@@ -300,8 +319,10 @@ export function QuestionInspector({
                   value={rule.operator}
                   onChange={(e) => setRule(i, { operator: e.target.value })}
                 >
-                  {OPERATORS.map((op) => (
-                    <option key={op} value={op}>{op}</option>
+                  {operatorsForType(refQ?.type, rule.operator).map((op) => (
+                    <option key={op} value={op}>
+                      {tOp(operatorLabelKey(op, refQ?.type))}
+                    </option>
                   ))}
                 </NativeSelect>
                 {!NO_VALUE_OPERATORS.includes(rule.operator) &&
