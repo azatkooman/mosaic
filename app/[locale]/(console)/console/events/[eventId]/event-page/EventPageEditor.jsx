@@ -67,32 +67,36 @@ const THEME_PRESETS = {
 // back into empty target-language slots (never overwriting existing text).
 const LOCALE_SET = new Set(LOCALES)
 
-function isLocaleMap(v) {
+// `codes` bounds which keys count as language codes. It defaults to the
+// built-in locales, but callers pass the event's full set (built-ins + custom
+// codes) so a field that already has a custom-language slot ({en, es, sq}) is
+// still recognized as translatable instead of being skipped.
+function isLocaleMap(v, codes = LOCALE_SET) {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return false
   const keys = Object.keys(v)
   return (
     keys.length > 0 &&
-    keys.every((k) => LOCALE_SET.has(k)) &&
+    keys.every((k) => codes.has(k)) &&
     Object.values(v).every((x) => x == null || typeof x === 'string')
   )
 }
 
-function collectSourceStrings(node, source, out) {
-  if (isLocaleMap(node)) {
+function collectSourceStrings(node, source, out, codes = LOCALE_SET) {
+  if (isLocaleMap(node, codes)) {
     const s = node[source]
     if (s && s.trim()) out.add(s)
     return
   }
-  if (Array.isArray(node)) node.forEach((n) => collectSourceStrings(n, source, out))
+  if (Array.isArray(node)) node.forEach((n) => collectSourceStrings(n, source, out, codes))
   else if (node && typeof node === 'object') {
-    Object.values(node).forEach((n) => collectSourceStrings(n, source, out))
+    Object.values(node).forEach((n) => collectSourceStrings(n, source, out, codes))
   }
 }
 
 // dict: { [target]: Map(sourceString -> translated) }. Returns a new node with
 // empty target slots filled.
-function applyTranslations(node, source, targets, dict) {
-  if (isLocaleMap(node)) {
+function applyTranslations(node, source, targets, dict, codes = LOCALE_SET) {
+  if (isLocaleMap(node, codes)) {
     const s = node[source]
     if (!s || !s.trim()) return node
     const next = { ...node }
@@ -104,10 +108,10 @@ function applyTranslations(node, source, targets, dict) {
     }
     return next
   }
-  if (Array.isArray(node)) return node.map((n) => applyTranslations(n, source, targets, dict))
+  if (Array.isArray(node)) return node.map((n) => applyTranslations(n, source, targets, dict, codes))
   if (node && typeof node === 'object') {
     const o = {}
-    for (const [k, v] of Object.entries(node)) o[k] = applyTranslations(v, source, targets, dict)
+    for (const [k, v] of Object.entries(node)) o[k] = applyTranslations(v, source, targets, dict, codes)
     return o
   }
   return node
@@ -412,8 +416,12 @@ export function EventPageEditor({ initialEvent }) {
       location: event.location,
       page_content: event.page_content ?? {},
     }
+    // Recognize locale maps keyed by any of the event's languages — built-ins
+    // plus custom codes — so fields that already have a custom-language slot
+    // aren't skipped on subsequent translations.
+    const codes = new Set([...LOCALES, ...availableLocales])
     const set = new Set()
-    collectSourceStrings(bundle, source, set)
+    collectSourceStrings(bundle, source, set, codes)
     const strings = [...set]
     if (!strings.length) {
       setTranslateState('error')
@@ -443,7 +451,7 @@ export function EventPageEditor({ initialEvent }) {
           dict[tgt] = m
         }
       }
-      const out = applyTranslations(bundle, source, targets, dict)
+      const out = applyTranslations(bundle, source, targets, dict, codes)
       setEvent((prev) => ({
         ...prev,
         name: out.name,
@@ -454,6 +462,7 @@ export function EventPageEditor({ initialEvent }) {
       markDirty()
       setTranslateState('done')
       setTranslateMsg(t('translateDone'))
+      window.alert(t('translateFinished'))
     } catch {
       setTranslateState('error')
       setTranslateMsg(t('translateError'))
@@ -559,7 +568,16 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+  const ALLOWED_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/avif',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+  ]
 
   async function upload(file, prefix) {
     setUploadError('')
@@ -567,13 +585,15 @@ export function EventPageEditor({ initialEvent }) {
       setUploadError(t('uploadBadType'))
       return null
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
+    const isVideo = file.type.startsWith('video/')
+    const maxBytes = isVideo ? 30 * 1024 * 1024 : MAX_UPLOAD_BYTES
+    if (file.size > maxBytes) {
       setUploadError(t('uploadTooLarge'))
       return null
     }
     setUploading((n) => n + 1)
     try {
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const ext = (file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase()
       const path = `${event.id}/${prefix}-${Date.now().toString(36)}.${ext}`
       const { error } = await supabase.storage.from('event-covers').upload(path, file)
       if (error) {
@@ -590,7 +610,10 @@ export function EventPageEditor({ initialEvent }) {
     const file = e.target.files?.[0]
     if (file) {
       const path = await upload(file, 'cover')
-      if (path) patchEvent({ cover_image_path: path })
+      if (path) {
+        patchEvent({ cover_image_path: path })
+        patchContent('hero', { video_url: undefined })
+      }
     }
     e.target.value = ''
   }
@@ -598,8 +621,15 @@ export function EventPageEditor({ initialEvent }) {
   async function onAboutImgFile(e) {
     const file = e.target.files?.[0]
     if (file) {
-      const path = await upload(file, 'about')
-      if (path) patchContent('about', { enabled: true, image_path: path })
+      const isVideo = file.type.startsWith('video/')
+      const path = await upload(file, isVideo ? 'about-video' : 'about')
+      if (path) {
+        if (isVideo) {
+          patchContent('about', { enabled: true, video_url: path, image_path: null })
+        } else {
+          patchContent('about', { enabled: true, image_path: path, video_url: null })
+        }
+      }
     }
     e.target.value = ''
   }
@@ -787,32 +817,6 @@ export function EventPageEditor({ initialEvent }) {
 
     return (
       <>
-        {/* ---- Presets ---- */}
-        <h4 className={styles.panelSubhead}>{t('themePresets')}</h4>
-        <div className={styles.panelRow}>
-          <Button variant="secondary" size="sm" onClick={() => setTheme(THEME_PRESETS.light)}>
-            {t('presetLight')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setTheme(THEME_PRESETS.dark)}>
-            {t('presetDark')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setTheme(THEME_PRESETS.brand)}>
-            {t('presetBrand')}
-          </Button>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => patchContent('theme', {
-            page_bg: undefined, text_color: undefined, title_color: undefined,
-            primary_color: undefined, accent_color: undefined, hero_bg: undefined,
-            hero_opacity: undefined, btn_bg: undefined, btn_text: undefined, btn_style: undefined,
-            body_font: undefined, title_font: undefined, title_size: undefined,
-            text_scale: undefined, radius: undefined, width: undefined, density: undefined,
-          })}
-        >
-          {t('resetToDefault')}
-        </Button>
 
         {/* ---- Colors & brand ---- */}
         <h4 className={styles.panelSubhead}>{t('groupColors')}</h4>
@@ -1150,18 +1154,36 @@ export function EventPageEditor({ initialEvent }) {
             <option value="split">{t('heroLayoutSplit')}</option>
           </NativeSelect>
         </div>
-        <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={onCoverFile} />
+        {content.theme?.hero_variant === 'split' && (
+          <div className={styles.colorField}>
+            <span className="field-label">{t('imageSide')}</span>
+            <NativeSelect
+              value={hero.image_side ?? 'right'}
+              onChange={(e) => patchContent('hero', { image_side: e.target.value })}
+              aria-label={t('imageSide')}
+            >
+              <option value="right">{t('imageSideRight')}</option>
+              <option value="left">{t('imageSideLeft')}</option>
+            </NativeSelect>
+            <p className="field-help">{t('imageSideHelp')}</p>
+          </div>
+        )}
+        <input ref={coverInputRef} type="file" accept="image/*,video/*" hidden onChange={onCoverFile} />
         {event.cover_image_path && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            className={styles.panelThumb}
-            src={eventMediaUrl(event.cover_image_path)}
-            alt=""
-          />
+          /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(event.cover_image_path) ? (
+            <video className={styles.panelThumb} src={eventMediaUrl(event.cover_image_path)} controls style={{ width: '100%', maxHeight: '150px', objectFit: 'contain' }} />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              className={styles.panelThumb}
+              src={eventMediaUrl(event.cover_image_path)}
+              alt=""
+            />
+          )
         )}
         <div className={styles.panelRow}>
           <Button variant="secondary" size="sm" onClick={() => coverInputRef.current?.click()}>
-            {event.cover_image_path ? t('changeImage') : t('uploadImage')}
+            {event.cover_image_path ? t('changeImageOrVideo') : t('uploadImageOrVideo')}
           </Button>
           {event.cover_image_path && (
             <Button variant="ghost" size="sm" onClick={() => patchEvent({ cover_image_path: null })}>
@@ -1182,6 +1204,21 @@ export function EventPageEditor({ initialEvent }) {
           />
         )}
         <p className="field-help">{t('coverHelp')}</p>
+        <Field label={t('videoUrl')} help={t('videoHelp')}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={hero.video_url && /^https?:\/\//i.test(hero.video_url) ? hero.video_url : ''}
+              onChange={(e) => {
+                const val = e.target.value || undefined
+                patchContent('hero', { video_url: val })
+                if (val) patchEvent({ cover_image_path: null })
+              }}
+            />
+          )}
+        </Field>
 
         {/* ---- Hero title styling (background, opacity, title size/font/align) ---- */}
         <h4 className={styles.panelSubhead}>{t('heroTitleStyle')}</h4>
@@ -1193,7 +1230,7 @@ export function EventPageEditor({ initialEvent }) {
           defaultValue={isDark ? '#000000' : '#ffffff'}
           onChange={(c) => setTheme({ hero_bg: c ?? undefined })}
         />
-        {theme.hero_bg && event.cover_image_path && (
+        {theme.hero_bg && (event.cover_image_path || theme.hero_variant === 'split') && (
           <div className={styles.colorField}>
             <span className="field-label">
               {t('heroOpacity')}: {theme.hero_opacity ?? 100}%
@@ -1337,6 +1374,11 @@ export function EventPageEditor({ initialEvent }) {
             >
               {t('useTitleColor')}
             </Button>
+            <CheckboxRow
+              label={t('countdownDivider')}
+              checked={hero.countdown_divider !== false}
+              onCheckedChange={(checked) => patchContent('hero', { countdown_divider: !!checked })}
+            />
           </>
         )}
       </>
@@ -1360,17 +1402,20 @@ export function EventPageEditor({ initialEvent }) {
             />
           )}
         </Field>
-        <input ref={aboutImgInputRef} type="file" accept="image/*" hidden onChange={onAboutImgFile} />
+        <input ref={aboutImgInputRef} type="file" accept="image/*,video/*" hidden onChange={onAboutImgFile} />
         {about.image_path && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img className={styles.panelThumb} src={eventMediaUrl(about.image_path)} alt="" />
         )}
+        {about.video_url && !/^https?:\/\//i.test(about.video_url) && (
+          <video className={styles.panelThumb} src={eventMediaUrl(about.video_url)} controls style={{ width: '100%', maxHeight: '150px', objectFit: 'contain' }} />
+        )}
         <div className={styles.panelRow}>
           <Button variant="secondary" size="sm" onClick={() => aboutImgInputRef.current?.click()}>
-            {about.image_path ? t('changeImage') : t('uploadImage')}
+            {about.image_path || about.video_url ? t('changeImageOrVideo') : t('uploadImageOrVideo')}
           </Button>
-          {about.image_path && (
-            <Button variant="ghost" size="sm" onClick={() => patchContent('about', { image_path: null })}>
+          {(about.image_path || about.video_url) && (
+            <Button variant="ghost" size="sm" onClick={() => patchContent('about', { image_path: null, video_url: null })}>
               {t('remove')}
             </Button>
           )}
@@ -1395,8 +1440,8 @@ export function EventPageEditor({ initialEvent }) {
               id={id}
               type="url"
               placeholder="https://www.youtube.com/watch?v=..."
-              value={about.video_url ?? ''}
-              onChange={(e) => patchContent('about', { video_url: e.target.value || undefined })}
+              value={about.video_url && /^https?:\/\//i.test(about.video_url) ? about.video_url : ''}
+              onChange={(e) => patchContent('about', { video_url: e.target.value || undefined, image_path: e.target.value ? null : about.image_path })}
             />
           )}
         </Field>
@@ -1668,6 +1713,14 @@ export function EventPageEditor({ initialEvent }) {
                   patchItem('agenda', it.id, { description: setLv(it.description, e.target.value) })
                 }
               />
+              <ColorField
+                label={t('sessionColor')}
+                addLabel={t('addColor')}
+                resetLabel={t('resetColor')}
+                value={it.color}
+                defaultValue={isDark ? '#ffffff' : '#000000'}
+                onChange={(color) => patchItem('agenda', it.id, { color: color ?? undefined })}
+              />
             </div>
             <Button variant="ghost" size="sm" onClick={() => removeItem('agenda', it.id)}>
               ✕
@@ -1844,6 +1897,16 @@ export function EventPageEditor({ initialEvent }) {
         <p className="field-help">{t('testimonialHeadingHelp')}</p>
         {headingEditor('testimonials')}
         {sectionBgField('testimonials')}
+        {(testimonials.layout ?? 'cards') !== 'quote' && (
+          <ColorField
+            label={t('cardBg')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={testimonials.card_bg}
+            defaultValue={isDark ? '#14161b' : '#f9f9f9'}
+            onChange={(color) => patchContent('testimonials', { card_bg: color ?? undefined })}
+          />
+        )}
         {items.map((it) => (
           <div key={it.id} className={styles.panelItem}>
             <div className={styles.panelItemFields}>
@@ -2034,6 +2097,24 @@ export function EventPageEditor({ initialEvent }) {
           <span className={styles.linkLabel}>{t('publicLink')}</span>
           <code className={styles.link}>{publicUrl}</code>
           <div className={styles.linkActions}>
+            <div className={styles.localeSwitch} role="tablist" aria-label={t('previewDevice')} style={{ marginInlineStart: 0, marginRight: 'var(--s-2)' }}>
+              <button
+                type="button"
+                data-active={previewDevice === 'desktop'}
+                aria-label={t('deviceDesktop')}
+                onClick={() => setPreviewDevice('desktop')}
+              >
+                {t('deviceDesktop')}
+              </button>
+              <button
+                type="button"
+                data-active={previewDevice === 'mobile'}
+                aria-label={t('deviceMobile')}
+                onClick={() => setPreviewDevice('mobile')}
+              >
+                {t('deviceMobile')}
+              </button>
+            </div>
             <Button variant="secondary" size="sm" onClick={copyLink}>
               {copied ? t('linkCopied') : t('copyLink')}
             </Button>
@@ -2052,24 +2133,6 @@ export function EventPageEditor({ initialEvent }) {
             {t('customize')}
           </Button>
           <p className={styles.hint}>{t('pagePreviewHint')}</p>
-          <div className={styles.localeSwitch} role="tablist" aria-label={t('previewDevice')}>
-            <button
-              type="button"
-              data-active={previewDevice === 'desktop'}
-              aria-label={t('deviceDesktop')}
-              onClick={() => setPreviewDevice('desktop')}
-            >
-              {t('deviceDesktop')}
-            </button>
-            <button
-              type="button"
-              data-active={previewDevice === 'mobile'}
-              aria-label={t('deviceMobile')}
-              onClick={() => setPreviewDevice('mobile')}
-            >
-              {t('deviceMobile')}
-            </button>
-          </div>
           {availableLocales.length > 1 && (
             <div className={styles.localeSwitch} role="tablist" aria-label="Preview language">
               {availableLocales.map((l) => (

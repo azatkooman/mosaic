@@ -24,11 +24,15 @@ import styles from './wizard.module.css'
  * single-mode registrations — in family mode person #1 may not be the
  * account holder, so no prefill there).
  */
-export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId, profile = null }) {
+export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId, profile = null, contentLocale }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
   const tMyRegs = useTranslations('myRegs')
-  const locale = useLocale()
+  const routeLocale = useLocale()
+  // Content (participant type names, questions) renders in the language the
+  // attendee chose on the register page — which may be a custom language that
+  // has no UI route. Chrome (t/tCommon) stays on the route locale.
+  const locale = contentLocale ?? routeLocale
   const storageKey = `mosaic-draft-${event.slug}`
 
   const [step, setStep] = useState('mode') // mode | single-type | counts | person | review | done

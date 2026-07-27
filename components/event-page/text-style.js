@@ -3,17 +3,17 @@
 // without a circular import.
 
 export const HEADING_SIZES = {
-  sm: '1.25rem',
-  md: '1.75rem',
-  lg: '2.375rem',
-  xl: '3rem',
+  sm: 'clamp(1.1rem, 3vw, 1.25rem)',
+  md: 'clamp(1.3rem, 4vw, 1.75rem)',
+  lg: 'clamp(1.5rem, 5vw, 2.375rem)',
+  xl: 'clamp(1.8rem, 6vw, 3rem)',
 }
 
 export const TITLE_SIZES = {
-  sm: '1.6rem',
-  md: 'clamp(2rem, 5vw, 3rem)',
-  lg: 'clamp(2.5rem, 6vw, 3.75rem)',
-  xl: 'clamp(3rem, 7vw, 4.5rem)',
+  sm: 'clamp(1.2rem, 4vw, 1.6rem)',
+  md: 'clamp(1.5rem, 5vw, 3rem)',
+  lg: 'clamp(1.8rem, 6vw, 3.75rem)',
+  xl: 'clamp(2.2rem, 8vw, 4.5rem)',
 }
 
 // Font options offered in the customize panel. `label: null` means the label

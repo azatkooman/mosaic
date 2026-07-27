@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { LOCALES } from '@/lib/i18n/locales'
+import { getTranslateLanguages } from '@/lib/i18n/translate-languages'
 import { applyLocalizedTranslations, collectLocalizedStrings } from '@/lib/form-localization'
-
-const SUPPORTED = new Set(LOCALES)
 
 function unescapeHtml(value) {
   return value
@@ -62,24 +60,36 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-  const { definition, source, targets } = body ?? {}
+  // Gate against the languages Google actually supports (fetched + cached), so
+  // organizer-picked custom languages translate too — not just the built-ins.
+  const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
+
+  const { definition, source, targets, locales } = body ?? {}
   if (
     !definition ||
     typeof definition !== 'object' ||
     typeof source !== 'string' ||
     !Array.isArray(targets) ||
-    !SUPPORTED.has(source)
+    !supported.has(source)
   ) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
 
-  const targetList = targets.filter((target) => SUPPORTED.has(target) && target !== source)
+  const MAX_TARGETS = 5
+  const targetList = targets
+    .filter((target) => typeof target === 'string' && supported.has(target) && target !== source)
+    .slice(0, MAX_TARGETS)
   if (targetList.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
   }
 
+  const validLocales = Array.isArray(locales)
+    ? locales.filter((locale) => typeof locale === 'string' && supported.has(locale))
+    : []
+  const allowed = new Set([...supported, ...validLocales])
+
   const sourceStrings = new Set()
-  collectLocalizedStrings(definition, source, sourceStrings)
+  collectLocalizedStrings(definition, source, sourceStrings, allowed)
   const strings = [...sourceStrings]
   if (strings.length === 0) {
     return NextResponse.json({ translatedDefinition: definition })
@@ -106,6 +116,6 @@ export async function POST(request) {
   }
 
   return NextResponse.json({
-    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict),
+    translatedDefinition: applyLocalizedTranslations(definition, source, targetList, dict, allowed),
   })
 }
