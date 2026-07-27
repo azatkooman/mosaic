@@ -59,6 +59,17 @@
   color: var(--ink-soft);
 }
 
+/* "Translating…" note beside the preview language switcher. */
+.translatingNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--pine-deep);
+  white-space: nowrap;
+}
+
 /* Segmented control (Desktop/Mobile view, language) — boxed and aligned. */
 .localeSwitch {
   display: inline-flex;

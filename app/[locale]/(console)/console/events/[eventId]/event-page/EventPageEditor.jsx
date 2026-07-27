@@ -420,6 +420,25 @@ export function EventPageEditor({ initialEvent }) {
     }
   }, [availableLocales, previewLocale, event.default_locale])
 
+  // Auto-translate on language switch, like the form builder: switching the
+  // editor to a non-default language fills that language's empty fields from
+  // the default. Only blanks are filled (typed text is kept) and the page is
+  // marked dirty only if something changed, so flipping between languages is
+  // free. The organizer still clicks Save Page — this editor is save-based.
+  // The first render is skipped so simply opening the page never auto-edits;
+  // it only fires on a real language switch.
+  const didAutoTranslateMount = useRef(false)
+  useEffect(() => {
+    if (!didAutoTranslateMount.current) {
+      didAutoTranslateMount.current = true
+      return
+    }
+    if (previewLocale === event.default_locale) return
+    if (!availableLocales.includes(previewLocale)) return
+    translateInto([previewLocale])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLocale])
+
   // ---- state helpers -------------------------------------------------------
 
   function markDirty() {
@@ -432,21 +451,21 @@ export function EventPageEditor({ initialEvent }) {
     markDirty()
   }
 
-  // Fill empty target-language slots by machine-translating the default
-  // language's text. Applied to state; the user then saves.
-  async function translateAll(availableLocales) {
+  // Machine-translate the default language's text into the given target
+  // languages, filling only EMPTY slots (never overwriting typed text). Applied
+  // to editor state; the page is marked dirty only if something actually
+  // changed, so re-running on an already-translated language is a no-op. Runs
+  // automatically when the organizer switches languages (see the effect below),
+  // mirroring the form builder — no button. Success is silent; errors surface.
+  async function translateInto(targets) {
     const source = event.default_locale
     const customCodes = Array.isArray(content.i18n?.custom)
       ? content.i18n.custom.map((c) => c.code)
       : []
     // Organizer-added languages come from the Google-supported list, so they
     // are valid auto-translate targets too. The API drops any it can't handle.
-    const targets = availableLocales.filter((l) => l !== source)
-    if (!targets.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNoTargets'))
-      return
-    }
+    const realTargets = targets.filter((l) => l && l !== source)
+    if (!realTargets.length) return
     const bundle = {
       name: event.name,
       description: event.description,
@@ -460,18 +479,14 @@ export function EventPageEditor({ initialEvent }) {
     const set = new Set()
     collectSourceStrings(bundle, source, set, codes)
     const strings = [...set]
-    if (!strings.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNothing'))
-      return
-    }
+    if (!strings.length) return
     setTranslateState('working')
     setTranslateMsg('')
     try {
       const res = await fetch('/api/translate-event', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ strings, source, targets }),
+        body: JSON.stringify({ strings, source, targets: realTargets }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -480,7 +495,7 @@ export function EventPageEditor({ initialEvent }) {
         return
       }
       const dict = {}
-      for (const tgt of targets) {
+      for (const tgt of realTargets) {
         const arr = data.translations?.[tgt]
         if (Array.isArray(arr)) {
           const m = new Map()
@@ -488,18 +503,24 @@ export function EventPageEditor({ initialEvent }) {
           dict[tgt] = m
         }
       }
-      const out = applyTranslations(bundle, source, targets, dict, codes)
-      setEvent((prev) => ({
-        ...prev,
-        name: out.name,
-        description: out.description,
-        location: out.location,
-        page_content: out.page_content,
-      }))
-      markDirty()
-      setTranslateState('done')
-      setTranslateMsg(t('translateDone'))
-      window.alert(t('translateFinished'))
+      const out = applyTranslations(bundle, source, realTargets, dict, codes)
+      const changed =
+        JSON.stringify(out.name) !== JSON.stringify(bundle.name) ||
+        JSON.stringify(out.description) !== JSON.stringify(bundle.description) ||
+        JSON.stringify(out.location) !== JSON.stringify(bundle.location) ||
+        JSON.stringify(out.page_content) !== JSON.stringify(bundle.page_content)
+      if (changed) {
+        setEvent((prev) => ({
+          ...prev,
+          name: out.name,
+          description: out.description,
+          location: out.location,
+          page_content: out.page_content,
+        }))
+        markDirty()
+      }
+      setTranslateState('idle')
+      setTranslateMsg('')
     } catch {
       setTranslateState('error')
       setTranslateMsg(t('translateError'))
@@ -1100,21 +1121,9 @@ export function EventPageEditor({ initialEvent }) {
         <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
           {t('addLanguagesInSettings')}
         </Link>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={translateState === 'working'}
-          onClick={() => translateAll(availableLocales)}
-        >
-          {translateState === 'working' ? t('translating') : t('translateAll')}
-        </Button>
-        <p className="field-help">{t('translateAllHelp')}</p>
-        {translateMsg && (
-          <p
-            className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}
-          >
-            {translateMsg}
-          </p>
+        <p className="field-help">{t('autoTranslateHelp')}</p>
+        {translateState === 'error' && translateMsg && (
+          <p className={`alert alert-error ${styles.uploadNote}`}>{translateMsg}</p>
         )}
 
         {/* ---- Section order ---- */}
@@ -2354,6 +2363,11 @@ export function EventPageEditor({ initialEvent }) {
             onChange={setPreviewLocale}
             ariaLabel={t('ariaPreviewLanguage')}
           />
+          {translateState === 'working' && (
+            <span className={styles.translatingNote} aria-live="polite">
+              {t('translating')}
+            </span>
+          )}
           <div className={styles.saveStatus} aria-live="polite">
             {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
             {saveState === 'error' && <span className="badge badge-cancelled">{t('saveError')}</span>}
