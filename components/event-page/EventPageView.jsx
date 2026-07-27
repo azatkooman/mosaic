@@ -2,7 +2,8 @@
 
 import { Fragment } from 'react'
 import { useTranslations } from 'next-intl'
-import { lt, eventLocales } from '@/lib/i18n/locales'
+import { lt, eventLocales, localeName } from '@/lib/i18n/locales'
+import { LanguagePicker } from '@/components/ui'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
 import { eventMediaUrl } from '@/lib/storage'
 import { externalHref } from '@/lib/url'
@@ -306,9 +307,9 @@ export function EventPageView({
   const showLangSwitch = availableLocales.length > 1
   const eventSlug = event.slug
   const isCustom = (code) => customCodes.includes(code)
-  // Show the language code as an acronym (e.g. "EN", "PT") for every language,
-  // built-in and custom alike, so the switcher stays compact.
-  const langLabel = (code) => code.toUpperCase()
+  // The dropdown has room for real names ("English", "Português") rather than
+  // the bare codes a compact button row was limited to.
+  const langLabel = (code) => localeName(event, code)
   // Built-in locales get their own route; custom ones ride on the current
   // route locale via a ?lang= param (they aren't platform routes).
   const langHref = (code) =>
@@ -327,21 +328,20 @@ export function EventPageView({
       ) : (
         <span />
       )}
-      {showLangSwitch && (
-        <nav className={styles.langSwitch} aria-label={tCommon('language')}>
-          {availableLocales.map((l) =>
-            editable ? (
-              <span key={l} data-active={l === cl ? '' : undefined}>
-                {langLabel(l)}
-              </span>
-            ) : (
-              <a key={l} href={langHref(l)} data-active={l === cl ? '' : undefined}>
-                {langLabel(l)}
-              </a>
-            )
-          )}
-        </nav>
-      )}
+      {/* Inside the console preview the picker is inert — the editor's own
+          preview-language control above the canvas drives the language there. */}
+      <LanguagePicker
+        options={availableLocales.map((l) => ({
+          value: l,
+          label: langLabel(l),
+          href: editable ? undefined : langHref(l),
+        }))}
+        value={cl}
+        disabled={editable}
+        ariaLabel={tCommon('language')}
+        variant="hero"
+        className={styles.langSwitch}
+      />
     </div>
   )
 

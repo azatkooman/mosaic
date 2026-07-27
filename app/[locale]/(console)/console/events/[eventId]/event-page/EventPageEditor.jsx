@@ -11,7 +11,15 @@ import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
 import { eventMediaUrl } from '@/lib/storage'
-import { Button, CheckboxRow, Field, Input, NativeSelect, Textarea } from '@/components/ui'
+import {
+  Button,
+  CheckboxRow,
+  Field,
+  Input,
+  LanguagePicker,
+  NativeSelect,
+  Textarea,
+} from '@/components/ui'
 import {
   EventPageView,
   FONT_CHOICES,
@@ -2212,22 +2220,12 @@ export function EventPageEditor({ initialEvent }) {
             {t('customize')}
           </Button>
           <p className={styles.hint}>{t('pagePreviewHint')}</p>
-          {availableLocales.length > 1 && (
-            <div className={styles.localeSwitch} role="tablist" aria-label={t('ariaPreviewLanguage')}>
-              {availableLocales.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  role="tab"
-                  aria-selected={previewLocale === l}
-                  data-active={previewLocale === l}
-                  onClick={() => setPreviewLocale(l)}
-                >
-                  {localeName(l)}
-                </button>
-              ))}
-            </div>
-          )}
+          <LanguagePicker
+            options={availableLocales.map((l) => ({ value: l, label: localeName(l) }))}
+            value={previewLocale}
+            onChange={setPreviewLocale}
+            ariaLabel={t('ariaPreviewLanguage')}
+          />
           <div className={styles.saveStatus} aria-live="polite">
             {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
             {saveState === 'error' && <span className="badge badge-cancelled">{t('saveError')}</span>}
