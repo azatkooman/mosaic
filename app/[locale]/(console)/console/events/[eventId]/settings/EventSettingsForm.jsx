@@ -246,16 +246,23 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     const existingI18n = existingContent.i18n ?? {}
     const nextAvailable = [...supportedLocales, ...customLangs.map((c) => c.code)]
 
-    // Languages dropped in this save. Their text has to go with them: machine
-    // translation only fills EMPTY slots, so anything left behind would come
+    // Normalize the stored text to exactly the languages the event offers.
+    // Any other language's text is stale — either dropped this save, or
+    // orphaned by a past removal that predates this cleanup. It must go:
+    // machine translation only fills EMPTY slots, so leftover text would come
     // back — stale and un-overwritable — the moment the language is re-added.
-    // The default language can never be dropped, so it is never purged.
-    const removed = new Set(
-      savedLocalesRef.current.filter((l) => !nextAvailable.includes(l) && l !== defaultLocale)
-    )
-    // Recognize maps keyed by any language the event had *before* the removal,
-    // otherwise the ones holding a dropped code wouldn't be seen as locale maps.
-    const codes = new Set([...LOCALES, ...savedLocalesRef.current, ...nextAvailable])
+    // The default language is always offered, so it is never stripped.
+    const offered = new Set([...nextAvailable, defaultLocale])
+    // Recognize locale maps keyed by any real language code — built-ins, the
+    // ones the event had, and the full Google list — so even text orphaned
+    // before this logic existed is seen as a locale map and cleaned.
+    const codes = new Set([
+      ...LOCALES,
+      ...savedLocalesRef.current,
+      ...nextAvailable,
+      ...allLanguages.map((l) => l.code),
+    ])
+    const removed = new Set([...codes].filter((c) => !offered.has(c)))
     const purge = (value) => (removed.size ? stripLocales(value, removed, codes) : value)
 
     const { error } = await supabase
