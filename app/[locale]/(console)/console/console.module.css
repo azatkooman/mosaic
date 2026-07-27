@@ -98,6 +98,15 @@
   margin-inline: auto;
 }
 
+/* The Event Page tab opts out of both width caps (it marks itself with
+   data-wide-tab). It renders a live page preview next to the customize
+   panel, and the narrow column leaves the preview too small to judge —
+   especially once the panel is open. Every other tab stays centered. */
+.main:has([data-wide-tab]),
+.eventContent:has([data-wide-tab]) {
+  max-inline-size: none;
+}
+
 /* Event sub-navigation */
 .eventNav {
   display: flex;

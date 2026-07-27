@@ -2166,7 +2166,10 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   return (
-    <div className={styles.wrap}>
+    // data-wide-tab lets the console layouts drop their centered max-widths
+    // for this tab only (see console.module.css): the live preview sits beside
+    // the customize panel and is unusable squeezed into the narrow column.
+    <div className={styles.wrap} data-wide-tab>
       {/* ---- toolbar ---- */}
       <section className={`card card-pad ${styles.toolbar}`}>
         <div className={styles.linkRow}>
