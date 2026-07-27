@@ -304,6 +304,8 @@
     "formKindFamily": "Форма групової реєстрації",
     "formModeSingle": "Індивідуальна",
     "formModeFamily": "Група",
+    "bucketIndividual": "Індивідуальні реєстрації",
+    "bucketGroup": "Групові реєстрації",
     "formModeSingleHelp": "Показується, коли особа реєструє лише себе.",
     "formModeFamilyHelp": "Показується, коли особа реєструє групу.",
     "copyQuestionsFrom": "Скопіювати запитання з",

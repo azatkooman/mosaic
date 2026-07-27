@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
+import { PARTICIPANT_BUCKETS } from '@/lib/event-questions'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue } from '@/lib/dates'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
@@ -30,7 +31,7 @@ const STATUS_TRANSITIONS = {
 export function ParticipantsTable({
   eventId,
   participantTypes,
-  questions,
+  buckets,
   definitionByVersion = {},
   canEdit = false,
   canChangeStatus = false,
@@ -41,6 +42,7 @@ export function ParticipantsTable({
   const supabase = getSupabaseBrowserClient()
   const queryClient = useQueryClient()
 
+  const [bucket, setBucket] = useState('individual')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -57,13 +59,20 @@ export function ParticipantsTable({
     () => new Map(participantTypes.map((pt) => [pt.id, pt])),
     [participantTypes]
   )
-  // Answer columns are driven purely by the questions this event actually
-  // asks — there are no fixed name/email columns any more, since those are
-  // optional questions and their columns sat empty whenever an organizer
-  // removed them. Deliberately uncapped: `questions` is already narrowed to
-  // the current published version of each form (lib/event-questions), and the
-  // export renders the identical set, so the download always matches the view.
-  // Wide forms scroll horizontally; each cell clips to one line.
+  // Individual and group registrations are separate lists, each carrying the
+  // questions of its own forms (lib/event-questions). Switching tabs therefore
+  // swaps the whole answer-column set instead of showing one merged table where
+  // half the cells are empty because the other mode's form never asked them.
+  const active = buckets[bucket] ?? buckets.individual
+  const questions = active.questions
+  // Only worth a tab strip when the event actually runs both kinds of form.
+  const hasGroupForms = buckets.group.versionIds.length > 0
+
+  // There are no fixed name/email columns: those are ordinary optional
+  // questions, and their columns sat empty whenever an organizer removed them.
+  // Deliberately uncapped — the export renders the identical set for this
+  // bucket, so the download always matches the view. Wide forms scroll
+  // horizontally; each cell clips to one line.
   const shownQuestions = questions
 
   // Only filterable question kinds get a filter control.
@@ -71,7 +80,19 @@ export function ParticipantsTable({
     ['select', 'radio', 'multiselect', 'checkbox', 'text', 'email', 'phone'].includes(q.type)
   )
 
-  const filters = { search, statusFilter, typeFilter, answerFilters, sort, page }
+  // Answer filters and `q:<id>` sorts name questions that exist in one bucket
+  // only, so they must be dropped on the way across — a stale filter would
+  // otherwise silently empty the other table.
+  function switchBucket(next) {
+    if (next === bucket) return
+    setBucket(next)
+    setAnswerFilters({})
+    setSort({ column: null, dir: 'desc' })
+    setSelectedIds(new Set())
+    setPage(0)
+  }
+
+  const filters = { bucket, search, statusFilter, typeFilter, answerFilters, sort, page }
   const { data, isLoading, error } = useQuery({
     queryKey: ['participants', eventId, filters],
     queryFn: async () => {
@@ -87,7 +108,13 @@ export function ParticipantsTable({
       // Same filter + sort logic the export uses, so the download matches.
       q = applyParticipantFilters(
         q,
-        { status: statusFilter, typeId: typeFilter, search, answerFilters },
+        {
+          status: statusFilter,
+          typeId: typeFilter,
+          search,
+          answerFilters,
+          formVersionIds: active.versionIds,
+        },
         questions
       )
       q = applyParticipantSort(q, sort, questions)
@@ -97,6 +124,30 @@ export function ParticipantsTable({
       return { rows: data ?? [], count: count ?? 0 }
     },
     placeholderData: keepPreviousData,
+  })
+
+  // Unfiltered totals for the tab labels, so an organizer can see there are
+  // group registrations even while a filter has emptied the individual list.
+  const { data: bucketCounts } = useQuery({
+    queryKey: ['participant-bucket-counts', eventId, buckets],
+    enabled: hasGroupForms,
+    queryFn: async () => {
+      const countFor = async (versionIds) => {
+        if (!versionIds.length) return 0
+        const { count, error } = await supabase
+          .from('participants')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_id', eventId)
+          .in('form_version_id', versionIds)
+        if (error) throw error
+        return count ?? 0
+      }
+      const [individual, group] = await Promise.all([
+        countFor(buckets.individual.versionIds),
+        countFor(buckets.group.versionIds),
+      ])
+      return { individual, group }
+    },
   })
 
   const rows = data?.rows ?? []
@@ -183,7 +234,9 @@ export function ParticipantsTable({
   }
 
   function exportUrl(format) {
-    const params = new URLSearchParams({ eventId, format, locale })
+    // `bucket` makes the download carry the active tab's columns and rows only,
+    // so each file has one clean header row instead of a merged superset.
+    const params = new URLSearchParams({ eventId, format, locale, bucket })
     if (statusFilter) params.set('status', statusFilter)
     if (typeFilter) params.set('typeId', typeFilter)
     if (search.trim()) params.set('q', search.trim())
@@ -214,6 +267,27 @@ export function ParticipantsTable({
 
   return (
     <div className={styles.wrap}>
+      {/* Plain buttons on the shared tab styles rather than the Radix Tabs
+          primitive: the panel below is one table fed different data, so there
+          is no second panel for a Radix trigger's aria-controls to point at. */}
+      {hasGroupForms && (
+        <div className="tabs-list" role="tablist" aria-label={t('console.participants')}>
+          {PARTICIPANT_BUCKETS.map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={bucket === key}
+              className="tabs-trigger"
+              data-state={bucket === key ? 'active' : 'inactive'}
+              onClick={() => switchBucket(key)}
+            >
+              {t(key === 'group' ? 'console.bucketGroup' : 'console.bucketIndividual')}
+              {bucketCounts && ` (${bucketCounts[key]})`}
+            </button>
+          ))}
+        </div>
+      )}
       <div className={styles.toolbar}>
         <Input
           placeholder={t('common.search')}

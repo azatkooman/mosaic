@@ -304,6 +304,8 @@
     "formKindFamily": "Group response form",
     "formModeSingle": "Single",
     "formModeFamily": "Group",
+    "bucketIndividual": "Individual registrations",
+    "bucketGroup": "Group registrations",
     "formModeSingleHelp": "Shown when a respondent registers only themself.",
     "formModeFamilyHelp": "Shown when a respondent registers a group.",
     "copyQuestionsFrom": "Copy questions from",
