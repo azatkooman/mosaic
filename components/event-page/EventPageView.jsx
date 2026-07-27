@@ -2,7 +2,8 @@
 
 import { Fragment } from 'react'
 import { useTranslations } from 'next-intl'
-import { lt, eventLocales } from '@/lib/i18n/locales'
+import { lt, eventLocales, localeName } from '@/lib/i18n/locales'
+import { LanguagePicker } from '@/components/ui'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
 import { eventMediaUrl } from '@/lib/storage'
 import { externalHref } from '@/lib/url'
@@ -151,6 +152,7 @@ export function EventPageView({
   onEditSection,
 }) {
   const t = useTranslations('event')
+  const tCommon = useTranslations('common')
   const content = event.page_content ?? {}
   const dl = event.default_locale
   // `locale` is a real platform locale (used for dates/number formatting);
@@ -234,7 +236,13 @@ export function EventPageView({
   const description = L(event.description)
   const location = L(event.location)
   const contact = event.contact ?? {}
-  const hasContact = contact.name || contact.email || contact.phone || contact.website
+  // The primary contact lives on the top-level fields (also edited in the
+  // Settings tab); any extras live in contact.people. Combine, then drop empties.
+  const contactPeople = [
+    { name: contact.name, email: contact.email, phone: contact.phone, website: contact.website },
+    ...(Array.isArray(contact.people) ? contact.people : []),
+  ].filter((c) => c && (c.name || c.email || c.phone || c.website))
+  const hasContact = contactPeople.length > 0
 
   const pageStyle = {}
   if (theme.page_bg) pageStyle['--ep-bg'] = theme.page_bg
@@ -299,9 +307,9 @@ export function EventPageView({
   const showLangSwitch = availableLocales.length > 1
   const eventSlug = event.slug
   const isCustom = (code) => customCodes.includes(code)
-  // Show the language code as an acronym (e.g. "EN", "PT") for every language,
-  // built-in and custom alike, so the switcher stays compact.
-  const langLabel = (code) => code.toUpperCase()
+  // The dropdown has room for real names ("English", "Português") rather than
+  // the bare codes a compact button row was limited to.
+  const langLabel = (code) => localeName(event, code)
   // Built-in locales get their own route; custom ones ride on the current
   // route locale via a ?lang= param (they aren't platform routes).
   const langHref = (code) =>
@@ -320,21 +328,20 @@ export function EventPageView({
       ) : (
         <span />
       )}
-      {showLangSwitch && (
-        <nav className={styles.langSwitch} aria-label="Language">
-          {availableLocales.map((l) =>
-            editable ? (
-              <span key={l} data-active={l === cl ? '' : undefined}>
-                {langLabel(l)}
-              </span>
-            ) : (
-              <a key={l} href={langHref(l)} data-active={l === cl ? '' : undefined}>
-                {langLabel(l)}
-              </a>
-            )
-          )}
-        </nav>
-      )}
+      {/* Inside the console preview the picker is inert — the editor's own
+          preview-language control above the canvas drives the language there. */}
+      <LanguagePicker
+        options={availableLocales.map((l) => ({
+          value: l,
+          label: langLabel(l),
+          href: editable ? undefined : langHref(l),
+        }))}
+        value={cl}
+        disabled={editable}
+        ariaLabel={tCommon('language')}
+        variant="hero"
+        className={styles.langSwitch}
+      />
     </div>
   )
 
@@ -515,7 +522,7 @@ export function EventPageView({
     tracks: (
       <TracksSection
         content={tracks}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -554,7 +561,7 @@ export function EventPageView({
     testimonials: (
       <TestimonialsSection
         content={testimonials}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -565,7 +572,7 @@ export function EventPageView({
     gallery: (
       <GallerySection
         content={gallery}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -614,7 +621,7 @@ export function EventPageView({
     faq: (
       <FaqSection
         content={faq}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -625,7 +632,7 @@ export function EventPageView({
     map: (
       <MapSection
         content={mapSection}
-        locale={locale}
+        contentLocale={cl}
         defaultLocale={dl}
         editable={editable}
         onEditSection={onEditSection}
@@ -638,14 +645,18 @@ export function EventPageView({
         <div className={`container-narrow ${styles.contactInner}`}>
           {heading(contactSection, t('contact'))}
           <div className={styles.contactList}>
-            {contact.name && <span>{contact.name}</span>}
-            {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
-            {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-            {externalHref(contact.website) && (
-              <a href={externalHref(contact.website)} target="_blank" rel="noreferrer">
-                {contact.website}
-              </a>
-            )}
+            {contactPeople.map((c, i) => (
+              <div key={i} className={styles.contactCard}>
+                {c.name && <span>{c.name}</span>}
+                {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>}
+                {c.phone && <a href={`tel:${c.phone}`}>{c.phone}</a>}
+                {externalHref(c.website) && (
+                  <a href={externalHref(c.website)} target="_blank" rel="noreferrer">
+                    {c.website}
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </Section>

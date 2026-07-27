@@ -23,6 +23,13 @@ import styles from './sections-extra.module.css'
  * Localized fields (title/body/heading/quote/role/question/answer/address) are
  * {en,es,...} maps resolved with lt(); plain strings (color, author,
  * image_path, embed_url) are stored as-is.
+ *
+ * These sections take `contentLocale` — the language the organizer's text is
+ * shown in — NOT the platform/route locale. The two differ whenever a custom
+ * (organizer-added) language is being viewed: the route stays on a real locale
+ * so dates and UI strings keep working, while the content resolves to the
+ * custom code. Passing the route locale here would silently leave these
+ * sections in the default language while the rest of the page switched.
  */
 
 const TRACK_COLORS = ['#3d7ea6', '#e8a33d', '#e2725b', '#146b5c']
@@ -89,10 +96,10 @@ const headingStyle = (hs) => textStyle(hs ?? {})
 
 /* ---------------- Tracks ---------------- */
 
-export function TracksSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
+export function TracksSection({ content = {}, contentLocale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
-  const L = (m) => lt(m, locale, defaultLocale)
+  const L = (m) => lt(m, contentLocale, defaultLocale)
   const items = content.items ?? []
   if (!content.enabled || items.length === 0) return null
 
@@ -126,9 +133,9 @@ export function TracksSection({ content = {}, locale, defaultLocale, editable, o
 
 /* ---------------- Testimonials ---------------- */
 
-export function TestimonialsSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
+export function TestimonialsSection({ content = {}, contentLocale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const sp = useSectionProps(editable, onEditSection)
-  const L = (m) => lt(m, locale, defaultLocale)
+  const L = (m) => lt(m, contentLocale, defaultLocale)
   const items = content.items ?? []
   if (!content.enabled || items.length === 0) return null
 
@@ -180,10 +187,10 @@ export function TestimonialsSection({ content = {}, locale, defaultLocale, edita
 
 /* ---------------- Gallery ---------------- */
 
-export function GallerySection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
+export function GallerySection({ content = {}, contentLocale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
-  const L = (m) => lt(m, locale, defaultLocale)
+  const L = (m) => lt(m, contentLocale, defaultLocale)
   const items = (content.items ?? []).filter((it) => it.image_path || videoEmbedSrc(it.video_url))
   if (!content.enabled || items.length === 0) return null
 
@@ -227,10 +234,10 @@ export function GallerySection({ content = {}, locale, defaultLocale, editable, 
 
 /* ---------------- FAQ ---------------- */
 
-export function FaqSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
+export function FaqSection({ content = {}, contentLocale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
-  const L = (m) => lt(m, locale, defaultLocale)
+  const L = (m) => lt(m, contentLocale, defaultLocale)
   const items = content.items ?? []
   if (!content.enabled || items.length === 0) return null
 
@@ -266,10 +273,10 @@ export function FaqSection({ content = {}, locale, defaultLocale, editable, onEd
 
 /* ---------------- Map / Location ---------------- */
 
-export function MapSection({ content = {}, locale, defaultLocale, editable, onEditSection, defaultAlign }) {
+export function MapSection({ content = {}, contentLocale, defaultLocale, editable, onEditSection, defaultAlign }) {
   const t = useTranslations('event')
   const sp = useSectionProps(editable, onEditSection)
-  const L = (m) => lt(m, locale, defaultLocale)
+  const L = (m) => lt(m, contentLocale, defaultLocale)
   const address = L(content.address)
   // Any pasted maps link (or just the address) becomes an iframe-safe embed.
   const embedSrc = mapEmbedSrc(content.embed_url, address)

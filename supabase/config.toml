@@ -160,7 +160,14 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# The `*` covers the locale segment (/en/auth/callback, /es/auth/callback, ...). A redirectTo
+# that misses this list does not error — Supabase silently sends the user to site_url instead,
+# which is why the post-login destination travels in a cookie rather than a query string.
+# Keep in sync with Auth → URL Configuration in the hosted project (see docs/auth-runbook.md).
+additional_redirect_urls = [
+  "http://127.0.0.1:3000/*/auth/callback",
+  "http://localhost:3000/*/auth/callback",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

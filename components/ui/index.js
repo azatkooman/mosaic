@@ -1,5 +1,6 @@
 export { Button } from './Button'
 export { Field, Input, Textarea, NativeSelect } from './Field'
+export { LanguagePicker } from './LanguagePicker'
 export { PreferenceDateInput } from './PreferenceDateInput'
 export { Checkbox, CheckboxRow } from './Checkbox'
 export { RadioGroup, RadioRow } from './Radio'

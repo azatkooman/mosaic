@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
+import { LOCALES, LOCALE_NAMES, eventLocales, localeName } from '@/lib/i18n/locales'
 import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
   Button,
-  Checkbox,
   ConfettiBurst,
   Dialog,
   Field,
@@ -19,6 +18,10 @@ import {
 } from '@/components/ui'
 import styles from './settings.module.css'
 
+function newContactId() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
 export function EventSettingsForm({ event, initialTypes, forms }) {
   const t = useTranslations('console')
   const tCommon = useTranslations('common')
@@ -26,18 +29,15 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const router = useRouter()
   const supabase = getSupabaseBrowserClient()
 
-  // Built-in languages this event offers. Custom (organizer-defined) languages
-  // are managed on the Event Page tab; this checklist covers the platform set.
-  const [supportedLocales, setSupportedLocales] = useState(
-    eventLocales(event).filter((l) => LOCALES.includes(l))
+  // Every language this event is offered in, in display order: [{ code, name }].
+  // Platform built-ins and organizer-picked languages share one list — you add
+  // them all the same way, and the Default Language dropdown offers exactly
+  // these. Their per-language content is authored on the Event Page and
+  // form-builder tabs.
+  const [langs, setLangs] = useState(() =>
+    eventLocales(event).map((code) => ({ code, name: localeName(event, code) }))
   )
   const [defaultLocale, setDefaultLocale] = useState(event.default_locale ?? 'en')
-  // Organizer-defined languages beyond the five built-ins: [{ code, name }].
-  // Managed here (was on the Event Page tab); their per-language content is
-  // still authored on the Event Page and form-builder tabs.
-  const [customLangs, setCustomLangs] = useState(
-    Array.isArray(event.page_content?.i18n?.custom) ? event.page_content.i18n.custom : []
-  )
   // Add-language picker: search over the Google-supported languages.
   const [pickerOpen, setPickerOpen] = useState(false)
   const [langQuery, setLangQuery] = useState('')
@@ -52,11 +52,22 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   const [visibility, setVisibility] = useState(event.visibility ?? 'public')
   const [contact, setContact] = useState(event.contact ?? {})
   const [types, setTypes] = useState(initialTypes)
+  // Last persisted participant types, so save() knows which rows changed.
+  // A ref (not the prop) because router.refresh() replaces initialTypes.
+  const savedTypesRef = useRef(initialTypes)
   const [typePickerOpen, setTypePickerOpen] = useState(false)
   const [saveState, setSaveState] = useState('idle')
+  const [saveErrorMsg, setSaveErrorMsg] = useState('')
   const [publishBurst, setPublishBurst] = useState(null)
   const [slugWarnOpen, setSlugWarnOpen] = useState(false)
   const [publishError, setPublishError] = useState(null)
+
+  // Extra contacts beyond the primary one. Stored on contact.people[] — the
+  // same list the Event Page tab edits — so both screens stay in sync.
+  const contactPeople = Array.isArray(contact.people) ? contact.people : []
+  const setContactPeople = (next) => setContact({ ...contact, people: next })
+  const patchPerson = (id, patch) =>
+    setContactPeople(contactPeople.map((p) => (p.id === id ? { ...p, ...patch } : p)))
 
   const timezones = Intl.supportedValuesOf?.('timeZone') ?? ['UTC']
 
@@ -72,15 +83,20 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   }, [])
 
   // Serialize the Save-button fields so we can tell whether there are unsaved
-  // edits (participant types persist immediately and are excluded). Slug is
-  // passed explicitly because "revert & save" writes a value the state hasn't
-  // caught up to yet.
-  function snapshot(slugValue = slug) {
+  // edits. Participant-type edits are included: they used to write per
+  // keystroke and were excluded here, which left Save disabled (and dropped
+  // edits when a write raced or failed silently). Slug is passed explicitly
+  // because "revert & save" writes a value the state hasn't caught up to yet.
+  function snapshotOf(typeList, slugValue = slug) {
     return JSON.stringify([
       slugValue, timezone,
       startsAt, endsAt, regOpens, regCloses, capacity, visibility, contact,
-      supportedLocales, defaultLocale, customLangs,
+      langs, defaultLocale,
+      typeList.map((pt) => [pt.id, pt.key, pt.name, pt.capacity, pt.form_id]),
     ])
+  }
+  function snapshot(slugValue = slug) {
+    return snapshotOf(types, slugValue)
   }
   // Baseline = last known saved state. Initialized to the values first loaded
   // from the event; reset after every successful save.
@@ -97,46 +113,35 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     save()
   }
 
-  // Add/remove a language from the event's supported set, keeping canonical
-  // LOCALES order. The default language is locked on and can't be removed.
-  function toggleLocale(l) {
-    if (l === defaultLocale) return
-    setSupportedLocales((prev) =>
-      prev.includes(l)
-        ? prev.filter((x) => x !== l)
-        : LOCALES.filter((x) => prev.includes(x) || x === l)
-    )
-  }
-
-  // Switching the default language pulls it into the supported set so an
-  // event can never default to a language it doesn't offer.
-  function changeDefaultLocale(l) {
-    setDefaultLocale(l)
-    setSupportedLocales((prev) =>
-      prev.includes(l) ? prev : LOCALES.filter((x) => prev.includes(x) || x === l)
-    )
-  }
-
-  // Add an organizer-picked language from the Google-supported list. Its code
-  // is the real Google code (e.g. 'tg', 'yo'), so auto-translate works as-is.
-  // Persisted into page_content.i18n on save.
-  function addCustomLang(lang) {
-    if (!lang?.code || LOCALES.includes(lang.code)) return
-    setCustomLangs((prev) =>
+  // Add a language from the Google-supported list. The code is the real Google
+  // code (e.g. 'tg', 'yo'), so auto-translate works as-is. Built-ins keep their
+  // native display name ("Español", not Google's "Spanish") to match the rest
+  // of the app.
+  function addLang(lang) {
+    if (!lang?.code) return
+    setLangs((prev) =>
       prev.some((c) => c.code === lang.code)
         ? prev
-        : [...prev, { code: lang.code, name: lang.name }]
+        : [...prev, { code: lang.code, name: LOCALE_NAMES[lang.code] ?? lang.name }]
     )
     setLangQuery('')
   }
 
-  function removeCustomLang(code) {
-    setCustomLangs((prev) => prev.filter((c) => c.code !== code))
+  // Every other language falls back to the default, so it can't be removed —
+  // pick a different default first. This also keeps the list from emptying.
+  function removeLang(code) {
+    if (code === defaultLocale) return
+    setLangs((prev) => prev.filter((c) => c.code !== code))
   }
 
-  // Languages available to add: Google-supported, minus the built-ins (managed
-  // by the checklist) and any already added, filtered by the search query.
-  const takenCodes = new Set([...LOCALES, ...customLangs.map((c) => c.code)])
+  // Split for storage: the legacy `supported_locales` column only holds
+  // platform built-ins, `page_content.i18n.custom` the organizer-picked ones.
+  const supportedLocales = langs.filter((c) => LOCALES.includes(c.code)).map((c) => c.code)
+  const customLangs = langs.filter((c) => !LOCALES.includes(c.code))
+
+  // Languages available to add: Google-supported, minus the ones already on the
+  // event, filtered by the search query.
+  const takenCodes = new Set(langs.map((c) => c.code))
   const langQ = langQuery.trim().toLowerCase()
   const languageChoices = allLanguages
     .filter((l) => !takenCodes.has(l.code))
@@ -151,13 +156,13 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   async function save(slugValue = slug) {
     setSlugWarnOpen(false)
     setSaveState('saving')
+    setSaveErrorMsg('')
     // Language selection lives in page_content.i18n (shared with the Event Page
-    // editor and the form builder). Settings owns both the built-in set and the
-    // organizer-defined custom languages; keep the legacy column + default
-    // locale in sync.
+    // editor and the form builder). Settings is the only writer; the legacy
+    // `supported_locales` column is kept in sync for older readers.
     const existingContent = event.page_content ?? {}
     const existingI18n = existingContent.i18n ?? {}
-    const nextAvailable = [...supportedLocales, ...customLangs.map((c) => c.code)]
+    const nextAvailable = langs.map((c) => c.code)
 
     const { error } = await supabase
       .from('events')
@@ -181,9 +186,36 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       .eq('id', event.id)
     if (error) {
       setSaveState('error')
+      // `check (name ? default_locale)` — the event has no name in the language
+      // just picked as default. Say so; the bare "couldn't save" is a dead end.
+      setSaveErrorMsg(error.code === '23514' ? t('defaultLanguageNeedsName') : '')
       return
     }
+
+    // Participant types: persist every row that differs from the last known
+    // saved state. Sequential (not parallel) so a failure stops before later
+    // rows and the error is surfaced instead of silently swallowed.
+    for (const pt of types) {
+      const original = savedTypesRef.current.find((o) => o.id === pt.id)
+      const changed =
+        !original ||
+        original.key !== pt.key ||
+        original.capacity !== pt.capacity ||
+        original.form_id !== pt.form_id ||
+        JSON.stringify(original.name) !== JSON.stringify(pt.name)
+      if (!changed) continue
+      const { error: typeError } = await supabase
+        .from('participant_types')
+        .update({ key: pt.key, name: pt.name, capacity: pt.capacity, form_id: pt.form_id })
+        .eq('id', pt.id)
+      if (typeError) {
+        setSaveState('error')
+        return
+      }
+    }
+
     setSaveState('saved')
+    savedTypesRef.current = types
     setSavedSnap(snapshot(slugValue))
     router.refresh()
   }
@@ -219,7 +251,11 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   }
 
   async function addType(preset) {
-    const base = preset ?? { key: `type_${Date.now().toString(36)}`, name: { en: 'New type' } }
+    const base = preset ?? {
+      key: `type_${Date.now().toString(36)}`,
+      // Seed the name in the event's default language, translated for the UI.
+      name: { [defaultLocale]: t('newTypeDefault') },
+    }
     const key = uniqueTypeKey(base.key, types.map((pt) => pt.key))
     const { data, error } = await supabase
       .from('participant_types')
@@ -232,18 +268,32 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       })
       .select('*')
       .single()
-    if (!error && data) setTypes((prev) => [...prev, data])
+    // Add/remove are discrete actions that persist immediately; re-baseline
+    // the dirty snapshot so they don't leave Save spuriously enabled.
+    if (!error && data) {
+      const next = [...types, data]
+      setTypes(next)
+      savedTypesRef.current = next
+      setSavedSnap(snapshotOf(next))
+    }
     setTypePickerOpen(false)
   }
 
-  async function updateType(id, patch) {
+  // Local edit only — persisted by save() together with the event fields.
+  // (Writing per keystroke silently lost edits when a request failed or a
+  // later keystroke's write raced an earlier one.)
+  function updateType(id, patch) {
     setTypes((prev) => prev.map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)))
-    await supabase.from('participant_types').update(patch).eq('id', id)
   }
 
   async function removeType(id) {
     const { error } = await supabase.from('participant_types').delete().eq('id', id)
-    if (!error) setTypes((prev) => prev.filter((pt) => pt.id !== id))
+    if (!error) {
+      const next = types.filter((pt) => pt.id !== id)
+      setTypes(next)
+      savedTypesRef.current = next
+      setSavedSnap(snapshotOf(next))
+    }
   }
 
   return (
@@ -251,51 +301,23 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
       <section className="card card-pad">
         <h2 style={{ marginBottom: 'var(--s-2)' }}>{t('languages')}</h2>
         <p className={styles.sectionHelp}>{t('languagesHelp')}</p>
-        <div className={styles.localeList}>
-          {LOCALES.map((l) => {
-            const checked = supportedLocales.includes(l)
-            const isDefault = l === defaultLocale
-            return (
-              <label key={l} className={styles.localeRow}>
-                <Checkbox
-                  checked={checked}
-                  disabled={isDefault}
-                  onCheckedChange={() => toggleLocale(l)}
-                />
-                <span>{LOCALE_NAMES[l]}</span>
-                {isDefault && <span className="badge">{t('defaultLanguage')}</span>}
-              </label>
-            )
-          })}
-        </div>
-        <Field label={t('defaultLanguage')} help={t('defaultLanguageHelp')}>
-          {({ id }) => (
-            <NativeSelect
-              id={id}
-              value={defaultLocale}
-              onChange={(e) => changeDefaultLocale(e.target.value)}
-              style={{ maxWidth: '16rem' }}
-            >
-              {supportedLocales.map((l) => (
-                <option key={l} value={l}>{LOCALE_NAMES[l]}</option>
-              ))}
-            </NativeSelect>
-          )}
-        </Field>
-
         <div className={styles.customLangs}>
           <span className="field-label">{t('availableLanguages')}</span>
-          {customLangs.map((c) => (
+          {langs.map((c) => (
             <div key={c.code} className={styles.customLangRow}>
               <span>{c.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={t('remove')}
-                onClick={() => removeCustomLang(c.code)}
-              >
-                ✕
-              </Button>
+              {c.code === defaultLocale ? (
+                <span className="badge">{t('defaultLanguage')}</span>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t('remove')}
+                  onClick={() => removeLang(c.code)}
+                >
+                  ✕
+                </Button>
+              )}
             </div>
           ))}
           {!pickerOpen ? (
@@ -327,9 +349,9 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
                       key={l.code}
                       type="button"
                       className={styles.langResult}
-                      onClick={() => addCustomLang(l)}
+                      onClick={() => addLang(l)}
                     >
-                      <span>{l.name}</span>
+                      <span>{LOCALE_NAMES[l.code] ?? l.name}</span>
                       <span className={styles.langCode}>{l.code}</span>
                     </button>
                   ))
@@ -347,8 +369,27 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
               </Button>
             </div>
           )}
-          <p className="field-help">{t('customLanguageHelp')}</p>
+          {/* Only true of organizer-picked languages: the five platform
+              built-ins do have translated chrome. */}
+          {customLangs.length > 0 && (
+            <p className="field-help">{t('customLanguageHelp')}</p>
+          )}
         </div>
+
+        <Field label={t('defaultLanguage')} help={t('defaultLanguageHelp')}>
+          {({ id }) => (
+            <NativeSelect
+              id={id}
+              value={defaultLocale}
+              onChange={(e) => setDefaultLocale(e.target.value)}
+              style={{ maxWidth: '16rem' }}
+            >
+              {langs.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </NativeSelect>
+          )}
+        </Field>
       </section>
 
       <section className="card card-pad">
@@ -446,6 +487,59 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
             )}
           </Field>
         </div>
+
+        {/* Extra contacts. Same contact.people[] the Event Page tab edits, so
+            both screens always show the same list. */}
+        <h3 className={styles.contactsSubhead}>{t('additionalContacts')}</h3>
+        <div className={styles.contactList}>
+          {contactPeople.map((p) => (
+            <div key={p.id} className={styles.contactRow}>
+              <Input
+                placeholder={t('contactName')}
+                value={p.name ?? ''}
+                onChange={(e) => patchPerson(p.id, { name: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder={t('contactEmail')}
+                value={p.email ?? ''}
+                onChange={(e) => patchPerson(p.id, { email: e.target.value })}
+              />
+              <Input
+                type="tel"
+                placeholder={t('contactPhone')}
+                value={p.phone ?? ''}
+                onChange={(e) => patchPerson(p.id, { phone: e.target.value })}
+              />
+              <Input
+                type="url"
+                placeholder={t('contactWebsite')}
+                value={p.website ?? ''}
+                onChange={(e) => patchPerson(p.id, { website: e.target.value })}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={t('removeContact')}
+                onClick={() => setContactPeople(contactPeople.filter((x) => x.id !== p.id))}
+              >
+                ✕
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            setContactPeople([
+              ...contactPeople,
+              { id: newContactId(), name: '', email: '', phone: '', website: '' },
+            ])
+          }
+        >
+          {t('addContact')}
+        </Button>
       </section>
 
       <section className="card card-pad">
@@ -546,7 +640,9 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
           {/* Save status sits right next to the Save button so it's noticed. */}
           <span className={styles.saveStatus} aria-live="polite">
             {saveState === 'error' ? (
-              <span className="badge badge-cancelled">{t('saveFailed')}</span>
+              <span className="badge badge-cancelled">
+                {saveErrorMsg || t('saveFailed')}
+              </span>
             ) : dirty ? (
               <span className="badge badge-waitlisted">{t('editsNotSaved')}</span>
             ) : saveState === 'saved' ? (

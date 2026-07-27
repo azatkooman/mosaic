@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { lt, eventLocales, LOCALES } from '@/lib/i18n/locales'
+import { lt, eventLocales, localeName, LOCALES } from '@/lib/i18n/locales'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
+import { LanguagePicker } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,28 +143,21 @@ export default async function RegisterPage({ params, searchParams }) {
 
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
-      {localeOptions.length > 1 && (
-        <nav
-          aria-label={tCommon('language')}
-          style={{ display: 'flex', gap: 'var(--s-2)', justifyContent: 'flex-end', marginBottom: 'var(--s-3)' }}
-        >
-          {localeOptions.map((code) => {
-            const href = LOCALES.includes(code)
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-3)' }}>
+        <LanguagePicker
+          options={localeOptions.map((code) => ({
+            value: code,
+            label: localeName(event, code),
+            // Built-in locales have their own route; custom codes ride the
+            // current route via ?lang=.
+            href: LOCALES.includes(code)
               ? `/${code}/events/${slug}/register`
-              : `/${locale}/events/${slug}/register?lang=${code}`
-            return (
-              <a
-                key={code}
-                href={href}
-                aria-current={code === contentLocale ? 'true' : undefined}
-                style={{ textTransform: 'uppercase', fontWeight: code === contentLocale ? 700 : 400 }}
-              >
-                {code}
-              </a>
-            )
-          })}
-        </nav>
-      )}
+              : `/${locale}/events/${slug}/register?lang=${code}`,
+          }))}
+          value={contentLocale}
+          ariaLabel={tCommon('language')}
+        />
+      </div>
       <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
         {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
       </h1>

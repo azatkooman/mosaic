@@ -6,42 +6,76 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  padding: 0.55rem 1.1rem;
+  padding: 0.6rem 1.15rem;
   border-radius: var(--r-md);
   border: 1px solid transparent;
   font-weight: 600;
   font-size: var(--text-sm);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   cursor: pointer;
   text-decoration: none;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease, border-color 140ms ease,
+    color 140ms ease, box-shadow 140ms ease, transform 90ms ease;
   white-space: nowrap;
 }
 
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+/* Clear, consistent keyboard focus ring on every button. */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Primary — brand fill with a soft gradient, top highlight and a clear
+   resting shadow so the main call-to-action reads as elevated. */
 .btn-primary {
-  background: var(--pine);
+  background: linear-gradient(180deg, var(--pine) 0%, var(--pine-deep) 100%);
   color: #fff;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--pine-deep) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--pine-deep);
+  background: linear-gradient(180deg, var(--pine-deep) 0%, var(--pine-deep) 100%);
   color: #fff;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--pine-deep) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--pine-deep) 40%, transparent);
 }
 
+/* Secondary — outlined, lifts to the brand color on hover. */
 .btn-secondary {
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--ink-faint);
+  border-color: var(--pine);
+  color: var(--pine-deep);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
   background: var(--surface-sunken);
-  color: var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 
+/* Ghost — quiet, for low-emphasis actions. */
 .btn-ghost {
   background: transparent;
   color: var(--ink-soft);
@@ -50,25 +84,51 @@
   background: var(--surface-sunken);
   color: var(--ink);
 }
+.btn-ghost:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-sunken) 70%, var(--line));
+}
 
+/* Danger — destructive actions, same elevated treatment as primary. */
 .btn-danger {
-  background: var(--danger);
+  background: linear-gradient(180deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 82%, black) 100%);
   color: #fff;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--danger) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
 }
 .btn-danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 85%, black);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 88%, black) 0%, color-mix(in srgb, var(--danger) 72%, black) 100%);
   color: #fff;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--danger) 38%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
+  transform: translateY(-1px);
+}
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
 .btn-sm {
-  padding: 0.3rem 0.7rem;
+  padding: 0.35rem 0.75rem;
   font-size: var(--text-xs);
   border-radius: var(--r-sm);
 }
 
 .btn-lg {
-  padding: 0.75rem 1.6rem;
+  padding: 0.8rem 1.7rem;
   font-size: var(--text-md);
+  border-radius: var(--r-md);
+}
+
+/* Respect reduced-motion: keep color feedback, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: background-color 140ms ease, border-color 140ms ease,
+      color 140ms ease, box-shadow 140ms ease;
+  }
+  .btn:hover:not(:disabled),
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* --- Fields --- */
@@ -491,4 +551,70 @@
   border: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+/* --- Language picker (event languages: console editors + public pages) --- */
+/* Always a dropdown so events with long language lists stay manageable. The
+   wrapper exists to carry the chevron — ::after can't be placed on a <select>. */
+.lang-picker-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-picker-wrap::after {
+  content: '';
+  position: absolute;
+  right: 0.6rem;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.lang-picker {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  max-width: 12rem;
+  padding: 0.3rem 1.6rem 0.3rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.lang-picker:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--focus-ring);
+}
+
+.lang-picker:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* The popup list is painted by the OS and does not inherit a translucent
+   background — pin it to real surface colours so it stays readable. */
+.lang-picker option {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 400;
+}
+
+/* Hero variant: sits on organizer-chosen photos and brand colours, so inherit
+   the surrounding colour instead of painting a solid control. */
+.lang-picker-wrap[data-variant='hero'] .lang-picker {
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }

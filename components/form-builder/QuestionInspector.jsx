@@ -30,9 +30,14 @@ export function QuestionInspector({
 }) {
   const t = useTranslations('console')
   const tr = useTranslations('runtime')
-  // Author only in the languages this event offers; fall back to the full
-  // set if the caller didn't scope them.
-  const locales = supportedLocales?.length ? supportedLocales : LOCALES
+  // Author only in the languages this event offers. An unscoped caller falls
+  // back to the default locale alone — falling back to all five would offer
+  // translation tabs for languages the event was never set up for.
+  const locales = supportedLocales?.length
+    ? supportedLocales
+    : defaultLocale
+      ? [defaultLocale]
+      : LOCALES
   // Display name for a language code — custom languages aren't in LOCALE_NAMES,
   // so fall back to the map passed from the event, then the raw code.
   const nameOf = (l) => localeNames?.[l] ?? LOCALE_NAMES[l] ?? l
@@ -275,10 +280,15 @@ export function QuestionInspector({
             return (
               <div key={i} className={styles.ruleRow}>
                 <NativeSelect
-                  aria-label="Question"
+                  aria-label={t('ariaQuestion')}
                   value={rule.questionId}
                   onChange={(e) => setRule(i, { questionId: e.target.value, value: '' })}
                 >
+                  {!refQ && (
+                    <option value={rule.questionId} disabled style={{ color: 'red' }}>
+                      ⚠️ Broken Question Reference ({rule.questionId})
+                    </option>
+                  )}
                   {priorQuestions.map((pq) => (
                     <option key={pq.id} value={pq.id}>
                       {lt(pq.label, editLocale, defaultLocale) || pq.id}
@@ -286,7 +296,7 @@ export function QuestionInspector({
                   ))}
                 </NativeSelect>
                 <NativeSelect
-                  aria-label="Operator"
+                  aria-label={t('ariaOperator')}
                   value={rule.operator}
                   onChange={(e) => setRule(i, { operator: e.target.value })}
                 >
@@ -298,7 +308,7 @@ export function QuestionInspector({
                   (ARRAY_OPERATORS.includes(rule.operator) ? (
                     refHasOptions ? (
                       <NativeSelect
-                        aria-label="Value"
+                        aria-label={t('ariaValue')}
                         multiple
                         size={Math.min(4, (refQ.options ?? []).length || 1)}
                         value={Array.isArray(rule.value) ? rule.value : []}
@@ -317,7 +327,7 @@ export function QuestionInspector({
                     ) : (
                       // Free-text lists: comma-separated, stored as an array.
                       <Input
-                        aria-label="Value"
+                        aria-label={t('ariaValue')}
                         value={Array.isArray(rule.value) ? rule.value.join(', ') : ''}
                         onChange={(e) =>
                           setRule(i, {
@@ -331,7 +341,7 @@ export function QuestionInspector({
                     )
                   ) : refHasOptions ? (
                     <NativeSelect
-                      aria-label="Value"
+                      aria-label={t('ariaValue')}
                       value={rule.value ?? ''}
                       onChange={(e) => setRule(i, { value: e.target.value })}
                     >
@@ -344,7 +354,7 @@ export function QuestionInspector({
                     </NativeSelect>
                   ) : (
                     <Input
-                      aria-label="Value"
+                      aria-label={t('ariaValue')}
                       value={rule.value ?? ''}
                       onChange={(e) => setRule(i, { value: e.target.value })}
                     />

@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
-import { Button, NativeSelect, ConfettiBurst } from '@/components/ui'
+import { Button, NativeSelect, ConfettiBurst, LanguagePicker } from '@/components/ui'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
@@ -261,26 +261,16 @@ export function FormBuilder({
             )}
           </span>
           <span style={{ flex: 1 }} />
-          {supportedLocales.length > 1 && (
-            <div className={styles.localeSwitch} role="tablist" aria-label="Edit language">
-              {supportedLocales.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  role="tab"
-                  aria-selected={editLocale === l}
-                  data-active={editLocale === l}
-                  onClick={() => setEditLocale(l)}
-                >
-                  {localeNames[l] ?? l}
-                </button>
-              ))}
-            </div>
-          )}
-          <Button variant="ghost" size="sm" onClick={store.undo} aria-label="Undo">
+          <LanguagePicker
+            options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
+            value={editLocale}
+            onChange={setEditLocale}
+            ariaLabel={t('ariaEditLanguage')}
+          />
+          <Button variant="ghost" size="sm" onClick={store.undo} aria-label={t('ariaUndo')}>
             ↩
           </Button>
-          <Button variant="ghost" size="sm" onClick={store.redo} aria-label="Redo">
+          <Button variant="ghost" size="sm" onClick={store.redo} aria-label={t('ariaRedo')}>
             ↪
           </Button>
           <Button
@@ -346,7 +336,7 @@ export function FormBuilder({
             onChange={(patch) => store.updateQuestion(selected.id, patch)}
           />
         ) : (
-          <p className={styles.inspectorEmpty}>{lt({ en: 'Select a question to edit it.' }, locale)}</p>
+          <p className={styles.inspectorEmpty}>{t('inspectorEmpty')}</p>
         )}
       </aside>
     </div>

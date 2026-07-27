@@ -7,6 +7,30 @@ unless noted. The redirect/callback URL for every provider is:
 https://<project-ref>.supabase.co/auth/v1/callback
 ```
 
+## URL configuration (do this first)
+
+Auth → URL Configuration in the dashboard. Getting this wrong does **not**
+produce an error — Supabase quietly redirects to **Site URL** instead, so users
+sign in successfully and land on the wrong page. That was the cause of the
+"clicking Register makes me sign in, then dumps me back on the event page and I
+have to click Register again" bug.
+
+| Field | Value |
+| --- | --- |
+| Site URL | `https://mosaic.cru.org` |
+| Redirect URLs | `https://mosaic.cru.org/*/auth/callback` |
+
+Add a preview entry (`https://*-<org>.vercel.app/*/auth/callback`) if you test
+auth on Vercel preview deployments. The local equivalents live in
+`supabase/config.toml` under `additional_redirect_urls` — keep the two in sync.
+
+The `*` covers the locale segment. Redirect URLs are matched against the
+**whole** `redirectTo` value including its query string, which is why the app
+never puts the post-login destination there: `LoginForm` stores it in the
+short-lived `mosaic-auth-next` cookie and `/[locale]/auth/callback` reads it
+back (see `AUTH_NEXT_COOKIE` in `lib/url.js`). Keep `redirectTo` bare so this
+one allow-list entry keeps matching.
+
 ## Google
 
 1. Google Cloud Console → create an OAuth 2.0 Client ID (type: Web application).
@@ -14,6 +38,12 @@ https://<project-ref>.supabase.co/auth/v1/callback
 3. Paste client ID + secret into Supabase → Auth → Providers → Google.
 
 ## Apple
+
+> **Disabled as of 2026-07-27.** The provider is switched off in Supabase →
+> Auth → Providers, and the button is gone from `LoginForm`. No accounts were
+> affected — `auth.identities` held zero rows with `provider = 'apple'`. The
+> secret-expiry warning below does not apply while it stays disabled. Steps are
+> kept for reference in case Apple is ever restored.
 
 Requires a paid Apple Developer account ($99/yr).
 
@@ -25,6 +55,11 @@ Requires a paid Apple Developer account ($99/yr).
 > ⚠️ **The Apple client secret expires after at most 6 months.** Set a
 > recurring calendar reminder to regenerate it — an expired secret is the
 > classic "Apple login suddenly broken" outage.
+
+To restore: re-enable the provider in Supabase, then add the button back to
+`app/[locale]/(auth)/login/LoginForm.jsx` alongside Google (`oauth('apple')`)
+and re-add the `auth.continueWithApple` key to all five `messages/*.json`
+files.
 
 ## Okta (SAML SSO)
 

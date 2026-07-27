@@ -26,26 +26,110 @@
 
 .nav {
   display: flex;
-  gap: var(--s-4);
+  align-items: center;
+  gap: var(--s-1);
   flex: 1;
 }
 
 .nav a {
-  color: var(--ink-soft);
+  color: var(--ink);
   text-decoration: none;
   font-size: var(--text-sm);
-  font-weight: 500;
-  padding: var(--s-1) 0;
+  font-weight: 600;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  transition: background-color 140ms ease, color 140ms ease, transform 90ms ease;
 }
 
 .nav a:hover {
-  color: var(--ink);
+  color: var(--pine-deep);
+  background: var(--surface-sunken);
+}
+
+/* Rounded-rectangle fill when tapped / pressed — shrinks in. */
+.nav a:active {
+  background: var(--pine-tint);
+  color: var(--pine-deep);
+  transform: scale(0.9);
+}
+
+.nav a:focus-visible {
+  outline: none;
+  color: var(--pine-deep);
+  background: var(--surface-sunken);
+  box-shadow: var(--focus-ring);
+}
+
+/* Underline the current page. */
+.nav a[aria-current='page'] {
+  color: var(--pine-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--pine);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav a:active {
+    transform: none;
+  }
 }
 
 .headerActions {
   display: flex;
   align-items: center;
   gap: var(--s-3);
+}
+
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* Mobile hamburger + dropdown (hidden on desktop). */
+.mobileNav {
+  display: none;
+}
+
+.mobileBackdrop {
+  position: fixed;
+  inset: 3.5rem 0 0 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.mobileMenu {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.mobileMenu a,
+.mobileMenu button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--text-md);
+}
+
+.mobileMenu a:hover,
+.mobileMenu button:hover {
+  background: var(--surface-sunken);
+}
+
+.mobileMenu a[aria-current='page'] {
+  color: var(--pine-deep);
+  background: var(--pine-tint);
 }
 
 .footer {
@@ -59,5 +143,11 @@
 @media (max-width: 640px) {
   .nav {
     display: none;
+  }
+  .desktopActions {
+    display: none;
+  }
+  .mobileNav {
+    display: block;
   }
 }
