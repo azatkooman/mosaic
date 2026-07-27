@@ -950,6 +950,23 @@ export function EventPageEditor({ initialEvent }) {
             onChange={(c) => setTheme({ btn_text: c ?? undefined })}
           />
         </div>
+        <Field label={`${t('registerButtonText')} (${previewLocale})`}>
+          {({ id }) => (
+            <Input
+              id={id}
+              placeholder={t('register')}
+              value={theme.register_btn_text?.[previewLocale] ?? ''}
+              onChange={(e) =>
+                setTheme({
+                  register_btn_text: {
+                    ...(theme.register_btn_text ?? {}),
+                    [previewLocale]: e.target.value || undefined,
+                  },
+                })
+              }
+            />
+          )}
+        </Field>
 
         {/* ---- Typography ---- */}
         <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>
@@ -1365,22 +1382,37 @@ export function EventPageEditor({ initialEvent }) {
         />
         <p className="field-help">{t('countdownHelp')}</p>
         {hero.show_countdown !== false && (
-          <div className={styles.colorField}>
-            <span className="field-label">{t('countdownTarget')}</span>
-            <NativeSelect
-              value={hero.countdown_target ?? 'starts_at'}
-              onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
-              aria-label={t('countdownTarget')}
-            >
-              <option value="starts_at">{t('countdownToStart')}</option>
-              <option value="registration_closes_at">{t('countdownToClose')}</option>
-              <option value="ends_at">{t('countdownToEnd')}</option>
-            </NativeSelect>
-            <p className="field-help">{t('countdownPastHelp')}</p>
-          </div>
-        )}
-        {hero.show_countdown !== false && (
           <>
+            <Field label={`${t('countdownLabelText')} (${previewLocale})`}>
+              {({ id }) => (
+                <Input
+                  id={id}
+                  placeholder={t('countdownLabel')}
+                  value={hero.countdown_label?.[previewLocale] ?? ''}
+                  onChange={(e) =>
+                    patchContent('hero', {
+                      countdown_label: {
+                        ...(hero.countdown_label ?? {}),
+                        [previewLocale]: e.target.value || undefined,
+                      },
+                    })
+                  }
+                />
+              )}
+            </Field>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('countdownTarget')}</span>
+              <NativeSelect
+                value={hero.countdown_target ?? 'starts_at'}
+                onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
+                aria-label={t('countdownTarget')}
+              >
+                <option value="starts_at">{t('countdownToStart')}</option>
+                <option value="registration_closes_at">{t('countdownToClose')}</option>
+                <option value="ends_at">{t('countdownToEnd')}</option>
+              </NativeSelect>
+              <p className="field-help">{t('countdownPastHelp')}</p>
+            </div>
             <div className={styles.colorField}>
               <span className="field-label">{t('countdownStyle')}</span>
               <NativeSelect
@@ -1700,6 +1732,25 @@ export function EventPageEditor({ initialEvent }) {
           checked={agenda.show_hero_button !== false}
           onCheckedChange={(checked) => patchContent('agenda', { show_hero_button: !!checked })}
         />
+        {agenda.show_hero_button !== false && (
+          <Field label={`${t('viewAgendaButtonText')} (${previewLocale})`}>
+            {({ id }) => (
+              <Input
+                id={id}
+                placeholder={t('viewAgenda')}
+                value={agenda.button_text?.[previewLocale] ?? ''}
+                onChange={(e) =>
+                  patchContent('agenda', {
+                    button_text: {
+                      ...(agenda.button_text ?? {}),
+                      [previewLocale]: e.target.value || undefined,
+                    },
+                  })
+                }
+              />
+            )}
+          </Field>
+        )}
         <input ref={agendaImgInputRef} type="file" accept="image/*" hidden onChange={onAgendaImgFile} />
         {agenda.image_path && (
           /* eslint-disable-next-line @next/next/no-img-element */

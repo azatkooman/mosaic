@@ -289,7 +289,7 @@ export function EventPageView({
     />
   )
   const registerButton = (
-    <RegisterCta editable={editable} registerHref={registerHref} label={t('register')} />
+    <RegisterCta editable={editable} registerHref={registerHref} label={L(theme.register_btn_text) || t('register')} />
   )
 
   // Logo + language switcher bar. Position controls horizontal alignment,
@@ -394,7 +394,7 @@ export function EventPageView({
         )}
         {showAgenda && agenda.show_hero_button !== false && (
           <a className={`btn ${styles.heroGhostBtn}`} href="#agenda">
-            {t('viewAgenda')}
+            {L(agenda.button_text) || t('viewAgenda')}
           </a>
         )}
       </div>
@@ -406,7 +406,7 @@ export function EventPageView({
           <Countdown
             targetIso={countdownTarget}
             tone={countdownTone}
-            label={t('countdownLabel')}
+            label={L(hero.countdown_label) || t('countdownLabel')}
             variant={hero.countdown_style || 'minimal'}
             color={hero.countdown_color}
           />
