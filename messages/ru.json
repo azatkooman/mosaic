@@ -218,7 +218,7 @@
     "contactPhone": "Телефон",
     "contactWebsite": "Веб-сайт",
     "additionalContacts": "Дополнительные контакты",
-    "addContact": "Добавить контакт",
+    "addContact": "Добавить контакты",
     "removeContact": "Удалить контакт",
     "selectType": "Выберите тип участника",
     "selectTypeHelp": "Добавьте тип участника из списка или создайте свой.",
@@ -694,5 +694,27 @@
     "registrationClosed": "Регистрация закрыта",
     "inProgress": "Проходит сейчас",
     "ended": "Событие завершилось"
+  },
+  "operators": {
+    "eq": "равно",
+    "neq": "не равно",
+    "in": "является одним из",
+    "notIn": "не является ни одним из",
+    "contains": "содержит",
+    "containsMultiselect": "включает",
+    "gt": "больше чем",
+    "gte": "больше или равно",
+    "lt": "меньше чем",
+    "lte": "меньше или равно",
+    "gtDate": "позже чем",
+    "gteDate": "не раньше чем",
+    "ltDate": "раньше чем",
+    "lteDate": "не позже чем",
+    "isEmpty": "без ответа",
+    "isNotEmpty": "с любым ответом",
+    "isEmptyCheckbox": "не отмечено",
+    "isNotEmptyCheckbox": "отмечено",
+    "isEmptyFile": "без файла",
+    "isNotEmptyFile": "с файлом"
   }
 }

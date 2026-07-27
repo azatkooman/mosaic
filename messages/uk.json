@@ -218,7 +218,7 @@
     "contactPhone": "Телефон",
     "contactWebsite": "Вебсайт",
     "additionalContacts": "Додаткові контакти",
-    "addContact": "Додати контакт",
+    "addContact": "Додати контакти",
     "removeContact": "Видалити контакт",
     "selectType": "Виберіть тип учасника",
     "selectTypeHelp": "Додайте тип учасника зі списку або створіть власний.",
@@ -694,5 +694,27 @@
     "registrationClosed": "Реєстрацію закрито",
     "inProgress": "Триває зараз",
     "ended": "Подія завершилася"
+  },
+  "operators": {
+    "eq": "дорівнює",
+    "neq": "не дорівнює",
+    "in": "є одним із",
+    "notIn": "не є жодним із",
+    "contains": "містить",
+    "containsMultiselect": "включає",
+    "gt": "більше ніж",
+    "gte": "більше або дорівнює",
+    "lt": "менше ніж",
+    "lte": "менше або дорівнює",
+    "gtDate": "пізніше ніж",
+    "gteDate": "не раніше ніж",
+    "ltDate": "раніше ніж",
+    "lteDate": "не пізніше ніж",
+    "isEmpty": "без відповіді",
+    "isNotEmpty": "з будь-якою відповіддю",
+    "isEmptyCheckbox": "не позначено",
+    "isNotEmptyCheckbox": "позначено",
+    "isEmptyFile": "без файлу",
+    "isNotEmptyFile": "з файлом"
   }
 }

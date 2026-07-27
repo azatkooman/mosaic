@@ -694,5 +694,27 @@
     "registrationClosed": "Registration closed",
     "inProgress": "Happening now",
     "ended": "Event ended"
+  },
+  "operators": {
+    "eq": "is",
+    "neq": "is not",
+    "in": "is any of",
+    "notIn": "is none of",
+    "contains": "contains",
+    "containsMultiselect": "includes",
+    "gt": "is greater than",
+    "gte": "is greater than or equal to",
+    "lt": "is less than",
+    "lte": "is less than or equal to",
+    "gtDate": "is after",
+    "gteDate": "is on or after",
+    "ltDate": "is before",
+    "lteDate": "is on or before",
+    "isEmpty": "has no answer",
+    "isNotEmpty": "has any answer",
+    "isEmptyCheckbox": "is unchecked",
+    "isNotEmptyCheckbox": "is checked",
+    "isEmptyFile": "has no file",
+    "isNotEmptyFile": "has a file"
   }
 }

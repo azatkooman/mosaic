@@ -36,10 +36,40 @@ function flatten(obj, prefix = '', out = new Set()) {
   return out
 }
 
+/**
+ * JSON.parse keeps the LAST of two same-named keys and drops the first without
+ * a word, so a duplicate looks like a working translation while silently
+ * overriding another one. Re-scan the raw text to catch it. (This is how five
+ * locales ended up with two different `console.addContact` strings, only one
+ * of which ever rendered.)
+ */
+function duplicateKeys(text) {
+  const dups = []
+  const stack = []
+  const re = /("(?:[^"\\]|\\.)*")\s*:|([{}])/g
+  let m
+  while ((m = re.exec(text))) {
+    if (m[2] === '{') stack.push(new Set())
+    else if (m[2] === '}') stack.pop()
+    else if (m[1] && stack.length) {
+      const top = stack[stack.length - 1]
+      if (top.has(m[1])) dups.push(JSON.parse(m[1]))
+      else top.add(m[1])
+    }
+  }
+  return dups
+}
+
 const messagesDir = join(ROOT, 'messages')
 const locales = readdirSync(messagesDir).filter((f) => f.endsWith('.json'))
+const rawByLocale = new Map(
+  locales.map((f) => [f, readFileSync(join(messagesDir, f), 'utf8')])
+)
+const duplicates = locales.flatMap((f) =>
+  duplicateKeys(rawByLocale.get(f)).map((k) => `${f}: duplicate key "${k}"`)
+)
 const keysByLocale = new Map(
-  locales.map((f) => [f, flatten(JSON.parse(readFileSync(join(messagesDir, f), 'utf8')))])
+  locales.map((f) => [f, flatten(JSON.parse(rawByLocale.get(f)))])
 )
 const enKeys = keysByLocale.get('en.json')
 
@@ -76,6 +106,12 @@ for (const file of SRC_DIRS.flatMap((d) => walk(join(ROOT, d)))) {
 }
 
 let failed = false
+if (duplicates.length) {
+  failed = true
+  console.error(`\n✗ ${duplicates.length} duplicate key(s) in messages/ — JSON.parse keeps only the last:`)
+  for (const d of duplicates) console.error(`   ${d}`)
+}
+
 if (missing.length) {
   failed = true
   console.error(`\n✗ ${missing.length} translation key(s) used in code but missing from messages/en.json:`)

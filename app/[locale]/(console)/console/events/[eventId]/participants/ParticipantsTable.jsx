@@ -14,7 +14,6 @@ import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
 
 const PAGE_SIZE = 50
-const MAX_ANSWER_COLUMNS = 8
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
 const STATUS_TRANSITIONS = {
   pending: ['confirmed', 'waitlisted', 'cancelled'],
@@ -61,12 +60,11 @@ export function ParticipantsTable({
   // Answer columns are driven purely by the questions this event actually
   // asks — there are no fixed name/email columns any more, since those are
   // optional questions and their columns sat empty whenever an organizer
-  // removed them. Capped so a long form can't push Type/Status/Profile off
-  // the far side of the scroll; the export always carries every question.
-  const shownQuestions = useMemo(
-    () => questions.filter((q) => !q.archived).slice(0, MAX_ANSWER_COLUMNS),
-    [questions]
-  )
+  // removed them. Deliberately uncapped: `questions` is already narrowed to
+  // the current published version of each form (lib/event-questions), and the
+  // export renders the identical set, so the download always matches the view.
+  // Wide forms scroll horizontally; each cell clips to one line.
+  const shownQuestions = questions
 
   // Only filterable question kinds get a filter control.
   const filterableQuestions = questions.filter((q) =>
@@ -126,22 +124,29 @@ export function ParticipantsTable({
     if (!bulkStatus || selectedIds.size === 0) return
     setStatusError('')
     setBulkBusy(true)
-    let failures = 0
-    for (const pid of selectedIds) {
-      const { error } = await supabase.rpc('transition_participant_status', {
-        p_participant_id: pid,
-        p_new_status: bulkStatus,
+    try {
+      const res = await fetch('/api/participants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus, locale }),
       })
-      if (error) failures++
+      const data = await res.json()
+      if (!res.ok || data.failures > 0) {
+        if (data.failures > 0) {
+          setStatusError(`Failed to update ${data.failures} participant(s).`)
+        } else {
+          setStatusError(data.error || 'Failed to update status')
+        }
+      } else {
+        setSelectedIds(new Set())
+        setBulkStatus('')
+      }
+    } catch {
+      setStatusError('Failed to update status')
+    } finally {
+      setBulkBusy(false)
+      queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
     }
-    setBulkBusy(false)
-    if (failures > 0) {
-      setStatusError(`Failed to update ${failures} participant(s).`)
-    } else {
-      setSelectedIds(new Set())
-      setBulkStatus('')
-    }
-    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
   }
 
   function handleCopyEmails() {
@@ -160,15 +165,21 @@ export function ParticipantsTable({
 
   async function changeStatus(participantId, status) {
     setStatusError('')
-    const { error } = await supabase.rpc('transition_participant_status', {
-      p_participant_id: participantId,
-      p_new_status: status,
-    })
-    if (error) {
-      setStatusError(error.message)
-      return
+    try {
+      const res = await fetch('/api/participants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: [participantId], status, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatusError(data.error || 'Failed to update status')
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
+    } catch {
+      setStatusError('Failed to update status')
     }
-    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
   }
 
   function exportUrl(format) {

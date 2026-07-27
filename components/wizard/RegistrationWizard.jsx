@@ -499,7 +499,7 @@ function CountStepper({ value, min, max, onChange }) {
         type="button"
         className="btn btn-secondary btn-sm"
         aria-label="+"
-        disabled={value >= max}
+        disabled={max != null && value >= max}
         onClick={() => onChange(value + 1)}
       >
         +

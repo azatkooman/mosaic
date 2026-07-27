@@ -694,5 +694,27 @@
     "registrationClosed": "Inscriptions closes",
     "inProgress": "En cours",
     "ended": "Événement terminé"
+  },
+  "operators": {
+    "eq": "est égal à",
+    "neq": "n'est pas égal à",
+    "in": "est l'un de",
+    "notIn": "n'est aucun de",
+    "contains": "contient",
+    "containsMultiselect": "inclut",
+    "gt": "est supérieur à",
+    "gte": "est supérieur ou égal à",
+    "lt": "est inférieur à",
+    "lte": "est inférieur ou égal à",
+    "gtDate": "est postérieur à",
+    "gteDate": "est postérieur ou égal à",
+    "ltDate": "est antérieur à",
+    "lteDate": "est antérieur ou égal à",
+    "isEmpty": "n'a pas de réponse",
+    "isNotEmpty": "a une réponse",
+    "isEmptyCheckbox": "n'est pas cochée",
+    "isNotEmptyCheckbox": "est cochée",
+    "isEmptyFile": "n'a pas de fichier",
+    "isNotEmptyFile": "a un fichier"
   }
 }
