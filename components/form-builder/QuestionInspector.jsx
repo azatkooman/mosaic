@@ -30,9 +30,14 @@ export function QuestionInspector({
 }) {
   const t = useTranslations('console')
   const tr = useTranslations('runtime')
-  // Author only in the languages this event offers; fall back to the full
-  // set if the caller didn't scope them.
-  const locales = supportedLocales?.length ? supportedLocales : LOCALES
+  // Author only in the languages this event offers. An unscoped caller falls
+  // back to the default locale alone — falling back to all five would offer
+  // translation tabs for languages the event was never set up for.
+  const locales = supportedLocales?.length
+    ? supportedLocales
+    : defaultLocale
+      ? [defaultLocale]
+      : LOCALES
   // Display name for a language code — custom languages aren't in LOCALE_NAMES,
   // so fall back to the map passed from the event, then the raw code.
   const nameOf = (l) => localeNames?.[l] ?? LOCALE_NAMES[l] ?? l

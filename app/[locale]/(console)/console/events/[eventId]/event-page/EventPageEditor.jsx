@@ -545,7 +545,9 @@ export function EventPageEditor({ initialEvent }) {
         contact: event.contact,
         cover_image_path: event.cover_image_path,
         page_content: event.page_content,
-        supported_locales: LOCALES.filter((l) => (event.name?.[l] ?? '').trim() !== ''),
+        // Deliberately not writing supported_locales: the event's languages are
+        // managed in Settings. Deriving them from which names happen to be
+        // filled in would silently re-add languages removed there.
       })
       .eq('id', event.id)
     if (error) {

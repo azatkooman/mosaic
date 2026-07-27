@@ -78,9 +78,6 @@ export function LoginForm({ oktaDomain }) {
           <Button variant="secondary" onClick={() => oauth('google')}>
             {t('continueWithGoogle')}
           </Button>
-          <Button variant="secondary" onClick={() => oauth('apple')}>
-            {t('continueWithApple')}
-          </Button>
           {oktaDomain && (
             <Button variant="secondary" onClick={okta}>
               {t('continueWithOkta')}

@@ -39,19 +39,6 @@
   margin-bottom: var(--s-4);
 }
 
-.localeList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3) var(--s-5);
-  margin-bottom: var(--s-4);
-}
-
-.localeRow {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-}
-
 .customLangs {
   display: grid;
   gap: var(--s-2);

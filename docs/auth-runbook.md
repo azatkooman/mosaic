@@ -39,6 +39,12 @@ one allow-list entry keeps matching.
 
 ## Apple
 
+> **Disabled as of 2026-07-27.** The provider is switched off in Supabase →
+> Auth → Providers, and the button is gone from `LoginForm`. No accounts were
+> affected — `auth.identities` held zero rows with `provider = 'apple'`. The
+> secret-expiry warning below does not apply while it stays disabled. Steps are
+> kept for reference in case Apple is ever restored.
+
 Requires a paid Apple Developer account ($99/yr).
 
 1. Create an App ID with "Sign in with Apple" enabled.
@@ -49,6 +55,11 @@ Requires a paid Apple Developer account ($99/yr).
 > ⚠️ **The Apple client secret expires after at most 6 months.** Set a
 > recurring calendar reminder to regenerate it — an expired secret is the
 > classic "Apple login suddenly broken" outage.
+
+To restore: re-enable the provider in Supabase, then add the button back to
+`app/[locale]/(auth)/login/LoginForm.jsx` alongside Google (`oauth('apple')`)
+and re-add the `auth.continueWithApple` key to all five `messages/*.json`
+files.
 
 ## Okta (SAML SSO)
 
