@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { setRequestLocale } from 'next-intl/server'
+import { eventPageUrl } from '@/lib/url'
 import { getSupabaseAnonClient } from '@/lib/supabase/server'
 import { lt, LOCALES } from '@/lib/i18n/locales'
 import { eventMediaUrl } from '@/lib/storage'
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }) {
     description: lt(event.description, locale, event.default_locale)?.slice(0, 160),
     alternates: {
       languages: Object.fromEntries(
-        LOCALES.map((l) => [l, `/${l}/events/${slug}`])
+        LOCALES.map((l) => [l, eventPageUrl({ slug, code: l })])
       ),
     },
   }
@@ -58,7 +59,14 @@ export default async function EventPage({ params, searchParams }) {
       event={event}
       locale={locale}
       contentLocale={contentLocale}
-      registerHref={`/${locale}/events/${slug}/register`}
+      // Carry the reader's language through to the form: a custom language
+      // rides on ?lang=, so a plain path would drop it and show English.
+      registerHref={eventPageUrl({
+        slug,
+        code: contentLocale,
+        uiLocale: locale,
+        subPath: '/register',
+      })}
     />
   )
 }
