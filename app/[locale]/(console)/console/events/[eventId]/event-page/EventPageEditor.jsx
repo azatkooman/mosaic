@@ -131,6 +131,32 @@ function applyTranslations(node, source, targets, dict, codes = LOCALE_SET) {
   return node
 }
 
+// True for a stat value worth translating: a word like "Thailand". Pure
+// numbers/symbols ("1000+", "20") read the same in every language, so they
+// stay plain strings and are never sent to translation.
+function isTranslatableStatValue(value) {
+  return typeof value === 'string' && /\p{L}/u.test(value)
+}
+
+// Stat values were historically plain strings. Promote the word-valued ones to
+// locale maps ({ [source]: text }) so the translation walk recognizes and fills
+// them; numeric ones are left as plain strings. Returns the same object when
+// nothing changed so callers can cheaply detect a no-op.
+function normalizeStatValues(pageContent, source) {
+  const stats = pageContent?.about?.stats
+  if (!Array.isArray(stats)) return pageContent
+  let changed = false
+  const nextStats = stats.map((s) => {
+    if (isTranslatableStatValue(s?.value)) {
+      changed = true
+      return { ...s, value: { [source]: s.value } }
+    }
+    return s
+  })
+  if (!changed) return pageContent
+  return { ...pageContent, about: { ...pageContent.about, stats: nextStats } }
+}
+
 // Relative luminance → WCAG contrast ratio between two hex colors.
 function contrastRatio(a, b) {
   const lum = (hex) => {
@@ -470,7 +496,9 @@ export function EventPageEditor({ initialEvent }) {
       name: event.name,
       description: event.description,
       location: event.location,
-      page_content: event.page_content ?? {},
+      // Promote plain-string word stat values (e.g. "Thailand") to locale maps
+      // so they translate too; numeric values stay strings and are left alone.
+      page_content: normalizeStatValues(event.page_content ?? {}, source),
     }
     // Recognize locale maps keyed by any of the event's languages — built-ins
     // plus custom codes — so fields that already have a custom-language slot
@@ -1619,8 +1647,20 @@ export function EventPageEditor({ initialEvent }) {
                         placeholder="50+"
                         value={val}
                         onChange={(e) => {
-                          const currentVal = typeof s.value === 'object' ? s.value : { [event.default_locale || 'en']: s.value ?? '' }
-                          updateStat({ value: setLv(currentVal, e.target.value) })
+                          const text = e.target.value
+                          // Numbers/symbols ("1000+", "20") stay a plain string
+                          // — the same in every language, never translated.
+                          // Words ("Thailand") become a locale map so they can
+                          // be auto-translated per language.
+                          if (!isTranslatableStatValue(text)) {
+                            updateStat({ value: text })
+                            return
+                          }
+                          const currentVal =
+                            typeof s.value === 'object'
+                              ? s.value
+                              : { [event.default_locale || 'en']: s.value ?? '' }
+                          updateStat({ value: setLv(currentVal, text) })
                         }}
                       />
                     )
