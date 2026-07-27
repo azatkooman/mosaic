@@ -7,13 +7,14 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { lt } from '@/lib/i18n/locales'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue } from '@/lib/dates'
-import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
+import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Field, Input, NativeSelect } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
 
 const PAGE_SIZE = 50
+const MAX_ANSWER_COLUMNS = 8
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
 const STATUS_TRANSITIONS = {
   pending: ['confirmed', 'waitlisted', 'cancelled'],
@@ -57,6 +58,16 @@ export function ParticipantsTable({
     () => new Map(participantTypes.map((pt) => [pt.id, pt])),
     [participantTypes]
   )
+  // Answer columns are driven purely by the questions this event actually
+  // asks — there are no fixed name/email columns any more, since those are
+  // optional questions and their columns sat empty whenever an organizer
+  // removed them. Capped so a long form can't push Type/Status/Profile off
+  // the far side of the scroll; the export always carries every question.
+  const shownQuestions = useMemo(
+    () => questions.filter((q) => !q.archived).slice(0, MAX_ANSWER_COLUMNS),
+    [questions]
+  )
+
   // Only filterable question kinds get a filter control.
   const filterableQuestions = questions.filter((q) =>
     ['select', 'radio', 'multiselect', 'checkbox', 'text', 'email', 'phone'].includes(q.type)
@@ -68,7 +79,10 @@ export function ParticipantsTable({
     queryFn: async () => {
       let q = supabase
         .from('participants')
-        .select('id, first_name, last_name, email, status, answers, created_at, participant_type_id, form_version_id', { count: 'exact' })
+        .select(
+          'id, first_name, last_name, email, status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email',
+          { count: 'exact' }
+        )
         .eq('event_id', eventId)
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
@@ -132,10 +146,15 @@ export function ParticipantsTable({
 
   function handleCopyEmails() {
     const selectedRows = rows.filter((r) => selectedIds.has(r.id))
-    const emails = [...new Set(selectedRows.map((r) => r.email).filter(Boolean))].join(', ')
-    if (emails) {
-      navigator.clipboard.writeText(emails)
-      alert(`Copied ${selectedRows.length} email address(es) to clipboard!`)
+    // Fall back to the registrant's profile email: the email question is
+    // optional, so `email` is null for any form that does not ask for one —
+    // without the fallback those rows would silently contribute nothing.
+    const emails = [
+      ...new Set(selectedRows.map((r) => r.email || r.profile_email).filter(Boolean)),
+    ]
+    if (emails.length) {
+      navigator.clipboard.writeText(emails.join(', '))
+      alert(`Copied ${emails.length} email address(es) to clipboard!`)
     }
   }
 
@@ -283,6 +302,8 @@ export function ParticipantsTable({
         <table className="table">
           <thead>
             <tr>
+              {/* Bulk-select stays the leftmost column; Reg. # follows it as
+                  the row's identifier and view link. */}
               <th style={{ width: '2.5rem' }}>
                 <input
                   type="checkbox"
@@ -291,15 +312,18 @@ export function ParticipantsTable({
                   aria-label={t('console.ariaSelectAll')}
                 />
               </th>
-              <SortHeader label={t('wizard.firstName')} column="first_name" sort={sort} onSort={toggleSort} />
-              <SortHeader label={t('wizard.lastName')} column="last_name" sort={sort} onSort={toggleSort} />
-              <SortHeader label={t('wizard.email')} column="email" sort={sort} onSort={toggleSort} />
-              <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
-              <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
-              {questions.slice(0, 6).map((q) => (
+              <SortHeader label={t('console.regNo')} column="reg_no" sort={sort} onSort={toggleSort} />
+              {shownQuestions.map((q) => (
                 <SortHeader key={q.id} label={lt(q.label, locale)} column={`q:${q.id}`} sort={sort} onSort={toggleSort} />
               ))}
-              <th>{t('common.actions')}</th>
+              <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.profileName')} column="profile_name" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.profileEmail')} column="profile_email" sort={sort} onSort={toggleSort} />
+              {/* Actions holds only the status control now that Reg. # is the
+                  view link — so the column disappears entirely for roles that
+                  cannot change status, rather than sitting empty. */}
+              {canChangeStatus && <th>{t('common.actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -319,31 +343,36 @@ export function ParticipantsTable({
               rows.map((p) => (
                 <tr key={p.id}>
                   <td>
+                    {/* Identified by Reg. #, not by name — a form need not ask
+                        for a name at all. */}
                     <input
                       type="checkbox"
                       checked={selectedIds.has(p.id)}
                       onChange={() => toggleSelectOne(p.id)}
-                      aria-label={`Select ${p.first_name} ${p.last_name}`}
+                      aria-label={`Select ${formatRegNo(p)}`}
                     />
                   </td>
                   <td>
-                    <button className={styles.rowLink} onClick={() => setSelected(p)}>
-                      {p.first_name}
+                    {/* The Reg. # is the row's view control — it replaced a
+                        separate "View" button in the actions cell. */}
+                    <button
+                      className={styles.regLink}
+                      onClick={() => setSelected(p)}
+                      title={t('console.viewDetail')}
+                    >
+                      {formatRegNo(p) || '—'}
                     </button>
                   </td>
-                  <td>{p.last_name}</td>
-                  <td>{p.email}</td>
+                  {shownQuestions.map((q) => (
+                    <Cell key={q.id} value={formatAnswer(p.answers?.[q.id], q, locale, dateFmt)} />
+                  ))}
                   <td>{lt(typeById.get(p.participant_type_id)?.name, locale)}</td>
                   <td><Badge tone={p.status}>{t(`status.${p.status}`)}</Badge></td>
-                  {questions.slice(0, 6).map((q) => (
-                    <td key={q.id}>{formatAnswer(p.answers?.[q.id], q, locale, dateFmt)}</td>
-                  ))}
-                  <td>
-                    <div className={styles.rowActions}>
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(p)}>
-                        {t('console.viewDetail')}
-                      </Button>
-                      {canChangeStatus && (
+                  <Cell value={p.profile_name} />
+                  <Cell value={p.profile_email} />
+                  {canChangeStatus && (
+                    <td>
+                      <div className={styles.rowActions}>
                         <NativeSelect
                           value={p.status}
                           aria-label={t('console.changeStatus')}
@@ -355,9 +384,9 @@ export function ParticipantsTable({
                             <option key={s} value={s}>{t(`status.${s}`)}</option>
                           ))}
                         </NativeSelect>
-                      )}
-                    </div>
-                  </td>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -397,6 +426,21 @@ export function ParticipantsTable({
   )
 }
 
+/**
+ * A body cell that clips overlong content to a single line ending in "…".
+ * The full text stays reachable as the title tooltip (and in the export).
+ */
+function Cell({ value }) {
+  const text = value == null || value === '' ? '' : String(value)
+  return (
+    <td className={styles.clipCell}>
+      <span className={styles.clip} title={text || undefined}>
+        {text || '—'}
+      </span>
+    </td>
+  )
+}
+
 function SortHeader({ label, column, sort, onSort }) {
   const active = sort.column === column
   return (
@@ -407,7 +451,7 @@ function SortHeader({ label, column, sort, onSort }) {
         onClick={() => onSort(column)}
         title={label}
       >
-        <span>{label}</span>
+        <span className={styles.clip}>{label}</span>
         <span className={styles.sortArrow} aria-hidden="true">
           {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
         </span>

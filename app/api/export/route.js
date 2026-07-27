@@ -8,7 +8,7 @@ import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
+import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -83,14 +83,18 @@ export async function GET(request) {
   }
   const questions = [...questionById.values()]
 
-  // Column headers and cell literals follow the requester's locale.
-  const tw = await getTranslations({ locale, namespace: 'wizard' })
+  // Column headers and cell literals follow the requester's locale. The
+  // wizard namespace is no longer needed here: the first/last/email headers
+  // it supplied went away with the fixed name columns.
   const tc = await getTranslations({ locale, namespace: 'console' })
   const tCommon = await getTranslations({ locale, namespace: 'common' })
+  // Column order mirrors the console list: Reg. # · answers · Type · Status ·
+  // profile. 'Registered at' has no column in the list but is kept here — a
+  // spreadsheet has room for it and organizers rely on it.
   const header = [
-    tw('firstName'), tw('lastName'), tw('email'),
-    tc('byType'), tc('byStatus'), tc('registeredAt'),
+    tc('regNo'),
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
+    tc('byType'), tc('byStatus'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
   ]
 
   // Page through all participants with the service client.
@@ -99,7 +103,9 @@ export async function GET(request) {
   for (let from = 0; ; from += PAGE) {
     let q = admin
       .from('participants')
-      .select('first_name, last_name, email, status, answers, created_at, participant_type_id')
+      .select(
+        'status, answers, created_at, participant_type_id, reg_seq, member_index, profile_name, profile_email'
+      )
       .eq('event_id', eventId)
       .range(from, from + PAGE - 1)
     // Same filters + sort as the console table, so the file matches the view.
@@ -109,13 +115,14 @@ export async function GET(request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     for (const p of data ?? []) {
       rows.push([
-        p.first_name,
-        p.last_name,
-        p.email ?? '',
+        formatRegNo(p),
+        // tCommon reaches plainAnswer for the localized yes/no on checkboxes.
+        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
         typeName.get(p.participant_type_id) ?? '',
         p.status,
+        p.profile_name ?? '',
+        p.profile_email ?? '',
         formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
-        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
       ])
     }
     if (!data || data.length < PAGE) break
