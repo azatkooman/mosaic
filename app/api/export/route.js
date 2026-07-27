@@ -8,6 +8,7 @@ import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
+import { eventQuestionColumns } from '@/lib/event-questions'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 
 export const runtime = 'nodejs'
@@ -62,7 +63,9 @@ export async function GET(request) {
       admin
         .from('form_versions')
         // FK hint required: forms↔form_versions has two relationships.
-        .select('id, definition, forms!form_versions_form_id_fkey!inner ( event_id )')
+        .select(
+          'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id )'
+        )
         .eq('forms.event_id', eventId),
       // Requester's display prefs come from their profile row (the DB is the
       // source of truth; the cookie may be absent for direct downloads).
@@ -75,13 +78,8 @@ export async function GET(request) {
   }
 
   const typeName = new Map((types ?? []).map((t) => [t.id, lt(t.name, locale, event?.default_locale)]))
-  const questionById = new Map()
-  for (const v of versions ?? []) {
-    for (const q of v.definition?.questions ?? []) {
-      if (q.type !== 'section' && !questionById.has(q.id)) questionById.set(q.id, q)
-    }
-  }
-  const questions = [...questionById.values()]
+  // Same column set the console list builds, so the download matches the view.
+  const questions = eventQuestionColumns(versions ?? [])
 
   // Column headers and cell literals follow the requester's locale. The
   // wizard namespace is no longer needed here: the first/last/email headers
