@@ -131,6 +131,32 @@ function applyTranslations(node, source, targets, dict, codes = LOCALE_SET) {
   return node
 }
 
+// True for a stat value worth translating: a word like "Thailand". Pure
+// numbers/symbols ("1000+", "20") read the same in every language, so they
+// stay plain strings and are never sent to translation.
+function isTranslatableStatValue(value) {
+  return typeof value === 'string' && /\p{L}/u.test(value)
+}
+
+// Stat values were historically plain strings. Promote the word-valued ones to
+// locale maps ({ [source]: text }) so the translation walk recognizes and fills
+// them; numeric ones are left as plain strings. Returns the same object when
+// nothing changed so callers can cheaply detect a no-op.
+function normalizeStatValues(pageContent, source) {
+  const stats = pageContent?.about?.stats
+  if (!Array.isArray(stats)) return pageContent
+  let changed = false
+  const nextStats = stats.map((s) => {
+    if (isTranslatableStatValue(s?.value)) {
+      changed = true
+      return { ...s, value: { [source]: s.value } }
+    }
+    return s
+  })
+  if (!changed) return pageContent
+  return { ...pageContent, about: { ...pageContent.about, stats: nextStats } }
+}
+
 // Relative luminance → WCAG contrast ratio between two hex colors.
 function contrastRatio(a, b) {
   const lum = (hex) => {
@@ -420,6 +446,25 @@ export function EventPageEditor({ initialEvent }) {
     }
   }, [availableLocales, previewLocale, event.default_locale])
 
+  // Auto-translate on language switch, like the form builder: switching the
+  // editor to a non-default language fills that language's empty fields from
+  // the default. Only blanks are filled (typed text is kept) and the page is
+  // marked dirty only if something changed, so flipping between languages is
+  // free. The organizer still clicks Save Page — this editor is save-based.
+  // The first render is skipped so simply opening the page never auto-edits;
+  // it only fires on a real language switch.
+  const didAutoTranslateMount = useRef(false)
+  useEffect(() => {
+    if (!didAutoTranslateMount.current) {
+      didAutoTranslateMount.current = true
+      return
+    }
+    if (previewLocale === event.default_locale) return
+    if (!availableLocales.includes(previewLocale)) return
+    translateInto([previewLocale])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLocale])
+
   // ---- state helpers -------------------------------------------------------
 
   function markDirty() {
@@ -432,26 +477,28 @@ export function EventPageEditor({ initialEvent }) {
     markDirty()
   }
 
-  // Fill empty target-language slots by machine-translating the default
-  // language's text. Applied to state; the user then saves.
-  async function translateAll(availableLocales) {
+  // Machine-translate the default language's text into the given target
+  // languages, filling only EMPTY slots (never overwriting typed text). Applied
+  // to editor state; the page is marked dirty only if something actually
+  // changed, so re-running on an already-translated language is a no-op. Runs
+  // automatically when the organizer switches languages (see the effect below),
+  // mirroring the form builder — no button. Success is silent; errors surface.
+  async function translateInto(targets) {
     const source = event.default_locale
     const customCodes = Array.isArray(content.i18n?.custom)
       ? content.i18n.custom.map((c) => c.code)
       : []
     // Organizer-added languages come from the Google-supported list, so they
     // are valid auto-translate targets too. The API drops any it can't handle.
-    const targets = availableLocales.filter((l) => l !== source)
-    if (!targets.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNoTargets'))
-      return
-    }
+    const realTargets = targets.filter((l) => l && l !== source)
+    if (!realTargets.length) return
     const bundle = {
       name: event.name,
       description: event.description,
       location: event.location,
-      page_content: event.page_content ?? {},
+      // Promote plain-string word stat values (e.g. "Thailand") to locale maps
+      // so they translate too; numeric values stay strings and are left alone.
+      page_content: normalizeStatValues(event.page_content ?? {}, source),
     }
     // Recognize locale maps keyed by any of the event's languages — built-ins
     // plus custom codes — so fields that already have a custom-language slot
@@ -460,18 +507,14 @@ export function EventPageEditor({ initialEvent }) {
     const set = new Set()
     collectSourceStrings(bundle, source, set, codes)
     const strings = [...set]
-    if (!strings.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNothing'))
-      return
-    }
+    if (!strings.length) return
     setTranslateState('working')
     setTranslateMsg('')
     try {
       const res = await fetch('/api/translate-event', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ strings, source, targets }),
+        body: JSON.stringify({ strings, source, targets: realTargets }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -480,7 +523,7 @@ export function EventPageEditor({ initialEvent }) {
         return
       }
       const dict = {}
-      for (const tgt of targets) {
+      for (const tgt of realTargets) {
         const arr = data.translations?.[tgt]
         if (Array.isArray(arr)) {
           const m = new Map()
@@ -488,18 +531,24 @@ export function EventPageEditor({ initialEvent }) {
           dict[tgt] = m
         }
       }
-      const out = applyTranslations(bundle, source, targets, dict, codes)
-      setEvent((prev) => ({
-        ...prev,
-        name: out.name,
-        description: out.description,
-        location: out.location,
-        page_content: out.page_content,
-      }))
-      markDirty()
-      setTranslateState('done')
-      setTranslateMsg(t('translateDone'))
-      window.alert(t('translateFinished'))
+      const out = applyTranslations(bundle, source, realTargets, dict, codes)
+      const changed =
+        JSON.stringify(out.name) !== JSON.stringify(bundle.name) ||
+        JSON.stringify(out.description) !== JSON.stringify(bundle.description) ||
+        JSON.stringify(out.location) !== JSON.stringify(bundle.location) ||
+        JSON.stringify(out.page_content) !== JSON.stringify(bundle.page_content)
+      if (changed) {
+        setEvent((prev) => ({
+          ...prev,
+          name: out.name,
+          description: out.description,
+          location: out.location,
+          page_content: out.page_content,
+        }))
+        markDirty()
+      }
+      setTranslateState('idle')
+      setTranslateMsg('')
     } catch {
       setTranslateState('error')
       setTranslateMsg(t('translateError'))
@@ -950,6 +999,23 @@ export function EventPageEditor({ initialEvent }) {
             onChange={(c) => setTheme({ btn_text: c ?? undefined })}
           />
         </div>
+        <Field label={`${t('registerButtonText')} (${previewLocale})`}>
+          {({ id }) => (
+            <Input
+              id={id}
+              placeholder={t('register')}
+              value={theme.register_btn_text?.[previewLocale] ?? ''}
+              onChange={(e) =>
+                setTheme({
+                  register_btn_text: {
+                    ...(theme.register_btn_text ?? {}),
+                    [previewLocale]: e.target.value || undefined,
+                  },
+                })
+              }
+            />
+          )}
+        </Field>
 
         {/* ---- Typography ---- */}
         <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>
@@ -1068,39 +1134,24 @@ export function EventPageEditor({ initialEvent }) {
         {/* ---- Languages ---- */}
         <h4 className={styles.panelSubhead}>{t('groupLanguages')}</h4>
         {/* Which languages this event offers is managed in event Settings; this
-            is read-only here, with a link back to Settings to change it. */}
-        <div className={styles.langInfo}>
-          <span className="field-label">{t('defaultLanguage')}</span>
-          <span className={styles.langDefault}>{localeName(event.default_locale)}</span>
-        </div>
-        {customLangs.length > 0 ? (
-          <div className={styles.langInfo}>
-            <span className="field-label">{t('customLanguages')}</span>
-            {customLangs.map((c) => (
-              <span key={c.code} className={styles.customLangRow}>{c.name}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="field-help">{t('noCustomLanguages')}</p>
-        )}
+            list is read-only here, with a link back to Settings to change it. */}
+        <ul className={styles.langList}>
+          {availableLocales.map((code) => (
+            <li key={code} className={styles.langRow}>
+              <span className={styles.langBadge}>{code.toUpperCase()}</span>
+              <span className={styles.langName}>{localeName(code)}</span>
+              {code === event.default_locale && (
+                <span className={styles.langTag}>{t('defaultBadge')}</span>
+              )}
+            </li>
+          ))}
+        </ul>
         <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
           {t('addLanguagesInSettings')}
         </Link>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={translateState === 'working'}
-          onClick={() => translateAll(availableLocales)}
-        >
-          {translateState === 'working' ? t('translating') : t('translateAll')}
-        </Button>
-        <p className="field-help">{t('translateAllHelp')}</p>
-        {translateMsg && (
-          <p
-            className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}
-          >
-            {translateMsg}
-          </p>
+        <p className="field-help">{t('autoTranslateHelp')}</p>
+        {translateState === 'error' && translateMsg && (
+          <p className={`alert alert-error ${styles.uploadNote}`}>{translateMsg}</p>
         )}
 
         {/* ---- Section order ---- */}
@@ -1368,22 +1419,109 @@ export function EventPageEditor({ initialEvent }) {
         />
         <p className="field-help">{t('countdownHelp')}</p>
         {hero.show_countdown !== false && (
-          <div className={styles.colorField}>
-            <span className="field-label">{t('countdownTarget')}</span>
-            <NativeSelect
-              value={hero.countdown_target ?? 'starts_at'}
-              onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
-              aria-label={t('countdownTarget')}
-            >
-              <option value="starts_at">{t('countdownToStart')}</option>
-              <option value="registration_closes_at">{t('countdownToClose')}</option>
-              <option value="ends_at">{t('countdownToEnd')}</option>
-            </NativeSelect>
-            <p className="field-help">{t('countdownPastHelp')}</p>
-          </div>
-        )}
-        {hero.show_countdown !== false && (
           <>
+            <Field label={`${t('countdownLabelText')} (${previewLocale})`}>
+              {({ id }) => (
+                <Input
+                  id={id}
+                  placeholder={t('countdownLabel')}
+                  value={hero.countdown_label?.[previewLocale] ?? ''}
+                  onChange={(e) =>
+                    patchContent('hero', {
+                      countdown_label: {
+                        ...(hero.countdown_label ?? {}),
+                        [previewLocale]: e.target.value || undefined,
+                      },
+                    })
+                  }
+                />
+              )}
+            </Field>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownDaysLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="DAYS"
+                    value={hero.countdown_days_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_days_label: {
+                          ...(hero.countdown_days_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownHoursLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="HRS"
+                    value={hero.countdown_hours_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_hours_label: {
+                          ...(hero.countdown_hours_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownMinutesLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="MIN"
+                    value={hero.countdown_minutes_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_minutes_label: {
+                          ...(hero.countdown_minutes_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownSecondsLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="SEC"
+                    value={hero.countdown_seconds_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_seconds_label: {
+                          ...(hero.countdown_seconds_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('countdownTarget')}</span>
+              <NativeSelect
+                value={hero.countdown_target ?? 'starts_at'}
+                onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
+                aria-label={t('countdownTarget')}
+              >
+                <option value="starts_at">{t('countdownToStart')}</option>
+                <option value="registration_closes_at">{t('countdownToClose')}</option>
+                <option value="ends_at">{t('countdownToEnd')}</option>
+              </NativeSelect>
+              <p className="field-help">{t('countdownPastHelp')}</p>
+            </div>
             <div className={styles.colorField}>
               <span className="field-label">{t('countdownStyle')}</span>
               <NativeSelect
@@ -1500,15 +1638,33 @@ export function EventPageEditor({ initialEvent }) {
                 {i + 1}
               </div>
               <div className={styles.panelItemFields}>
-                <Field label={t('statValue')}>
-                  {({ id }) => (
-                    <Input
-                      id={id}
-                      placeholder="50+"
-                      value={s.value ?? ''}
-                      onChange={(e) => updateStat({ value: e.target.value })}
-                    />
-                  )}
+                 <Field label={`${t('statValue')} (${previewLocale})`}>
+                  {({ id }) => {
+                    const val = typeof s.value === 'object' ? lv(s.value) : (s.value ?? '')
+                    return (
+                      <Input
+                        id={id}
+                        placeholder="50+"
+                        value={val}
+                        onChange={(e) => {
+                          const text = e.target.value
+                          // Numbers/symbols ("1000+", "20") stay a plain string
+                          // — the same in every language, never translated.
+                          // Words ("Thailand") become a locale map so they can
+                          // be auto-translated per language.
+                          if (!isTranslatableStatValue(text)) {
+                            updateStat({ value: text })
+                            return
+                          }
+                          const currentVal =
+                            typeof s.value === 'object'
+                              ? s.value
+                              : { [event.default_locale || 'en']: s.value ?? '' }
+                          updateStat({ value: setLv(currentVal, text) })
+                        }}
+                      />
+                    )
+                  }}
                 </Field>
                 <Field label={`${t('statLabel')} (${previewLocale})`}>
                   {({ id }) => (
@@ -1703,6 +1859,25 @@ export function EventPageEditor({ initialEvent }) {
           checked={agenda.show_hero_button !== false}
           onCheckedChange={(checked) => patchContent('agenda', { show_hero_button: !!checked })}
         />
+        {agenda.show_hero_button !== false && (
+          <Field label={`${t('viewAgendaButtonText')} (${previewLocale})`}>
+            {({ id }) => (
+              <Input
+                id={id}
+                placeholder={t('viewAgenda')}
+                value={agenda.button_text?.[previewLocale] ?? ''}
+                onChange={(e) =>
+                  patchContent('agenda', {
+                    button_text: {
+                      ...(agenda.button_text ?? {}),
+                      [previewLocale]: e.target.value || undefined,
+                    },
+                  })
+                }
+              />
+            )}
+          </Field>
+        )}
         <input ref={agendaImgInputRef} type="file" accept="image/*" hidden onChange={onAgendaImgFile} />
         {agenda.image_path && (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -2234,6 +2409,11 @@ export function EventPageEditor({ initialEvent }) {
             onChange={setPreviewLocale}
             ariaLabel={t('ariaPreviewLanguage')}
           />
+          {translateState === 'working' && (
+            <span className={styles.translatingNote} aria-live="polite">
+              {t('translating')}
+            </span>
+          )}
           <div className={styles.saveStatus} aria-live="polite">
             {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
             {saveState === 'error' && <span className="badge badge-cancelled">{t('saveError')}</span>}
