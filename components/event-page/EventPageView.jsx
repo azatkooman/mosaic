@@ -6,7 +6,7 @@ import { lt, eventLocales, localeName } from '@/lib/i18n/locales'
 import { LanguagePicker } from '@/components/ui'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
 import { eventMediaUrl } from '@/lib/storage'
-import { externalHref } from '@/lib/url'
+import { externalHref, eventPageUrl } from '@/lib/url'
 import { StatIcon } from './stat-icons'
 import { Countdown } from './Countdown'
 import { textStyle, TITLE_SIZES, FONT_FAMILIES } from './text-style'
@@ -298,22 +298,17 @@ export function EventPageView({
   const logoUrl = eventMediaUrl(logo.path)
   const logoPos = ['left', 'center', 'right'].includes(logo.position) ? logo.position : 'left'
   const logoAtBottom = logo.placement === 'bottom'
-  // Custom (organizer-defined) languages, e.g. { code: 'pt', name: 'Português' }.
-  const customLangs = Array.isArray(content.i18n?.custom) ? content.i18n.custom : []
-  const customCodes = customLangs.map((c) => c.code)
   // Shared with the editor and the rest of the console so every surface agrees
   // on which languages the event offers.
   const availableLocales = eventLocales(event)
   const showLangSwitch = availableLocales.length > 1
   const eventSlug = event.slug
-  const isCustom = (code) => customCodes.includes(code)
   // The dropdown has room for real names ("English", "Português") rather than
   // the bare codes a compact button row was limited to.
   const langLabel = (code) => localeName(event, code)
   // Built-in locales get their own route; custom ones ride on the current
   // route locale via a ?lang= param (they aren't platform routes).
-  const langHref = (code) =>
-    isCustom(code) ? `/${locale}/events/${eventSlug}?lang=${code}` : `/${code}/events/${eventSlug}`
+  const langHref = (code) => eventPageUrl({ slug: eventSlug, code, uiLocale: locale })
 
   const heroTopBar = (logoUrl || showLangSwitch) && (
     <div

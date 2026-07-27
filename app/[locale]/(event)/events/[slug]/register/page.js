@@ -2,9 +2,10 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { lt, eventLocales, localeName, LOCALES } from '@/lib/i18n/locales'
+import { lt, eventLocales, localeName } from '@/lib/i18n/locales'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
+import { eventPageUrl } from '@/lib/url'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,10 +21,10 @@ export default async function RegisterPage({ params, searchParams }) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
-    redirect({
-      href: `/login?next=${encodeURIComponent(`/${locale}/events/${slug}/register`)}`,
-      locale,
-    })
+    // Keep the reader's language across the login round-trip, or they come
+    // back to an English form.
+    const next = eventPageUrl({ slug, code: lang, uiLocale: locale, subPath: '/register' })
+    redirect({ href: `/login?next=${encodeURIComponent(next)}`, locale })
   }
 
   const { data: event } = await supabase
@@ -150,9 +151,7 @@ export default async function RegisterPage({ params, searchParams }) {
             label: localeName(event, code),
             // Built-in locales have their own route; custom codes ride the
             // current route via ?lang=.
-            href: LOCALES.includes(code)
-              ? `/${code}/events/${slug}/register`
-              : `/${locale}/events/${slug}/register?lang=${code}`,
+            href: eventPageUrl({ slug, code, uiLocale: locale, subPath: '/register' }),
           }))}
           value={contentLocale}
           ariaLabel={tCommon('language')}

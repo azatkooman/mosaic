@@ -20,6 +20,7 @@ import {
   NativeSelect,
   Textarea,
 } from '@/components/ui'
+import { eventPageUrl } from '@/lib/url'
 import {
   EventPageView,
   FONT_CHOICES,
@@ -387,7 +388,14 @@ export function EventPageEditor({ initialEvent }) {
     setOrigin(window.location.origin)
   }, [])
 
-  const publicUrl = `${origin}/${previewLocale}/events/${event.slug}`
+  // A custom language isn't a route — it needs ?lang=, not a path segment
+  // (a path segment produced /en/th/events/slug, which 404s).
+  const publicUrl = eventPageUrl({
+    slug: event.slug,
+    code: previewLocale,
+    uiLocale,
+    origin,
+  })
   const content = event.page_content ?? {}
 
   // Organizer-defined custom languages: [{ code, name }]. Their content lives
