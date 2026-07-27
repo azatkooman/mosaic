@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { LOCALES, LOCALE_NAMES, lt } from '@/lib/i18n/locales'
+import { setLocalizedText } from '@/lib/form-localization'
 import { ADDRESS_PART_KEYS, DEFAULT_ADDRESS_PARTS } from '@/lib/form-engine/address'
 import {
   operatorsForType,
@@ -66,8 +67,12 @@ export function QuestionInspector({
   const hasOptions = ['select', 'multiselect', 'radio'].includes(q.type)
   const rules = q.visibleIf?.rules ?? []
 
+  // Typing into a NON-default language marks that field human-authored, so
+  // auto-translate stops overwriting it. Typing into the default language
+  // leaves the bookkeeping alone: that's what flags the field as modified and
+  // gets the other languages refreshed.
   function setLocalized(fieldName, value) {
-    onChange({ [fieldName]: { ...(q[fieldName] ?? {}), [editLocale]: value } })
+    onChange({ [fieldName]: setLocalizedText(q[fieldName], editLocale, value, defaultLocale) })
   }
 
   function setRule(index, patch) {
@@ -245,7 +250,15 @@ export function QuestionInspector({
                 onChange={(e) => {
                   const options = q.options.map((opt, j) =>
                     j === i
-                      ? { ...opt, label: { ...opt.label, [editLocale]: e.target.value } }
+                      ? {
+                          ...opt,
+                          label: setLocalizedText(
+                            opt.label,
+                            editLocale,
+                            e.target.value,
+                            defaultLocale
+                          ),
+                        }
                       : opt
                   )
                   onChange({ options })
