@@ -7,6 +7,7 @@ import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { SignOutButton } from '@/components/shell/SignOutButton'
 import { NavLink } from '@/components/shell/NavLink'
 import { ThemeToggle } from '@/components/shell/ThemeToggle'
+import { MobileNav } from '@/components/shell/MobileNav'
 import { NamePrompt } from '@/components/shell/NamePrompt'
 import { QueryProvider } from './QueryProvider'
 import styles from './console.module.css'
@@ -51,11 +52,22 @@ export default async function ConsoleLayout({ children, params }) {
           </nav>
           <div className={styles.actions}>
             <ThemeToggle label={t('common.toggleTheme')} />
-            <LocaleSwitcher label={t('common.language')} />
-            <Link href="/my/profile" className="btn btn-ghost btn-sm">
-              {t('nav.profile')}
-            </Link>
-            <SignOutButton label={t('common.signOut')} />
+            {/* Desktop-only cluster; folded into the menu on phones. */}
+            <div className={styles.desktopActions}>
+              <LocaleSwitcher label={t('common.language')} />
+              <Link href="/my/profile" className="btn btn-ghost btn-sm">
+                {t('nav.profile')}
+              </Link>
+              <SignOutButton label={t('common.signOut')} />
+            </div>
+            <MobileNav label={t('common.menu')}>
+              <Link href="/">{t('console.navHome')} ↗</Link>
+              <NavLink href="/console">{t('console.navMyEvents')}</NavLink>
+              {isAdmin && <Link href="/admin">{t('console.admin')} ↗</Link>}
+              <Link href="/my/profile">{t('nav.profile')}</Link>
+              <LocaleSwitcher label={t('common.language')} />
+              <SignOutButton label={t('common.signOut')} />
+            </MobileNav>
           </div>
         </header>
         <main className={styles.main}>{children}</main>
