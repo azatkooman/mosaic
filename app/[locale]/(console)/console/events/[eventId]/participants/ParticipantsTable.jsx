@@ -124,22 +124,29 @@ export function ParticipantsTable({
     if (!bulkStatus || selectedIds.size === 0) return
     setStatusError('')
     setBulkBusy(true)
-    let failures = 0
-    for (const pid of selectedIds) {
-      const { error } = await supabase.rpc('transition_participant_status', {
-        p_participant_id: pid,
-        p_new_status: bulkStatus,
+    try {
+      const res = await fetch('/api/participants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus, locale }),
       })
-      if (error) failures++
+      const data = await res.json()
+      if (!res.ok || data.failures > 0) {
+        if (data.failures > 0) {
+          setStatusError(`Failed to update ${data.failures} participant(s).`)
+        } else {
+          setStatusError(data.error || 'Failed to update status')
+        }
+      } else {
+        setSelectedIds(new Set())
+        setBulkStatus('')
+      }
+    } catch {
+      setStatusError('Failed to update status')
+    } finally {
+      setBulkBusy(false)
+      queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
     }
-    setBulkBusy(false)
-    if (failures > 0) {
-      setStatusError(`Failed to update ${failures} participant(s).`)
-    } else {
-      setSelectedIds(new Set())
-      setBulkStatus('')
-    }
-    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
   }
 
   function handleCopyEmails() {
@@ -158,15 +165,21 @@ export function ParticipantsTable({
 
   async function changeStatus(participantId, status) {
     setStatusError('')
-    const { error } = await supabase.rpc('transition_participant_status', {
-      p_participant_id: participantId,
-      p_new_status: status,
-    })
-    if (error) {
-      setStatusError(error.message)
-      return
+    try {
+      const res = await fetch('/api/participants/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: [participantId], status, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatusError(data.error || 'Failed to update status')
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
+    } catch {
+      setStatusError('Failed to update status')
     }
-    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
   }
 
   function exportUrl(format) {
