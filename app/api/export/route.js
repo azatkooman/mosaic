@@ -6,6 +6,7 @@ import { lt } from '@/lib/i18n/locales'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
+import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { applyParticipantFilters, applyParticipantSort } from '@/lib/participants-query'
 
@@ -82,8 +83,13 @@ export async function GET(request) {
   }
   const questions = [...questionById.values()]
 
+  // Column headers and cell literals follow the requester's locale.
+  const tw = await getTranslations({ locale, namespace: 'wizard' })
+  const tc = await getTranslations({ locale, namespace: 'console' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
   const header = [
-    'First name', 'Last name', 'Email', 'Type', 'Status', 'Registered at',
+    tw('firstName'), tw('lastName'), tw('email'),
+    tc('byType'), tc('byStatus'), tc('registeredAt'),
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
   ]
 
@@ -109,7 +115,7 @@ export async function GET(request) {
         typeName.get(p.participant_type_id) ?? '',
         p.status,
         formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
-        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt)),
+        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
       ])
     }
     if (!data || data.length < PAGE) break
@@ -135,7 +141,7 @@ export async function GET(request) {
   }
 
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet('Participants')
+  const sheet = workbook.addWorksheet(tc('participants'))
   sheet.addRow(header)
   sheet.getRow(1).font = { bold: true }
   for (const r of rows) sheet.addRow(r)
@@ -156,12 +162,12 @@ export async function GET(request) {
   })
 }
 
-function plainAnswer(value, question, locale, dateFmt) {
+function plainAnswer(value, question, locale, dateFmt, tCommon) {
   if (value == null) return ''
   const structured = formatStructuredAnswer(question, value)
   if (structured !== null) return structured
   if (question.type === 'date') return formatDateValue(value, locale, dateFmt)
-  if (question.type === 'checkbox') return value ? 'yes' : 'no'
+  if (question.type === 'checkbox') return value ? tCommon('yes') : tCommon('no')
   if (Array.isArray(value)) {
     return value
       .map((v) => lt(question.options?.find((o) => o.value === v)?.label, locale) || v)
