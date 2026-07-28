@@ -102,6 +102,27 @@ describe('EventPageView content locale', () => {
   })
 })
 
+describe('language switcher labels on the pages attendees see', () => {
+  it('offers short codes, not full language names', () => {
+    const html = render('en')
+    // The switcher is the only place these appear, so matching on the option
+    // text is enough to pin the label style.
+    expect(html).toContain('>EN<')
+    expect(html).toContain('>PT<')
+    // The console keeps full names; the public hero must not spend the room.
+    expect(html).not.toContain('>English<')
+    expect(html).not.toContain('>Português<')
+  })
+
+  it('uppercases an organizer-added custom code too', () => {
+    // Custom languages carry organizer-typed names ("Português") that would be
+    // even longer than the built-ins — the code is what stays predictable.
+    const html = render('pt')
+    expect(html).toContain('>PT<')
+    expect(html).not.toContain('>Português<')
+  })
+})
+
 describe('language switcher colours', () => {
   function renderWithTheme(theme) {
     const event = makeEvent()

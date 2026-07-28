@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { lt, eventLocales, localeName } from '@/lib/i18n/locales'
+import { lt, eventLocales, localeAcronym } from '@/lib/i18n/locales'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
@@ -148,7 +148,9 @@ export default async function RegisterPage({ params, searchParams }) {
         <LanguagePicker
           options={localeOptions.map((code) => ({
             value: code,
-            label: localeName(event, code),
+            // Short code here too, matching the event page an attendee just
+            // came from; the console keeps full names.
+            label: localeAcronym(code),
             // Built-in locales have their own route; custom codes ride the
             // current route via ?lang=.
             href: eventPageUrl({ slug, code, uiLocale: locale, subPath: '/register' }),
