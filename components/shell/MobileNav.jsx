@@ -28,11 +28,17 @@ export function MobileNav({ label, children }) {
       </button>
       {open && (
         <div className={styles.mobileBackdrop} onClick={() => setOpen(false)}>
-          {/* Tapping a link bubbles up and closes the menu too. */}
           <nav
             className={styles.mobileMenu}
             aria-label={label}
-            onClick={() => setOpen(false)}
+            onClick={(e) => {
+              // Keep the panel open for interactive controls inside it — the
+              // language <select> in particular, whose click would otherwise
+              // unmount the menu before its options could be picked. Only a
+              // navigation link should dismiss the panel.
+              e.stopPropagation()
+              if (e.target.closest('a')) setOpen(false)
+            }}
           >
             {children}
           </nav>
