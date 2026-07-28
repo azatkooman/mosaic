@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations, NextIntlClientProvider } from 'next-intl'
 import enMessages from '@/messages/en.json'
 import esMessages from '@/messages/es.json'
@@ -10,7 +10,11 @@ import ukMessages from '@/messages/uk.json'
 import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
-import { retranslateDocument, setLocalizedText } from '@/lib/form-localization'
+import {
+  hasStaleTranslations,
+  retranslateDocument,
+  setLocalizedText,
+} from '@/lib/form-localization'
 import { eventMediaUrl } from '@/lib/storage'
 import {
   Button,
@@ -523,6 +527,34 @@ export function EventPageEditor({ initialEvent }) {
       setTranslateMsg(failure ?? t('translateError'))
     }
   }
+
+  // Is anything out of date for the safe pass? Mirrors the bundle, targets and
+  // codes translateInto builds, so the button's label reflects what a click
+  // would really do. Recomputed as the organizer edits.
+  const hasTranslateUpdates = useMemo(() => {
+    const source = event.default_locale
+    const customCodes = Array.isArray(content.i18n?.custom)
+      ? content.i18n.custom.map((c) => c.code)
+      : []
+    const targets = availableLocales.filter((l) => l && l !== source)
+    if (!targets.length) return false
+    const bundle = {
+      name: event.name,
+      description: event.description,
+      location: event.location,
+      page_content: normalizeStatValues(event.page_content ?? {}, source),
+    }
+    const codes = new Set([...LOCALES, ...availableLocales, ...customCodes])
+    return hasStaleTranslations(bundle, source, targets, codes)
+  }, [
+    event.name,
+    event.description,
+    event.location,
+    event.page_content,
+    event.default_locale,
+    availableLocales,
+    content.i18n?.custom,
+  ])
 
   // Functional updates: colors/text can change in quick succession, so always
   // derive from the latest state rather than a value captured at render time.
@@ -1125,31 +1157,44 @@ export function EventPageEditor({ initialEvent }) {
         <p className="field-help">{t('autoTranslateHelp')}</p>
         {/* Switching languages already translates in the background, but that
             only ever covers the language being switched to. This runs every
-            language at once, on demand, and reports what it did. */}
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={translateState === 'working'}
-          onClick={() => translateInto(availableLocales, { announce: true })}
-        >
-          {translateState === 'working' ? t('translating') : t('translateAll')}
-        </Button>
-        <p className="field-help">{t('translateAllHelp')}</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={translateState === 'working'}
-          onClick={() => {
-            // Destructive: this is the one path that overwrites translations a
-            // human typed, so make the organizer say yes first.
-            if (window.confirm(t('translateForceConfirm'))) {
-              translateInto(availableLocales, { force: true, announce: true })
-            }
-          }}
-        >
-          {t('translateForce')}
-        </Button>
-        <p className="field-help">{t('translateForceHelp')}</p>
+            language at once, on demand, and reports what it did.
+
+            One button, two modes: while anything is out of date it does the
+            safe pass; once everything is current the same button becomes the
+            forced redo — because a redo is the only thing left worth doing.
+            hasTranslateUpdates is derived from the same bundle translateInto
+            builds, so the label always matches what a click will actually do. */}
+        {hasTranslateUpdates ? (
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={translateState === 'working'}
+              onClick={() => translateInto(availableLocales, { announce: true })}
+            >
+              {translateState === 'working' ? t('translating') : t('translateAll')}
+            </Button>
+            <p className="field-help">{t('translateAllHelp')}</p>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={translateState === 'working'}
+              onClick={() => {
+                // Nothing is stale, so a click here can only mean "redo it all",
+                // which overwrites translations a human typed — warn first.
+                if (window.confirm(t('translateForceNoChangesConfirm'))) {
+                  translateInto(availableLocales, { force: true, announce: true })
+                }
+              }}
+            >
+              {translateState === 'working' ? t('translating') : t('translateForce')}
+            </Button>
+            <p className="field-help">{t('translateForceHelp')}</p>
+          </>
+        )}
         {translateMsg && (
           <p
             className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}

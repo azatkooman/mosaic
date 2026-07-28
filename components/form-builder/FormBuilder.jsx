@@ -17,7 +17,8 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { lt } from '@/lib/i18n/locales'
+import { LOCALES, lt } from '@/lib/i18n/locales'
+import { hasStaleTranslations } from '@/lib/form-localization'
 import { Button, NativeSelect, ConfettiBurst, LanguagePicker } from '@/components/ui'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
@@ -111,6 +112,29 @@ export function FormBuilder({
     } catch {
       // Translation is best-effort; editing must keep working even if the
       // API key is missing or the request fails.
+    }
+  }
+
+  // Manual translate actions for the current language tab, exposed as a dropdown
+  // so the cramped header carries one control, not two. The silent
+  // translate-on-switch still handles the common case; this is the deliberate
+  // override.
+  function runTranslateAction(action) {
+    if (action === 'updates') {
+      const codes = new Set([...LOCALES, ...supportedLocales])
+      // Warn rather than silently do nothing when there is nothing to catch up
+      // on — the organizer asked for an action and deserves an answer.
+      if (!hasStaleTranslations(definition, defaultLocale, [editLocale], codes)) {
+        window.alert(t('translateUpToDate'))
+        return
+      }
+      translateLocale(editLocale)
+    } else if (action === 'force') {
+      // Destructive: the only path that overwrites translations a human typed,
+      // so make the organizer say yes first.
+      if (window.confirm(t('translateForceConfirm'))) {
+        translateLocale(editLocale, { force: true })
+      }
     }
   }
 
@@ -274,20 +298,24 @@ export function FormBuilder({
             ariaLabel={t('ariaEditLanguage')}
           />
           {editLocale !== defaultLocale && (
-            <Button
-              variant="ghost"
-              size="sm"
+            // value stays '' so the menu always shows its label, not the last
+            // action picked — it's a menu of actions, not a stateful select.
+            <NativeSelect
+              value=""
+              aria-label={t('translateMenu')}
               title={t('translateForceHelp')}
-              onClick={() => {
-                // Destructive: the only path that overwrites translations a
-                // human typed, so make the organizer say yes first.
-                if (window.confirm(t('translateForceConfirm'))) {
-                  translateLocale(editLocale, { force: true })
-                }
+              onChange={(e) => {
+                const action = e.target.value
+                e.target.value = ''
+                runTranslateAction(action)
               }}
             >
-              {t('translateForce')}
-            </Button>
+              <option value="" disabled>
+                {t('translateMenu')}
+              </option>
+              <option value="updates">{t('translateAll')}</option>
+              <option value="force">{t('translateForce')}</option>
+            </NativeSelect>
           )}
           <Button variant="ghost" size="sm" onClick={store.undo} aria-label={t('ariaUndo')}>
             ↩
