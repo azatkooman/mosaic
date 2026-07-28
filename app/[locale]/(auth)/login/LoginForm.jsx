@@ -81,6 +81,9 @@ export function LoginForm({ oktaDomain }) {
         </div>
       </aside>
       <div className={styles.formPanel}>
+      <div className={styles.formTiles} aria-hidden="true">
+        <span /><span /><span /><span />
+      </div>
       <div className={`card card-pad ${styles.card}`}>
         <div className={styles.brand}>
           <MosaicMark />

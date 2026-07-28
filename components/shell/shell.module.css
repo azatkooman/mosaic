@@ -130,6 +130,18 @@
   background: var(--surface-sunken);
 }
 
+/* The language <select> ships with an inline width:auto for the desktop bar;
+   inside the menu it should fill the row like every other item, hence the
+   scoped override. */
+.mobileMenu select {
+  width: 100% !important;
+  padding-block: var(--s-3) !important;
+  padding-inline: var(--s-4);
+  font-size: var(--text-md);
+  font-weight: 600;
+  border-radius: var(--r-md);
+}
+
 .mobileMenu a[aria-current='page'] {
   color: var(--pine-deep);
   background: var(--pine-tint);
