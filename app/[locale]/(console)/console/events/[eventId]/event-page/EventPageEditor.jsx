@@ -10,6 +10,7 @@ import ukMessages from '@/messages/uk.json'
 import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
+import { retranslateDocument, setLocalizedText } from '@/lib/form-localization'
 import { eventMediaUrl } from '@/lib/storage'
 import {
   Button,
@@ -75,60 +76,30 @@ const THEME_PRESETS = {
   },
 }
 
-// --- Machine translation of typed content -------------------------------
-// Localized fields are stored as {en: "...", es: "..."} maps. These helpers
-// walk the content, gather source-language strings, and write translations
-// back into empty target-language slots (never overwriting existing text).
-const LOCALE_SET = new Set(LOCALES)
-
-// `codes` bounds which keys count as language codes. It defaults to the
-// built-in locales, but callers pass the event's full set (built-ins + custom
-// codes) so a field that already has a custom-language slot ({en, es, sq}) is
-// still recognized as translatable instead of being skipped.
-function isLocaleMap(v, codes = LOCALE_SET) {
-  if (!v || typeof v !== 'object' || Array.isArray(v)) return false
-  const keys = Object.keys(v)
-  return (
-    keys.length > 0 &&
-    keys.every((k) => codes.has(k)) &&
-    Object.values(v).every((x) => x == null || typeof x === 'string')
-  )
+// True for a stat value worth translating: a word like "Thailand". Pure
+// numbers/symbols ("1000+", "20") read the same in every language, so they
+// stay plain strings and are never sent to translation.
+function isTranslatableStatValue(value) {
+  return typeof value === 'string' && /\p{L}/u.test(value)
 }
 
-function collectSourceStrings(node, source, out, codes = LOCALE_SET) {
-  if (isLocaleMap(node, codes)) {
-    const s = node[source]
-    if (s && s.trim()) out.add(s)
-    return
-  }
-  if (Array.isArray(node)) node.forEach((n) => collectSourceStrings(n, source, out, codes))
-  else if (node && typeof node === 'object') {
-    Object.values(node).forEach((n) => collectSourceStrings(n, source, out, codes))
-  }
-}
-
-// dict: { [target]: Map(sourceString -> translated) }. Returns a new node with
-// empty target slots filled.
-function applyTranslations(node, source, targets, dict, codes = LOCALE_SET) {
-  if (isLocaleMap(node, codes)) {
-    const s = node[source]
-    if (!s || !s.trim()) return node
-    const next = { ...node }
-    for (const tgt of targets) {
-      if (!next[tgt] || !next[tgt].trim()) {
-        const tr = dict[tgt]?.get(s)
-        if (tr) next[tgt] = tr
-      }
+// Stat values were historically plain strings. Promote the word-valued ones to
+// locale maps ({ [source]: text }) so the translation walk recognizes and fills
+// them; numeric ones are left as plain strings. Returns the same object when
+// nothing changed so callers can cheaply detect a no-op.
+function normalizeStatValues(pageContent, source) {
+  const stats = pageContent?.about?.stats
+  if (!Array.isArray(stats)) return pageContent
+  let changed = false
+  const nextStats = stats.map((s) => {
+    if (isTranslatableStatValue(s?.value)) {
+      changed = true
+      return { ...s, value: { [source]: s.value } }
     }
-    return next
-  }
-  if (Array.isArray(node)) return node.map((n) => applyTranslations(n, source, targets, dict, codes))
-  if (node && typeof node === 'object') {
-    const o = {}
-    for (const [k, v] of Object.entries(node)) o[k] = applyTranslations(v, source, targets, dict, codes)
-    return o
-  }
-  return node
+    return s
+  })
+  if (!changed) return pageContent
+  return { ...pageContent, about: { ...pageContent.about, stats: nextStats } }
 }
 
 // Relative luminance → WCAG contrast ratio between two hex colors.
@@ -420,6 +391,25 @@ export function EventPageEditor({ initialEvent }) {
     }
   }, [availableLocales, previewLocale, event.default_locale])
 
+  // Auto-translate on language switch, like the form builder: switching the
+  // editor to a non-default language fills that language's empty fields from
+  // the default. Only blanks are filled (typed text is kept) and the page is
+  // marked dirty only if something changed, so flipping between languages is
+  // free. The organizer still clicks Save Page — this editor is save-based.
+  // The first render is skipped so simply opening the page never auto-edits;
+  // it only fires on a real language switch.
+  const didAutoTranslateMount = useRef(false)
+  useEffect(() => {
+    if (!didAutoTranslateMount.current) {
+      didAutoTranslateMount.current = true
+      return
+    }
+    if (previewLocale === event.default_locale) return
+    if (!availableLocales.includes(previewLocale)) return
+    translateInto([previewLocale])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLocale])
+
   // ---- state helpers -------------------------------------------------------
 
   function markDirty() {
@@ -432,77 +422,105 @@ export function EventPageEditor({ initialEvent }) {
     markDirty()
   }
 
-  // Fill empty target-language slots by machine-translating the default
-  // language's text. Applied to state; the user then saves.
-  async function translateAll(availableLocales) {
+  // Machine-translate the default language's text into the given target
+  // languages. Only fields whose source text changed since they were last
+  // translated are sent (plus everything for a language that has no
+  // translations yet), so a second run after editing two headings costs two
+  // strings, not the page. Applied to editor state and marked dirty only when
+  // something actually changed; the organizer then saves.
+  //
+  // Runs automatically when the organizer switches languages (see the effect
+  // below), mirroring the form builder. That path stays silent on success so
+  // flipping between languages never nags; `announce` turns on the message and
+  // alert for the manual button.
+  //
+  // `force` ignores the bookkeeping and retranslates everything, including text
+  // a human typed — the way back from a hand-edit the organizer regrets.
+  async function translateInto(targets, { force = false, announce = false } = {}) {
     const source = event.default_locale
     const customCodes = Array.isArray(content.i18n?.custom)
       ? content.i18n.custom.map((c) => c.code)
       : []
     // Organizer-added languages come from the Google-supported list, so they
     // are valid auto-translate targets too. The API drops any it can't handle.
-    const targets = availableLocales.filter((l) => l !== source)
-    if (!targets.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNoTargets'))
+    const realTargets = targets.filter((l) => l && l !== source)
+    if (!realTargets.length) {
+      // Silent for the automatic path — switching to the default language has
+      // nothing to do and isn't an error.
+      if (announce) {
+        setTranslateState('error')
+        setTranslateMsg(t('translateNoTargets'))
+      }
       return
     }
     const bundle = {
       name: event.name,
       description: event.description,
       location: event.location,
-      page_content: event.page_content ?? {},
+      // Promote plain-string word stat values (e.g. "Thailand") to locale maps
+      // so they translate too; numeric values stay strings and are left alone.
+      page_content: normalizeStatValues(event.page_content ?? {}, source),
     }
-    // Recognize locale maps keyed by any of the event's languages — built-ins
-    // plus custom codes — so fields that already have a custom-language slot
-    // aren't skipped on subsequent translations.
-    const codes = new Set([...LOCALES, ...availableLocales, ...customCodes])
-    const set = new Set()
-    collectSourceStrings(bundle, source, set, codes)
-    const strings = [...set]
-    if (!strings.length) {
-      setTranslateState('error')
-      setTranslateMsg(t('translateNothing'))
-      return
-    }
+
     setTranslateState('working')
     setTranslateMsg('')
+    let failure = null
     try {
-      const res = await fetch('/api/translate-event', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ strings, source, targets }),
+      const { node: out, changed, translated } = await retranslateDocument(bundle, {
+        source,
+        targets: realTargets,
+        // The event's full language set, so provenance is adopted for every
+        // language at once rather than only this run's targets.
+        locales: [...availableLocales, ...customCodes],
+        force,
+        translate: async (requests) => {
+          const res = await fetch('/api/translate-event', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ requests, source }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            failure = data?.error === 'no_api_key' ? t('translateNoKey') : t('translateError')
+            throw new Error(data?.error ?? 'translate_failed')
+          }
+          return data.translations ?? {}
+        },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setTranslateState('error')
-        setTranslateMsg(data?.error === 'no_api_key' ? t('translateNoKey') : t('translateError'))
+
+      // Apply whenever anything changed, even with nothing translated: a first
+      // run over content that predates tracking only adopts provenance, and
+      // that bookkeeping MUST be saved. Drop it and the next run would re-adopt
+      // against the by-then-edited source, marking the stale translation fresh.
+      if (changed) {
+        setEvent((prev) => ({
+          ...prev,
+          name: out.name,
+          description: out.description,
+          location: out.location,
+          page_content: out.page_content,
+        }))
+        markDirty()
+      }
+      // The automatic language-switch path says nothing on success; only the
+      // manual button reports what it did.
+      if (!announce) {
+        setTranslateState('idle')
+        setTranslateMsg('')
         return
       }
-      const dict = {}
-      for (const tgt of targets) {
-        const arr = data.translations?.[tgt]
-        if (Array.isArray(arr)) {
-          const m = new Map()
-          strings.forEach((s, i) => m.set(s, arr[i]))
-          dict[tgt] = m
-        }
-      }
-      const out = applyTranslations(bundle, source, targets, dict, codes)
-      setEvent((prev) => ({
-        ...prev,
-        name: out.name,
-        description: out.description,
-        location: out.location,
-        page_content: out.page_content,
-      }))
-      markDirty()
       setTranslateState('done')
+      if (translated === 0) {
+        // Either the page has no text yet, or every language already matches
+        // the current source text — the common case on a second click.
+        setTranslateMsg(t('translateUpToDate'))
+        return
+      }
       setTranslateMsg(t('translateDone'))
       window.alert(t('translateFinished'))
     } catch {
       setTranslateState('error')
-      setTranslateMsg(t('translateError'))
+      setTranslateMsg(failure ?? t('translateError'))
     }
   }
 
@@ -565,8 +583,12 @@ export function EventPageEditor({ initialEvent }) {
   }
 
   // Localized value helpers — edit the text for the previewed language.
+  // Typing into a NON-default language marks that field human-authored, so
+  // auto-translate stops overwriting it. Typing into the default language
+  // leaves the bookkeeping alone: that's what flags the field as modified.
   const lv = (map) => map?.[previewLocale] ?? ''
-  const setLv = (map, value) => ({ ...(map ?? {}), [previewLocale]: value })
+  const setLv = (map, value) =>
+    setLocalizedText(map, previewLocale, value, event.default_locale)
 
   // ---- persistence ---------------------------------------------------------
 
@@ -950,6 +972,23 @@ export function EventPageEditor({ initialEvent }) {
             onChange={(c) => setTheme({ btn_text: c ?? undefined })}
           />
         </div>
+        <Field label={`${t('registerButtonText')} (${previewLocale})`}>
+          {({ id }) => (
+            <Input
+              id={id}
+              placeholder={t('register')}
+              value={theme.register_btn_text?.[previewLocale] ?? ''}
+              onChange={(e) =>
+                setTheme({
+                  register_btn_text: {
+                    ...(theme.register_btn_text ?? {}),
+                    [previewLocale]: e.target.value || undefined,
+                  },
+                })
+              }
+            />
+          )}
+        </Field>
 
         {/* ---- Typography ---- */}
         <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>
@@ -1068,33 +1107,49 @@ export function EventPageEditor({ initialEvent }) {
         {/* ---- Languages ---- */}
         <h4 className={styles.panelSubhead}>{t('groupLanguages')}</h4>
         {/* Which languages this event offers is managed in event Settings; this
-            is read-only here, with a link back to Settings to change it. */}
-        <div className={styles.langInfo}>
-          <span className="field-label">{t('defaultLanguage')}</span>
-          <span className={styles.langDefault}>{localeName(event.default_locale)}</span>
-        </div>
-        {customLangs.length > 0 ? (
-          <div className={styles.langInfo}>
-            <span className="field-label">{t('customLanguages')}</span>
-            {customLangs.map((c) => (
-              <span key={c.code} className={styles.customLangRow}>{c.name}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="field-help">{t('noCustomLanguages')}</p>
-        )}
+            list is read-only here, with a link back to Settings to change it. */}
+        <ul className={styles.langList}>
+          {availableLocales.map((code) => (
+            <li key={code} className={styles.langRow}>
+              <span className={styles.langBadge}>{code.toUpperCase()}</span>
+              <span className={styles.langName}>{localeName(code)}</span>
+              {code === event.default_locale && (
+                <span className={styles.langTag}>{t('defaultBadge')}</span>
+              )}
+            </li>
+          ))}
+        </ul>
         <Link href={`/console/events/${event.id}/settings`} className={styles.langSettingsLink}>
           {t('addLanguagesInSettings')}
         </Link>
+        <p className="field-help">{t('autoTranslateHelp')}</p>
+        {/* Switching languages already translates in the background, but that
+            only ever covers the language being switched to. This runs every
+            language at once, on demand, and reports what it did. */}
         <Button
           variant="secondary"
           size="sm"
           disabled={translateState === 'working'}
-          onClick={() => translateAll(availableLocales)}
+          onClick={() => translateInto(availableLocales, { announce: true })}
         >
           {translateState === 'working' ? t('translating') : t('translateAll')}
         </Button>
         <p className="field-help">{t('translateAllHelp')}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={translateState === 'working'}
+          onClick={() => {
+            // Destructive: this is the one path that overwrites translations a
+            // human typed, so make the organizer say yes first.
+            if (window.confirm(t('translateForceConfirm'))) {
+              translateInto(availableLocales, { force: true, announce: true })
+            }
+          }}
+        >
+          {t('translateForce')}
+        </Button>
+        <p className="field-help">{t('translateForceHelp')}</p>
         {translateMsg && (
           <p
             className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}
@@ -1368,22 +1423,109 @@ export function EventPageEditor({ initialEvent }) {
         />
         <p className="field-help">{t('countdownHelp')}</p>
         {hero.show_countdown !== false && (
-          <div className={styles.colorField}>
-            <span className="field-label">{t('countdownTarget')}</span>
-            <NativeSelect
-              value={hero.countdown_target ?? 'starts_at'}
-              onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
-              aria-label={t('countdownTarget')}
-            >
-              <option value="starts_at">{t('countdownToStart')}</option>
-              <option value="registration_closes_at">{t('countdownToClose')}</option>
-              <option value="ends_at">{t('countdownToEnd')}</option>
-            </NativeSelect>
-            <p className="field-help">{t('countdownPastHelp')}</p>
-          </div>
-        )}
-        {hero.show_countdown !== false && (
           <>
+            <Field label={`${t('countdownLabelText')} (${previewLocale})`}>
+              {({ id }) => (
+                <Input
+                  id={id}
+                  placeholder={t('countdownLabel')}
+                  value={hero.countdown_label?.[previewLocale] ?? ''}
+                  onChange={(e) =>
+                    patchContent('hero', {
+                      countdown_label: {
+                        ...(hero.countdown_label ?? {}),
+                        [previewLocale]: e.target.value || undefined,
+                      },
+                    })
+                  }
+                />
+              )}
+            </Field>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownDaysLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="DAYS"
+                    value={hero.countdown_days_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_days_label: {
+                          ...(hero.countdown_days_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownHoursLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="HRS"
+                    value={hero.countdown_hours_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_hours_label: {
+                          ...(hero.countdown_hours_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+            <div className={styles.colorPair}>
+              <Field label={`${t('countdownMinutesLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="MIN"
+                    value={hero.countdown_minutes_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_minutes_label: {
+                          ...(hero.countdown_minutes_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={`${t('countdownSecondsLabel')} (${previewLocale})`}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    placeholder="SEC"
+                    value={hero.countdown_seconds_label?.[previewLocale] ?? ''}
+                    onChange={(e) =>
+                      patchContent('hero', {
+                        countdown_seconds_label: {
+                          ...(hero.countdown_seconds_label ?? {}),
+                          [previewLocale]: e.target.value || undefined,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+            <div className={styles.colorField}>
+              <span className="field-label">{t('countdownTarget')}</span>
+              <NativeSelect
+                value={hero.countdown_target ?? 'starts_at'}
+                onChange={(e) => patchContent('hero', { countdown_target: e.target.value })}
+                aria-label={t('countdownTarget')}
+              >
+                <option value="starts_at">{t('countdownToStart')}</option>
+                <option value="registration_closes_at">{t('countdownToClose')}</option>
+                <option value="ends_at">{t('countdownToEnd')}</option>
+              </NativeSelect>
+              <p className="field-help">{t('countdownPastHelp')}</p>
+            </div>
             <div className={styles.colorField}>
               <span className="field-label">{t('countdownStyle')}</span>
               <NativeSelect
@@ -1500,15 +1642,33 @@ export function EventPageEditor({ initialEvent }) {
                 {i + 1}
               </div>
               <div className={styles.panelItemFields}>
-                <Field label={t('statValue')}>
-                  {({ id }) => (
-                    <Input
-                      id={id}
-                      placeholder="50+"
-                      value={s.value ?? ''}
-                      onChange={(e) => updateStat({ value: e.target.value })}
-                    />
-                  )}
+                 <Field label={`${t('statValue')} (${previewLocale})`}>
+                  {({ id }) => {
+                    const val = typeof s.value === 'object' ? lv(s.value) : (s.value ?? '')
+                    return (
+                      <Input
+                        id={id}
+                        placeholder="50+"
+                        value={val}
+                        onChange={(e) => {
+                          const text = e.target.value
+                          // Numbers/symbols ("1000+", "20") stay a plain string
+                          // — the same in every language, never translated.
+                          // Words ("Thailand") become a locale map so they can
+                          // be auto-translated per language.
+                          if (!isTranslatableStatValue(text)) {
+                            updateStat({ value: text })
+                            return
+                          }
+                          const currentVal =
+                            typeof s.value === 'object'
+                              ? s.value
+                              : { [event.default_locale || 'en']: s.value ?? '' }
+                          updateStat({ value: setLv(currentVal, text) })
+                        }}
+                      />
+                    )
+                  }}
                 </Field>
                 <Field label={`${t('statLabel')} (${previewLocale})`}>
                   {({ id }) => (
@@ -1703,6 +1863,25 @@ export function EventPageEditor({ initialEvent }) {
           checked={agenda.show_hero_button !== false}
           onCheckedChange={(checked) => patchContent('agenda', { show_hero_button: !!checked })}
         />
+        {agenda.show_hero_button !== false && (
+          <Field label={`${t('viewAgendaButtonText')} (${previewLocale})`}>
+            {({ id }) => (
+              <Input
+                id={id}
+                placeholder={t('viewAgenda')}
+                value={agenda.button_text?.[previewLocale] ?? ''}
+                onChange={(e) =>
+                  patchContent('agenda', {
+                    button_text: {
+                      ...(agenda.button_text ?? {}),
+                      [previewLocale]: e.target.value || undefined,
+                    },
+                  })
+                }
+              />
+            )}
+          </Field>
+        )}
         <input ref={agendaImgInputRef} type="file" accept="image/*" hidden onChange={onAgendaImgFile} />
         {agenda.image_path && (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -2234,6 +2413,11 @@ export function EventPageEditor({ initialEvent }) {
             onChange={setPreviewLocale}
             ariaLabel={t('ariaPreviewLanguage')}
           />
+          {translateState === 'working' && (
+            <span className={styles.translatingNote} aria-live="polite">
+              {t('translating')}
+            </span>
+          )}
           <div className={styles.saveStatus} aria-live="polite">
             {saveState === 'saved' && <span className="badge badge-confirmed">{t('saved')}</span>}
             {saveState === 'error' && <span className="badge badge-cancelled">{t('saveError')}</span>}

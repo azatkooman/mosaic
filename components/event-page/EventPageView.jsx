@@ -289,7 +289,7 @@ export function EventPageView({
     />
   )
   const registerButton = (
-    <RegisterCta editable={editable} registerHref={registerHref} label={t('register')} />
+    <RegisterCta editable={editable} registerHref={registerHref} label={L(theme.register_btn_text) || t('register')} />
   )
 
   // Logo + language switcher bar. Position controls horizontal alignment,
@@ -365,7 +365,7 @@ export function EventPageView({
                 }
           }
         >
-          {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale)}
+          {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, cl)}
           {location ? ` · ${location}` : ''}
         </span>
       )}
@@ -386,7 +386,7 @@ export function EventPageView({
         ) : notOpenYet ? (
           <p className={styles.heroNotice}>
             {t('registrationNotOpen', {
-              date: formatEventDate(event.registration_opens_at, event.timezone, locale),
+              date: formatEventDate(event.registration_opens_at, event.timezone, cl),
             })}
           </p>
         ) : (
@@ -394,7 +394,7 @@ export function EventPageView({
         )}
         {showAgenda && agenda.show_hero_button !== false && (
           <a className={`btn ${styles.heroGhostBtn}`} href="#agenda">
-            {t('viewAgenda')}
+            {L(agenda.button_text) || t('viewAgenda')}
           </a>
         )}
       </div>
@@ -406,9 +406,13 @@ export function EventPageView({
           <Countdown
             targetIso={countdownTarget}
             tone={countdownTone}
-            label={t('countdownLabel')}
+            label={L(hero.countdown_label) || t('countdownLabel')}
             variant={hero.countdown_style || 'minimal'}
             color={hero.countdown_color}
+            labelDays={L(hero.countdown_days_label)}
+            labelHours={L(hero.countdown_hours_label)}
+            labelMinutes={L(hero.countdown_minutes_label)}
+            labelSeconds={L(hero.countdown_seconds_label)}
           />
         </div>
       )}
@@ -448,7 +452,7 @@ export function EventPageView({
                         </span>
                       )}
                       <span className={styles.statText}>
-                        <strong>{s.value}</strong>
+                        <strong>{L(s.value)}</strong>
                         <span>{L(s.label)}</span>
                       </span>
                     </div>

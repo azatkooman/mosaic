@@ -8,7 +8,7 @@ import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { eventQuestionColumns } from '@/lib/event-questions'
+import { eventQuestionBuckets } from '@/lib/event-questions'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 
 export const runtime = 'nodejs'
@@ -19,8 +19,9 @@ export const maxDuration = 60
  *
  * Uses the service-role key to page through all rows, so it FIRST verifies
  * the caller can view the event (RLS does not apply to service role).
- * Columns = fixed fields + the union of question ids across every form
- * version this event ever published, with labels in the requester's locale.
+ * One download per participants tab (`bucket`: individual or group). Columns =
+ * fixed fields + the questions the current version of that bucket's forms asks,
+ * with labels in the requester's locale; rows are restricted to that bucket too.
  */
 export async function GET(request) {
   const rateLimitRes = enforceRateLimit(request, { limit: 10, windowMs: 60000, keyPrefix: 'export' })
@@ -33,6 +34,9 @@ export async function GET(request) {
   const status = url.searchParams.get('status')
   const typeId = url.searchParams.get('typeId')
   const search = url.searchParams.get('q') ?? ''
+  // Which participants list this download is for. Anything but 'group' means
+  // the individual list, so an older link without the param still works.
+  const bucket = url.searchParams.get('bucket') === 'group' ? 'group' : 'individual'
   const sort = { column: url.searchParams.get('sort'), dir: url.searchParams.get('dir') }
   let answerFilters = {}
   try {
@@ -64,7 +68,7 @@ export async function GET(request) {
         .from('form_versions')
         // FK hint required: forms↔form_versions has two relationships.
         .select(
-          'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id )'
+          'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id, registration_mode )'
         )
         .eq('forms.event_id', eventId),
       // Requester's display prefs come from their profile row (the DB is the
@@ -78,8 +82,9 @@ export async function GET(request) {
   }
 
   const typeName = new Map((types ?? []).map((t) => [t.id, lt(t.name, locale, event?.default_locale)]))
-  // Same column set the console list builds, so the download matches the view.
-  const questions = eventQuestionColumns(versions ?? [])
+  // Same column set the console list builds for this tab, so the download
+  // matches the view — including being restricted to that tab's own rows.
+  const { questions, versionIds } = eventQuestionBuckets(versions ?? [])[bucket]
 
   // Column headers and cell literals follow the requester's locale. The
   // wizard namespace is no longer needed here: the first/last/email headers
@@ -107,7 +112,11 @@ export async function GET(request) {
       .eq('event_id', eventId)
       .range(from, from + PAGE - 1)
     // Same filters + sort as the console table, so the file matches the view.
-    q = applyParticipantFilters(q, { status, typeId, search, answerFilters }, questions)
+    q = applyParticipantFilters(
+      q,
+      { status, typeId, search, answerFilters, formVersionIds: versionIds },
+      questions
+    )
     q = applyParticipantSort(q, sort, questions)
     const { data, error } = await q
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -131,7 +140,9 @@ export async function GET(request) {
     dateFmt.dateFormat === 'auto'
       ? new Date().toISOString().slice(0, 10)
       : formatSampleDateSafe(dateFmt.dateFormat)
-  const filename = `${event?.slug ?? 'participants'}-${fileDate}`
+  // The bucket is part of the name so the two downloads never collide in a
+  // Downloads folder, and so it is obvious which list a file holds.
+  const filename = `${event?.slug ?? 'participants'}-${bucket}-${fileDate}`
 
   if (format === 'csv') {
     const csv = [header, ...rows]
@@ -146,7 +157,9 @@ export async function GET(request) {
   }
 
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet(tc('participants'))
+  const sheet = workbook.addWorksheet(
+    tc(bucket === 'group' ? 'bucketGroup' : 'bucketIndividual')
+  )
   sheet.addRow(header)
   sheet.getRow(1).font = { bold: true }
   for (const r of rows) sheet.addRow(r)

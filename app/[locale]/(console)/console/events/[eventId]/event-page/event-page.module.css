@@ -59,6 +59,17 @@
   color: var(--ink-soft);
 }
 
+/* "Translating…" note beside the preview language switcher. */
+.translatingNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--pine-deep);
+  white-space: nowrap;
+}
+
 /* Segmented control (Desktop/Mobile view, language) — boxed and aligned. */
 .localeSwitch {
   display: inline-flex;
@@ -265,24 +276,57 @@
 }
 
 /* Read-only language info (control lives in Settings) */
-.langInfo {
+/* Languages the event offers — one compact row each, default flagged. Managed
+   in Settings, so this is read-only here. */
+.langList {
   display: grid;
-  gap: var(--s-2);
-  margin-bottom: var(--s-2);
+  gap: var(--s-1);
+  margin: var(--s-2) 0 var(--s-3);
+  padding: 0;
+  list-style: none;
 }
 
-.langDefault {
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.customLangRow {
+.langRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--surface-sunken);
+}
+
+.langBadge {
+  flex-shrink: 0;
+  min-width: 2.4rem;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.langName {
+  flex: 1;
+  min-width: 0;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.langTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pine-tint);
+  color: var(--pine-deep);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .langSettingsLink {

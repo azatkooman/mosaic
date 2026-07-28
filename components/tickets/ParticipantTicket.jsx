@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Badge, Button } from '@/components/ui'
+import { useTranslations } from 'next-intl'
+import { Badge, Dialog } from '@/components/ui'
+import styles from './ticket.module.css'
 
 /**
  * Renders a clean SVG QR Code representation for a given payload text.
@@ -90,81 +92,60 @@ function generateQrMatrix(text) {
   return matrix
 }
 
+/**
+ * A confirmed participant's ticket, shown in a centered modal.
+ *
+ * Built on the shared Dialog (Radix, which portals to <body>) rather than a
+ * hand-rolled fixed overlay: the trigger sits inside a registration card that
+ * lifts on hover and hides its overflow, and a fixed element left in that
+ * subtree gets clipped to the card and flickers as `:hover` toggles.
+ */
 export function ParticipantTicket({ participant, eventName }) {
+  const t = useTranslations('ticket')
+  const tCommon = useTranslations('common')
+  const tStatus = useTranslations('status')
   const [open, setOpen] = useState(false)
+
   if (!participant || participant.status !== 'confirmed') return null
 
   const ticketPayload = `mosaic:ticket:${participant.id}`
+  const holder = `${participant.first_name ?? ''} ${participant.last_name ?? ''}`.trim()
 
   return (
-    <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        🎟️ View Ticket
-      </Button>
+    <Dialog
+      open={open}
+      onOpenChange={setOpen}
+      title={t('title')}
+      className={styles.panel}
+      trigger={
+        <button className="btn btn-ghost btn-sm">
+          <span aria-hidden="true">🎟️</span> {t('view')}
+        </button>
+      }
+    >
+      <div className={styles.body}>
+        {eventName && <p className={styles.event}>{eventName}</p>}
 
-      {open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-          onClick={() => setOpen(false)}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              color: '#0f172a',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              maxWidth: '360px',
-              width: '100%',
-              textAlign: 'center',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Event Ticket
-            </div>
-            <h3 style={{ margin: '0.5rem 0 1rem', fontSize: '1.25rem', color: '#0f172a' }}>
-              {eventName}
-            </h3>
-
-            <div
-              style={{
-                display: 'inline-block',
-                padding: '12px',
-                border: '2px solid #e2e8f0',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff',
-                marginBottom: '1rem',
-              }}
-            >
-              <QrCodeSvg value={ticketPayload} size={180} />
-            </div>
-
-            <div style={{ fontSize: '1.125rem', fontWeight: 700 }}>
-              {participant.first_name} {participant.last_name}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.75rem' }}>
-              ID: {participant.id.slice(0, 8)}...
-            </div>
-            <Badge tone="confirmed">CONFIRMED</Badge>
-
-            <div style={{ marginTop: '1.5rem' }}>
-              <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
+        {/* The QR stays on a light plate whatever the page theme is — a
+            dark-on-dark code will not scan. */}
+        <div className={styles.qrPlate}>
+          <QrCodeSvg value={ticketPayload} size={180} />
         </div>
-      )}
-    </>
+
+        {holder && <p className={styles.holder}>{holder}</p>}
+        <p className={styles.muted}>
+          {t('id')}: {participant.id.slice(0, 8)}…
+        </p>
+        <Badge tone="confirmed">{tStatus('confirmed')}</Badge>
+      </div>
+
+      <footer className={styles.foot}>
+        <Dialog.Close asChild>
+          <button type="button" className="btn btn-secondary">
+            {tCommon('close')}
+          </button>
+        </Dialog.Close>
+      </footer>
+    </Dialog>
   )
 }

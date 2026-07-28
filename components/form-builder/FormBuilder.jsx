@@ -70,49 +70,55 @@ export function FormBuilder({
     }
   }, [supportedLocales, defaultLocale, editLocale])
 
+  // Machine-translate into the selected language. The route only sends fields
+  // whose default-language text changed since they were last translated, so
+  // this is cheap to run on every tab switch: an unedited form translates
+  // nothing, an edited heading translates one string, and a language the
+  // organizer just added gets the whole form. `force` ignores that bookkeeping
+  // and retranslates everything, including text a human typed.
+  async function translateLocale(target, { force = false } = {}) {
+    const snapshot = useBuilderStore.getState().definition
+    try {
+      const res = await fetch('/api/translate-form', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          definition: snapshot,
+          source: defaultLocale,
+          targets: [target],
+          // Tell the route the event's full language set so custom-language
+          // content maps (e.g. {en, pt}) are recognized and translated.
+          locales: supportedLocales,
+          force,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) return
+
+      const nextDefinition = data?.translatedDefinition
+      if (!nextDefinition) return
+      const latestDefinition = useBuilderStore.getState().definition
+      if (JSON.stringify(latestDefinition) !== JSON.stringify(snapshot)) {
+        return
+      }
+      // Also persists translation bookkeeping on runs that translated nothing:
+      // adopting provenance for content that predates tracking has to be saved,
+      // or the next run would re-adopt against a by-then-edited source and mark
+      // the stale translation fresh.
+      if (JSON.stringify(nextDefinition) !== JSON.stringify(latestDefinition)) {
+        store.replaceDefinition(nextDefinition)
+      }
+    } catch {
+      // Translation is best-effort; editing must keep working even if the
+      // API key is missing or the request fails.
+    }
+  }
+
   useEffect(() => {
     if (!initialized.current) return
     if (editLocale === defaultLocale) return
     if (supportedLocales && !supportedLocales.includes(editLocale)) return
-
-    let cancelled = false
-
-    async function translateSelectedLocale() {
-      try {
-        const res = await fetch('/api/translate-form', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            definition,
-            source: defaultLocale,
-            targets: [editLocale],
-            // Tell the route the event's full language set so custom-language
-            // content maps (e.g. {en, pt}) are recognized and translated.
-            locales: supportedLocales,
-          }),
-        })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || cancelled) return
-
-        const nextDefinition = data?.translatedDefinition
-        if (!nextDefinition) return
-        const latestDefinition = useBuilderStore.getState().definition
-        if (JSON.stringify(latestDefinition) !== JSON.stringify(definition)) {
-          return
-        }
-        if (JSON.stringify(nextDefinition) !== JSON.stringify(latestDefinition)) {
-          store.replaceDefinition(nextDefinition)
-        }
-      } catch {
-        // Translation is best-effort; editing must keep working even if the
-        // API key is missing or the request fails.
-      }
-    }
-
-    translateSelectedLocale()
-    return () => {
-      cancelled = true
-    }
+    translateLocale(editLocale)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editLocale, defaultLocale, supportedLocales])
 
@@ -267,6 +273,22 @@ export function FormBuilder({
             onChange={setEditLocale}
             ariaLabel={t('ariaEditLanguage')}
           />
+          {editLocale !== defaultLocale && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title={t('translateForceHelp')}
+              onClick={() => {
+                // Destructive: the only path that overwrites translations a
+                // human typed, so make the organizer say yes first.
+                if (window.confirm(t('translateForceConfirm'))) {
+                  translateLocale(editLocale, { force: true })
+                }
+              }}
+            >
+              {t('translateForce')}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={store.undo} aria-label={t('ariaUndo')}>
             ↩
           </Button>

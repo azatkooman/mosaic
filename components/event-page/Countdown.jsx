@@ -9,7 +9,17 @@ import { useTranslations } from 'next-intl'
 // tone: 'light' (over dark cover) | 'dark' (on paper) — default colors.
 // color: explicit color override for numbers (labels get 65% opacity).
 // Hides itself once the target is in the past.
-export function Countdown({ targetIso, tone = 'dark', label, variant = 'minimal', color }) {
+export function Countdown({
+  targetIso,
+  tone = 'dark',
+  label,
+  variant = 'minimal',
+  color,
+  labelDays,
+  labelHours,
+  labelMinutes,
+  labelSeconds,
+}) {
   const t = useTranslations('event')
   const [remaining, setRemaining] = useState(() => diff(targetIso))
 
@@ -25,10 +35,10 @@ export function Countdown({ targetIso, tone = 'dark', label, variant = 'minimal'
   const numColor = color || (light ? '#fff' : 'var(--ink)')
   const lblColor = color || (light ? '#fff' : 'var(--ink)')
   const units = [
-    [remaining.days, t('countdownDays'), 'd'],
-    [remaining.hours, t('countdownHours'), 'h'],
-    [remaining.minutes, t('countdownMinutes'), 'm'],
-    [remaining.seconds, t('countdownSeconds'), 's'],
+    [remaining.days, labelDays || t('countdownDays'), 'd'],
+    [remaining.hours, labelHours || t('countdownHours'), 'h'],
+    [remaining.minutes, labelMinutes || t('countdownMinutes'), 'm'],
+    [remaining.seconds, labelSeconds || t('countdownSeconds'), 's'],
   ]
 
   const labelEl = label && (
