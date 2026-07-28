@@ -117,20 +117,16 @@ export function FormBuilder({
     }
   }
 
-  // Which languages a manual translate covers. On a language tab it is that
-  // language; on the default tab there is no single target, so it means "push
-  // my edits out to all of them" — which is the moment the organizer most wants
-  // it, having just rewritten the source text.
+  // Every language the form is offered in bar the source. Both the manual
+  // action and the on-switch catch-up cover all of them: per-field diffing
+  // means unchanged fields cost nothing, so widening the scope is close to free
+  // and saves the organizer visiting each tab in turn to catch everything up.
   const translateTargets = useMemo(
-    () =>
-      editLocale === defaultLocale
-        ? supportedLocales.filter((l) => l !== defaultLocale)
-        : [editLocale],
-    [editLocale, defaultLocale, supportedLocales]
+    () => supportedLocales.filter((l) => l && l !== defaultLocale),
+    [defaultLocale, supportedLocales]
   )
 
-  // Is anything out of date for those languages? Decides what the button does
-  // and what its tooltip promises.
+  // Only used to phrase the confirm, since the button always forces.
   const hasTranslateUpdates = useMemo(
     () =>
       translateTargets.length > 0 &&
@@ -143,28 +139,28 @@ export function FormBuilder({
     [definition, defaultLocale, translateTargets, supportedLocales]
   )
 
-  // The label stays put so the control is findable; the tooltip carries which
-  // of the two things a click will do.
-  const translateActionHint = hasTranslateUpdates ? t('translateAllHelp') : t('translateForceHelp')
-
-  // The deliberate override; translate-on-switch still handles the common case.
+  // Always destructive — it replaces translations a human typed — so it always
+  // asks. With nothing stale the prompt says that too, so a stray click can't
+  // be mistaken for a routine catch-up.
   function runTranslateAction() {
-    if (hasTranslateUpdates) {
-      translateLocale(translateTargets)
-      return
-    }
-    // Nothing to catch up on, so a click can only mean "redo it all", which
-    // overwrites translations a human typed — warn before doing that.
-    if (window.confirm(t('translateForceNoChangesConfirm'))) {
+    const prompt = hasTranslateUpdates
+      ? t('translateForceConfirm')
+      : t('translateForceNoChangesConfirm')
+    if (window.confirm(prompt)) {
       translateLocale(translateTargets, { force: true })
     }
   }
 
+  // Switching language is the safe pass: it translates the fields whose source
+  // text changed since they were last translated, and nothing else. It covers
+  // every language rather than only the one being switched to, so one switch
+  // brings the whole form up to date instead of demanding a tour of the tabs —
+  // and it fires switching back to the source language too, since by then the
+  // organizer has usually just finished editing it.
   useEffect(() => {
     if (!initialized.current) return
-    if (editLocale === defaultLocale) return
-    if (supportedLocales && !supportedLocales.includes(editLocale)) return
-    translateLocale(editLocale)
+    if (!translateTargets.length) return
+    translateLocale(translateTargets)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editLocale, defaultLocale, supportedLocales])
 
@@ -276,7 +272,13 @@ export function FormBuilder({
     <div className={styles.builder}>
       {/* Palette */}
       <aside className={styles.palette} aria-label={t('addQuestion')}>
-        <h2 className="eyebrow">{t('addQuestion')}</h2>
+        {/* The version rides here rather than in the canvas header: that row has
+            to fit six controls beside a 20rem inspector in a 448px column, and
+            a passive fact was crowding out the actions. */}
+        <div className={styles.paletteHead}>
+          <h2 className="eyebrow">{t('addQuestion')}</h2>
+          <span className={styles.version}>v{versionNumber}</span>
+        </div>
         <div className={styles.paletteGrid}>
           {QUESTION_TYPES.map((type) => (
             <button
@@ -293,46 +295,30 @@ export function FormBuilder({
       {/* Canvas */}
       <section className={styles.canvas}>
         <div className={styles.canvasHead}>
-          <span className={styles.version}>v{versionNumber}</span>
-          <span aria-live="polite" className={styles.saveState}>
-            {saveState === 'saving' && t('draftSaving')}
-            {saveState === 'saved' && t('draftSaved')}
-            {saveState === 'published' && (
-              <strong className="publish-flash" style={{ color: 'var(--success)' }}>
-                {t('formPublished')}
-              </strong>
-            )}
-            {saveState === 'saveFailed' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
-            )}
-            {saveState === 'publishFailed' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
-            )}
-            {saveState === 'publishEmpty' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
-            )}
-          </span>
           <span style={{ flex: 1 }} />
           <LanguagePicker
+            className={styles.langPicker}
             options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
             value={editLocale}
             onChange={setEditLocale}
             ariaLabel={t('ariaEditLanguage')}
+            /* Switching languages is now the only route to the safe pass, so
+               say so somewhere the organizer will actually look. */
+            title={t('ariaLanguageHint')}
           />
           {translateTargets.length > 0 && (
-            // Labelled, not an icon: an unlabelled glyph here was unfindable,
-            // and this is the control an organizer goes looking for right after
-            // editing their source text. The other secondary actions stay icons
-            // to buy it the room. Shown on the default tab too — that is where
-            // the source gets edited, so it is where "translate my changes" is
-            // most wanted, and there it covers every language at once.
+            // The one manual translate action, and it is the destructive one:
+            // catching up edited fields happens by switching language, which
+            // costs nothing when nothing changed. Labelled short because the
+            // row has to hold six controls in a 448px column — the tooltip
+            // carries what it does and points at the cheaper alternative.
             <Button
-              variant={hasTranslateUpdates ? 'secondary' : 'ghost'}
+              variant="ghost"
               size="sm"
-              title={translateActionHint}
+              title={t('translateAllTooltip')}
               onClick={runTranslateAction}
             >
-              {t('translateShort')}
+              {t('translateAllShort')}
             </Button>
           )}
           <Button
@@ -372,6 +358,31 @@ export function FormBuilder({
             <ConfettiBurst burst={publishBurst} />
           </span>
         </div>
+
+        {/* Its own line under the actions rather than inside them: a failed save
+            is the worst thing that can happen in a builder, so it stays next to
+            Publish where it gets noticed instead of in the far-left column — and
+            it can never push Publish sideways from here. Absent when idle. */}
+        {saveState !== 'idle' && (
+          <p aria-live="polite" className={styles.saveStateRow}>
+            {saveState === 'saving' && t('draftSaving')}
+            {saveState === 'saved' && t('draftSaved')}
+            {saveState === 'published' && (
+              <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+                {t('formPublished')}
+              </strong>
+            )}
+            {saveState === 'saveFailed' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+            )}
+            {saveState === 'publishFailed' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
+            )}
+            {saveState === 'publishEmpty' && (
+              <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
+            )}
+          </p>
+        )}
 
         <DndContext
           sensors={sensors}
