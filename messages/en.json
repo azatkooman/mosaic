@@ -600,7 +600,6 @@
     "translateForceHelp": "Ignores what's already translated and redoes every field, including translations you typed yourself.",
     "translateForceConfirm": "Retranslate every field in every language? This replaces translations you typed yourself.",
     "translateForceNoChangesConfirm": "Nothing has changed since the last translation. Retranslate everything from scratch anyway? This replaces translations you typed yourself.",
-    "translateMenu": "Translate…",
     "addLanguage": "+ Add a language",
     "addLanguageConfirm": "Add",
     "cancel": "Cancel",

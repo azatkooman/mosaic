@@ -43,6 +43,14 @@
   align-items: center;
   gap: var(--s-2);
   margin-bottom: var(--s-3);
+  /* Wrap, or the row overflows its grid column and the sticky inspector — a
+     later sibling with an opaque background — paints straight over the tail of
+     it. Publish is the last item, so it was the one that disappeared. */
+  flex-wrap: wrap;
+  /* Once wrapped, keep the controls tucked to the right rather than stranded
+     against the version badge. The flex:1 spacer already handles row one, so
+     this only affects the wrapped rows. */
+  justify-content: flex-end;
 }
 
 .version {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import {
@@ -115,26 +115,30 @@ export function FormBuilder({
     }
   }
 
-  // Manual translate actions for the current language tab, exposed as a dropdown
-  // so the cramped header carries one control, not two. The silent
-  // translate-on-switch still handles the common case; this is the deliberate
-  // override.
-  function runTranslateAction(action) {
-    if (action === 'updates') {
-      const codes = new Set([...LOCALES, ...supportedLocales])
-      // Warn rather than silently do nothing when there is nothing to catch up
-      // on — the organizer asked for an action and deserves an answer.
-      if (!hasStaleTranslations(definition, defaultLocale, [editLocale], codes)) {
-        window.alert(t('translateUpToDate'))
-        return
-      }
+  // Is anything out of date for the language tab being edited? Decides both
+  // what the translate button does and what its tooltip promises.
+  const hasTranslateUpdates = useMemo(
+    () =>
+      editLocale !== defaultLocale &&
+      hasStaleTranslations(definition, defaultLocale, [editLocale], new Set([
+        ...LOCALES,
+        ...supportedLocales,
+      ])),
+    [definition, defaultLocale, editLocale, supportedLocales]
+  )
+
+  const translateActionLabel = hasTranslateUpdates ? t('translateAll') : t('translateForce')
+
+  // The deliberate override; translate-on-switch still handles the common case.
+  function runTranslateAction() {
+    if (hasTranslateUpdates) {
       translateLocale(editLocale)
-    } else if (action === 'force') {
-      // Destructive: the only path that overwrites translations a human typed,
-      // so make the organizer say yes first.
-      if (window.confirm(t('translateForceConfirm'))) {
-        translateLocale(editLocale, { force: true })
-      }
+      return
+    }
+    // Nothing to catch up on, so a click can only mean "redo it all", which
+    // overwrites translations a human typed — warn before doing that.
+    if (window.confirm(t('translateForceNoChangesConfirm'))) {
+      translateLocale(editLocale, { force: true })
     }
   }
 
@@ -298,40 +302,50 @@ export function FormBuilder({
             ariaLabel={t('ariaEditLanguage')}
           />
           {editLocale !== defaultLocale && (
-            // value stays '' so the menu always shows its label, not the last
-            // action picked — it's a menu of actions, not a stateful select.
-            <NativeSelect
-              value=""
-              aria-label={t('translateMenu')}
-              title={t('translateForceHelp')}
-              onChange={(e) => {
-                const action = e.target.value
-                e.target.value = ''
-                runTranslateAction(action)
-              }}
+            // Icon-only: the header has to fit beside a 20rem inspector, and a
+            // native select sized itself to its longest option and swallowed
+            // the row. An icon can't hold two choices, so the action follows
+            // the same rule as the event page — catch up while anything is
+            // stale, otherwise offer the redo. The tooltip names which it is.
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={translateActionLabel}
+              title={translateActionLabel}
+              onClick={runTranslateAction}
             >
-              <option value="" disabled>
-                {t('translateMenu')}
-              </option>
-              <option value="updates">{t('translateAll')}</option>
-              <option value="force">{t('translateForce')}</option>
-            </NativeSelect>
+              <span aria-hidden="true">⇄</span>
+            </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={store.undo} aria-label={t('ariaUndo')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={store.undo}
+            aria-label={t('ariaUndo')}
+            title={t('ariaUndo')}
+          >
             ↩
           </Button>
-          <Button variant="ghost" size="sm" onClick={store.redo} aria-label={t('ariaRedo')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={store.redo}
+            aria-label={t('ariaRedo')}
+            title={t('ariaRedo')}
+          >
             ↪
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
+            aria-label={t('previewForm')}
+            title={t('previewForm')}
             onClick={() => {
               setPreviewAnswers({})
               setPreviewing(true)
             }}
           >
-            {t('previewForm')}
+            <span aria-hidden="true">◱</span>
           </Button>
           <span style={{ position: 'relative', display: 'inline-flex' }}>
             <Button size="sm" onClick={publish}>

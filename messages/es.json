@@ -600,7 +600,6 @@
     "translateForceHelp": "Ignora lo ya traducido y rehace todos los campos, incluidas las traducciones que escribiste tú.",
     "translateForceConfirm": "¿Traducir de nuevo todos los campos en todos los idiomas? Esto reemplazará las traducciones que escribiste tú.",
     "translateForceNoChangesConfirm": "Nada ha cambiado desde la última traducción. ¿Traducir todo de nuevo desde cero de todos modos? Esto reemplazará las traducciones que escribiste tú.",
-    "translateMenu": "Traducir…",
     "addLanguage": "+ Añadir idioma",
     "addLanguageConfirm": "Añadir",
     "cancel": "Cancelar",
