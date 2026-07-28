@@ -138,6 +138,11 @@
     "registeredOn": "Зарегистрирован {date}",
     "eventUnavailable": "Событие больше недоступно"
   },
+  "ticket": {
+    "title": "Билет на событие",
+    "view": "Показать билет",
+    "id": "ID"
+  },
   "console": {
     "title": "Центр событий",
     "dashboard": "Панель",

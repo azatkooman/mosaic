@@ -138,6 +138,11 @@
     "registeredOn": "Зареєстровано {date}",
     "eventUnavailable": "Подія більше недоступна"
   },
+  "ticket": {
+    "title": "Квиток на подію",
+    "view": "Показати квиток",
+    "id": "ID"
+  },
   "console": {
     "title": "Центр подій",
     "dashboard": "Панель",

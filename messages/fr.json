@@ -138,6 +138,11 @@
     "registeredOn": "Inscrit le {date}",
     "eventUnavailable": "L'événement n'est plus disponible"
   },
+  "ticket": {
+    "title": "Billet de l'événement",
+    "view": "Voir le billet",
+    "id": "ID"
+  },
   "console": {
     "title": "Espace événements",
     "dashboard": "Tableau de bord",
