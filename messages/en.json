@@ -585,6 +585,7 @@
     "groupEventDetails": "Event Details",
     "groupHero": "Hero",
     "translateAll": "Auto-translate content",
+    "translateShort": "Translate",
     "translating": "Translating…",
     "translateAllHelp": "Translates your default-language text into the other languages. The first run does every field; after that, only fields you've edited — plus all fields of a language you just added. Text you typed yourself is never overwritten. Review, then Save.",
     "autoTranslateHelp": "Switching to another language translates what changed since last time — everything on the first switch, then only fields you've edited. Anything you typed yourself is kept.",

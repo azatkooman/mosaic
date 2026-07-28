@@ -585,6 +585,7 @@
     "groupEventDetails": "Detalles del evento",
     "groupHero": "Encabezado",
     "translateAll": "Traducir contenido con IA",
+    "translateShort": "Traducir",
     "translating": "Traduciendo…",
     "translateAllHelp": "Traduce el texto de tu idioma predeterminado a los demás idiomas. La primera vez se traducen todos los campos; después, solo los campos que hayas editado, más todos los campos de un idioma que acabes de añadir. El texto que escribiste tú nunca se sobrescribe. Revisa y guarda.",
     "autoTranslateHelp": "Al cambiar a otro idioma se traduce lo que cambió desde la última vez: todo la primera vez y después solo los campos que hayas editado. Lo que escribiste tú se conserva.",

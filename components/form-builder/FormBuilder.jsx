@@ -78,6 +78,8 @@ export function FormBuilder({
   // organizer just added gets the whole form. `force` ignores that bookkeeping
   // and retranslates everything, including text a human typed.
   async function translateLocale(target, { force = false } = {}) {
+    const targets = Array.isArray(target) ? target : [target]
+    if (!targets.length) return
     const snapshot = useBuilderStore.getState().definition
     try {
       const res = await fetch('/api/translate-form', {
@@ -86,7 +88,7 @@ export function FormBuilder({
         body: JSON.stringify({
           definition: snapshot,
           source: defaultLocale,
-          targets: [target],
+          targets,
           // Tell the route the event's full language set so custom-language
           // content maps (e.g. {en, pt}) are recognized and translated.
           locales: supportedLocales,
@@ -115,30 +117,46 @@ export function FormBuilder({
     }
   }
 
-  // Is anything out of date for the language tab being edited? Decides both
-  // what the translate button does and what its tooltip promises.
-  const hasTranslateUpdates = useMemo(
+  // Which languages a manual translate covers. On a language tab it is that
+  // language; on the default tab there is no single target, so it means "push
+  // my edits out to all of them" — which is the moment the organizer most wants
+  // it, having just rewritten the source text.
+  const translateTargets = useMemo(
     () =>
-      editLocale !== defaultLocale &&
-      hasStaleTranslations(definition, defaultLocale, [editLocale], new Set([
-        ...LOCALES,
-        ...supportedLocales,
-      ])),
-    [definition, defaultLocale, editLocale, supportedLocales]
+      editLocale === defaultLocale
+        ? supportedLocales.filter((l) => l !== defaultLocale)
+        : [editLocale],
+    [editLocale, defaultLocale, supportedLocales]
   )
 
-  const translateActionLabel = hasTranslateUpdates ? t('translateAll') : t('translateForce')
+  // Is anything out of date for those languages? Decides what the button does
+  // and what its tooltip promises.
+  const hasTranslateUpdates = useMemo(
+    () =>
+      translateTargets.length > 0 &&
+      hasStaleTranslations(
+        definition,
+        defaultLocale,
+        translateTargets,
+        new Set([...LOCALES, ...supportedLocales])
+      ),
+    [definition, defaultLocale, translateTargets, supportedLocales]
+  )
+
+  // The label stays put so the control is findable; the tooltip carries which
+  // of the two things a click will do.
+  const translateActionHint = hasTranslateUpdates ? t('translateAllHelp') : t('translateForceHelp')
 
   // The deliberate override; translate-on-switch still handles the common case.
   function runTranslateAction() {
     if (hasTranslateUpdates) {
-      translateLocale(editLocale)
+      translateLocale(translateTargets)
       return
     }
     // Nothing to catch up on, so a click can only mean "redo it all", which
     // overwrites translations a human typed — warn before doing that.
     if (window.confirm(t('translateForceNoChangesConfirm'))) {
-      translateLocale(editLocale, { force: true })
+      translateLocale(translateTargets, { force: true })
     }
   }
 
@@ -301,20 +319,20 @@ export function FormBuilder({
             onChange={setEditLocale}
             ariaLabel={t('ariaEditLanguage')}
           />
-          {editLocale !== defaultLocale && (
-            // Icon-only: the header has to fit beside a 20rem inspector, and a
-            // native select sized itself to its longest option and swallowed
-            // the row. An icon can't hold two choices, so the action follows
-            // the same rule as the event page — catch up while anything is
-            // stale, otherwise offer the redo. The tooltip names which it is.
+          {translateTargets.length > 0 && (
+            // Labelled, not an icon: an unlabelled glyph here was unfindable,
+            // and this is the control an organizer goes looking for right after
+            // editing their source text. The other secondary actions stay icons
+            // to buy it the room. Shown on the default tab too — that is where
+            // the source gets edited, so it is where "translate my changes" is
+            // most wanted, and there it covers every language at once.
             <Button
-              variant="ghost"
+              variant={hasTranslateUpdates ? 'secondary' : 'ghost'}
               size="sm"
-              aria-label={translateActionLabel}
-              title={translateActionLabel}
+              title={translateActionHint}
               onClick={runTranslateAction}
             >
-              <span aria-hidden="true">⇄</span>
+              {t('translateShort')}
             </Button>
           )}
           <Button

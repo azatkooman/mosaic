@@ -585,6 +585,7 @@
     "groupEventDetails": "Détails de l'événement",
     "groupHero": "En-tête",
     "translateAll": "Traduire le contenu par IA",
+    "translateShort": "Traduire",
     "translating": "Traduction…",
     "translateAllHelp": "Traduit le texte de votre langue par défaut dans les autres langues. Le premier lancement traite tous les champs ; ensuite, uniquement les champs que vous avez modifiés, plus tous les champs d'une langue que vous venez d'ajouter. Le texte que vous avez saisi n'est jamais remplacé. Vérifiez puis enregistrez.",
     "autoTranslateHelp": "Passer à une autre langue traduit ce qui a changé depuis la dernière fois : tout au premier passage, puis uniquement les champs que vous avez modifiés. Ce que vous avez saisi est conservé.",
