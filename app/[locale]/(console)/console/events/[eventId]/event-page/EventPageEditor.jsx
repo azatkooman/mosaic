@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations, NextIntlClientProvider } from 'next-intl'
 import enMessages from '@/messages/en.json'
 import esMessages from '@/messages/es.json'
@@ -10,7 +10,11 @@ import ukMessages from '@/messages/uk.json'
 import { Link, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales } from '@/lib/i18n/locales'
-import { retranslateDocument, setLocalizedText } from '@/lib/form-localization'
+import {
+  hasStaleTranslations,
+  retranslateDocument,
+  setLocalizedText,
+} from '@/lib/form-localization'
 import { eventMediaUrl } from '@/lib/storage'
 import {
   Button,
@@ -524,6 +528,38 @@ export function EventPageEditor({ initialEvent }) {
     }
   }
 
+  // A single-language event has nowhere to translate INTO. Distinct from "no
+  // fields changed", so the buttons can say which of the two it is.
+  const hasTranslateTargets = availableLocales.some((l) => l && l !== event.default_locale)
+
+  // Is anything out of date for the safe pass? Mirrors the bundle, targets and
+  // codes translateInto builds, so "modified" means exactly what a run would
+  // act on. Recomputed as the organizer edits.
+  const hasTranslateUpdates = useMemo(() => {
+    const source = event.default_locale
+    const customCodes = Array.isArray(content.i18n?.custom)
+      ? content.i18n.custom.map((c) => c.code)
+      : []
+    const targets = availableLocales.filter((l) => l && l !== source)
+    if (!targets.length) return false
+    const bundle = {
+      name: event.name,
+      description: event.description,
+      location: event.location,
+      page_content: normalizeStatValues(event.page_content ?? {}, source),
+    }
+    const codes = new Set([...LOCALES, ...availableLocales, ...customCodes])
+    return hasStaleTranslations(bundle, source, targets, codes)
+  }, [
+    event.name,
+    event.description,
+    event.location,
+    event.page_content,
+    event.default_locale,
+    availableLocales,
+    content.i18n?.custom,
+  ])
+
   // Functional updates: colors/text can change in quick succession, so always
   // derive from the latest state rather than a value captured at render time.
   function patchContent(section, patch) {
@@ -876,6 +912,12 @@ export function EventPageEditor({ initialEvent }) {
     const fg = theme.text_color || (isDark ? '#eceae4' : '#111111')
     const ratio = contrastRatio(fg, bg)
     const lowContrast = ratio != null && ratio < 4.5
+    // Same check for the language switcher, but only once BOTH of its colours
+    // are set: with one unset it tints itself from the hero text, and comparing
+    // against a placeholder would cry wolf about a pairing that never renders.
+    const langRatio =
+      theme.lang_bg && theme.lang_text ? contrastRatio(theme.lang_text, theme.lang_bg) : null
+    const langLowContrast = langRatio != null && langRatio < 4.5
 
     return (
       <>
@@ -989,6 +1031,33 @@ export function EventPageEditor({ initialEvent }) {
             />
           )}
         </Field>
+
+        {/* ---- Language switcher ---- */}
+        <h4 className={styles.panelSubhead}>{t('langSwitcherStyle')}</h4>
+        <div className={styles.colorPair}>
+          <ColorField
+            label={t('langSwitcherBackground')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.lang_bg}
+            defaultValue={isDark ? '#000000' : '#ffffff'}
+            onChange={(c) => setTheme({ lang_bg: c ?? undefined })}
+          />
+          <ColorField
+            label={t('langSwitcherTextColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.lang_text}
+            defaultValue={isDark ? '#ffffff' : '#000000'}
+            onChange={(c) => setTheme({ lang_text: c ?? undefined })}
+          />
+        </div>
+        <p className="field-help">{t('langSwitcherHelp')}</p>
+        {langLowContrast && (
+          <p className={`alert alert-error ${styles.uploadNote}`}>
+            {t('contrastWarning', { ratio: langRatio.toFixed(1) })}
+          </p>
+        )}
 
         {/* ---- Typography ---- */}
         <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>
@@ -1123,14 +1192,33 @@ export function EventPageEditor({ initialEvent }) {
           {t('addLanguagesInSettings')}
         </Link>
         <p className="field-help">{t('autoTranslateHelp')}</p>
-        {/* Switching languages already translates in the background, but that
-            only ever covers the language being switched to. This runs every
-            language at once, on demand, and reports what it did. */}
+        {/* Switching languages already translates in the background, but only
+            into the language being switched to. Both of these run every
+            language at once, on demand, and report what they did.
+
+            Two standing buttons rather than one that renames itself: the label
+            you clicked last time is the label you look for next time, and the
+            safe pass and the destructive redo are different enough decisions
+            that the organizer should pick between them, not have one offered.
+
+            hasTranslateUpdates comes from the same bundle translateInto builds,
+            so "modified" here means exactly what a run would act on. */}
         <Button
           variant="secondary"
           size="sm"
           disabled={translateState === 'working'}
-          onClick={() => translateInto(availableLocales, { announce: true })}
+          onClick={() => {
+            // Say so rather than appearing to work and changing nothing.
+            if (!hasTranslateTargets) {
+              window.alert(t('translateNoTargets'))
+              return
+            }
+            if (!hasTranslateUpdates) {
+              window.alert(t('translateNoChanges'))
+              return
+            }
+            translateInto(availableLocales, { announce: true })
+          }}
         >
           {translateState === 'working' ? t('translating') : t('translateAll')}
         </Button>
@@ -1140,9 +1228,17 @@ export function EventPageEditor({ initialEvent }) {
           size="sm"
           disabled={translateState === 'working'}
           onClick={() => {
-            // Destructive: this is the one path that overwrites translations a
-            // human typed, so make the organizer say yes first.
-            if (window.confirm(t('translateForceConfirm'))) {
+            if (!hasTranslateTargets) {
+              window.alert(t('translateNoTargets'))
+              return
+            }
+            // Always destructive — it overwrites hand-written translations — so
+            // it always asks. When nothing is stale the prompt says that too,
+            // so a stray click can't be mistaken for a routine catch-up.
+            const prompt = hasTranslateUpdates
+              ? t('translateForceConfirm')
+              : t('translateForceNoChangesConfirm')
+            if (window.confirm(prompt)) {
               translateInto(availableLocales, { force: true, announce: true })
             }
           }}

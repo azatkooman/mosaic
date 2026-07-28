@@ -25,6 +25,7 @@ export function LanguagePicker({
   disabled = false,
   variant,
   className = '',
+  title,
 }) {
   if (!Array.isArray(options) || options.length < 2) return null
 
@@ -41,6 +42,7 @@ export function LanguagePicker({
       <select
         className="lang-picker"
         aria-label={ariaLabel}
+        title={title}
         value={value}
         disabled={disabled}
         onChange={handleChange}

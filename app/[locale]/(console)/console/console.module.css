@@ -116,7 +116,15 @@
   gap: var(--s-1);
   border-bottom: 1px solid var(--line);
   margin-bottom: var(--s-5);
+  /* The tabs scroll sideways on phones, where six of them don't fit.
+     overflow-y MUST be stated: an axis cannot stay `visible` while the other
+     scrolls, so declaring overflow-x alone silently computes overflow-y to
+     `auto` as well. The links below sit 1px lower than this box (their
+     margin-bottom pulls the active underline over the border above), and that
+     single pixel was enough to raise a full 15px vertical scrollbar on every
+     event tab. Nothing renders in that pixel, so clipping it costs nothing. */
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .eventNav a {

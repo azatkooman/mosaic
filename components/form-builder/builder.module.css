@@ -41,8 +41,19 @@
 .canvasHead {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  /* Six controls share a ~448px column, and the standard --s-2 leaves the row
+     7px short of fitting. A slightly tighter gap buys it back; wrapping below
+     still catches any locale whose labels run longer. */
+  gap: var(--s-1);
   margin-bottom: var(--s-3);
+  /* Wrap, or the row overflows its grid column and the sticky inspector — a
+     later sibling with an opaque background — paints straight over the tail of
+     it. Publish is the last item, so it was the one that disappeared. */
+  flex-wrap: wrap;
+  /* Once wrapped, keep the controls tucked to the right rather than stranded
+     against the version badge. The flex:1 spacer already handles row one, so
+     this only affects the wrapped rows. */
+  justify-content: flex-end;
 }
 
 .version {
@@ -54,6 +65,27 @@
 .saveState {
   font-size: var(--text-xs);
   color: var(--ink-soft);
+}
+/* Version sits beside the palette heading, baseline-aligned with it. */
+.paletteHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+/* Save state on its own line under the actions: it can't push Publish sideways
+   from here, and it stays beside Publish where a failure gets noticed. */
+.saveStateRow {
+  margin: calc(-1 * var(--s-2)) 0 var(--s-3);
+  text-align: end;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  min-height: 1em;
+}
+/* The picker sizes itself to its longest language name. Clamped so one very
+   long custom language name can't push the row over on its own. */
+.langPicker select {
+  max-width: 8rem;
 }
 
 .questionList {

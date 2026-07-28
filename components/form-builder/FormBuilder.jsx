@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/lib/i18n/navigation'
 import {
@@ -17,7 +17,8 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { lt } from '@/lib/i18n/locales'
+import { LOCALES, lt } from '@/lib/i18n/locales'
+import { hasStaleTranslations } from '@/lib/form-localization'
 import { Button, NativeSelect, ConfettiBurst, LanguagePicker } from '@/components/ui'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
@@ -77,6 +78,8 @@ export function FormBuilder({
   // organizer just added gets the whole form. `force` ignores that bookkeeping
   // and retranslates everything, including text a human typed.
   async function translateLocale(target, { force = false } = {}) {
+    const targets = Array.isArray(target) ? target : [target]
+    if (!targets.length) return
     const snapshot = useBuilderStore.getState().definition
     try {
       const res = await fetch('/api/translate-form', {
@@ -85,7 +88,7 @@ export function FormBuilder({
         body: JSON.stringify({
           definition: snapshot,
           source: defaultLocale,
-          targets: [target],
+          targets,
           // Tell the route the event's full language set so custom-language
           // content maps (e.g. {en, pt}) are recognized and translated.
           locales: supportedLocales,
@@ -114,11 +117,50 @@ export function FormBuilder({
     }
   }
 
+  // Every language the form is offered in bar the source. Both the manual
+  // action and the on-switch catch-up cover all of them: per-field diffing
+  // means unchanged fields cost nothing, so widening the scope is close to free
+  // and saves the organizer visiting each tab in turn to catch everything up.
+  const translateTargets = useMemo(
+    () => supportedLocales.filter((l) => l && l !== defaultLocale),
+    [defaultLocale, supportedLocales]
+  )
+
+  // Only used to phrase the confirm, since the button always forces.
+  const hasTranslateUpdates = useMemo(
+    () =>
+      translateTargets.length > 0 &&
+      hasStaleTranslations(
+        definition,
+        defaultLocale,
+        translateTargets,
+        new Set([...LOCALES, ...supportedLocales])
+      ),
+    [definition, defaultLocale, translateTargets, supportedLocales]
+  )
+
+  // Always destructive — it replaces translations a human typed — so it always
+  // asks. With nothing stale the prompt says that too, so a stray click can't
+  // be mistaken for a routine catch-up.
+  function runTranslateAction() {
+    const prompt = hasTranslateUpdates
+      ? t('translateForceConfirm')
+      : t('translateForceNoChangesConfirm')
+    if (window.confirm(prompt)) {
+      translateLocale(translateTargets, { force: true })
+    }
+  }
+
+  // Switching language is the safe pass: it translates the fields whose source
+  // text changed since they were last translated, and nothing else. It covers
+  // every language rather than only the one being switched to, so one switch
+  // brings the whole form up to date instead of demanding a tour of the tabs —
+  // and it fires switching back to the source language too, since by then the
+  // organizer has usually just finished editing it.
   useEffect(() => {
     if (!initialized.current) return
-    if (editLocale === defaultLocale) return
-    if (supportedLocales && !supportedLocales.includes(editLocale)) return
-    translateLocale(editLocale)
+    if (!translateTargets.length) return
+    translateLocale(translateTargets)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editLocale, defaultLocale, supportedLocales])
 
@@ -230,7 +272,13 @@ export function FormBuilder({
     <div className={styles.builder}>
       {/* Palette */}
       <aside className={styles.palette} aria-label={t('addQuestion')}>
-        <h2 className="eyebrow">{t('addQuestion')}</h2>
+        {/* The version rides here rather than in the canvas header: that row has
+            to fit six controls beside a 20rem inspector in a 448px column, and
+            a passive fact was crowding out the actions. */}
+        <div className={styles.paletteHead}>
+          <h2 className="eyebrow">{t('addQuestion')}</h2>
+          <span className={styles.version}>v{versionNumber}</span>
+        </div>
         <div className={styles.paletteGrid}>
           {QUESTION_TYPES.map((type) => (
             <button
@@ -247,8 +295,76 @@ export function FormBuilder({
       {/* Canvas */}
       <section className={styles.canvas}>
         <div className={styles.canvasHead}>
-          <span className={styles.version}>v{versionNumber}</span>
-          <span aria-live="polite" className={styles.saveState}>
+          <span style={{ flex: 1 }} />
+          <LanguagePicker
+            className={styles.langPicker}
+            options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
+            value={editLocale}
+            onChange={setEditLocale}
+            ariaLabel={t('ariaEditLanguage')}
+            /* Switching languages is now the only route to the safe pass, so
+               say so somewhere the organizer will actually look. */
+            title={t('ariaLanguageHint')}
+          />
+          {translateTargets.length > 0 && (
+            // The one manual translate action, and it is the destructive one:
+            // catching up edited fields happens by switching language, which
+            // costs nothing when nothing changed. Labelled short because the
+            // row has to hold six controls in a 448px column — the tooltip
+            // carries what it does and points at the cheaper alternative.
+            <Button
+              variant="ghost"
+              size="sm"
+              title={t('translateAllTooltip')}
+              onClick={runTranslateAction}
+            >
+              {t('translateAllShort')}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={store.undo}
+            aria-label={t('ariaUndo')}
+            title={t('ariaUndo')}
+          >
+            ↩
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={store.redo}
+            aria-label={t('ariaRedo')}
+            title={t('ariaRedo')}
+          >
+            ↪
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={t('previewForm')}
+            title={t('previewForm')}
+            onClick={() => {
+              setPreviewAnswers({})
+              setPreviewing(true)
+            }}
+          >
+            <span aria-hidden="true">◱</span>
+          </Button>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <Button size="sm" onClick={publish}>
+              {t('publishForm')}
+            </Button>
+            <ConfettiBurst burst={publishBurst} />
+          </span>
+        </div>
+
+        {/* Its own line under the actions rather than inside them: a failed save
+            is the worst thing that can happen in a builder, so it stays next to
+            Publish where it gets noticed instead of in the far-left column — and
+            it can never push Publish sideways from here. Absent when idle. */}
+        {saveState !== 'idle' && (
+          <p aria-live="polite" className={styles.saveStateRow}>
             {saveState === 'saving' && t('draftSaving')}
             {saveState === 'saved' && t('draftSaved')}
             {saveState === 'published' && (
@@ -265,53 +381,8 @@ export function FormBuilder({
             {saveState === 'publishEmpty' && (
               <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
             )}
-          </span>
-          <span style={{ flex: 1 }} />
-          <LanguagePicker
-            options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
-            value={editLocale}
-            onChange={setEditLocale}
-            ariaLabel={t('ariaEditLanguage')}
-          />
-          {editLocale !== defaultLocale && (
-            <Button
-              variant="ghost"
-              size="sm"
-              title={t('translateForceHelp')}
-              onClick={() => {
-                // Destructive: the only path that overwrites translations a
-                // human typed, so make the organizer say yes first.
-                if (window.confirm(t('translateForceConfirm'))) {
-                  translateLocale(editLocale, { force: true })
-                }
-              }}
-            >
-              {t('translateForce')}
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={store.undo} aria-label={t('ariaUndo')}>
-            ↩
-          </Button>
-          <Button variant="ghost" size="sm" onClick={store.redo} aria-label={t('ariaRedo')}>
-            ↪
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setPreviewAnswers({})
-              setPreviewing(true)
-            }}
-          >
-            {t('previewForm')}
-          </Button>
-          <span style={{ position: 'relative', display: 'inline-flex' }}>
-            <Button size="sm" onClick={publish}>
-              {t('publishForm')}
-            </Button>
-            <ConfettiBurst burst={publishBurst} />
-          </span>
-        </div>
+          </p>
+        )}
 
         <DndContext
           sensors={sensors}
