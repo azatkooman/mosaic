@@ -912,6 +912,12 @@ export function EventPageEditor({ initialEvent }) {
     const fg = theme.text_color || (isDark ? '#eceae4' : '#111111')
     const ratio = contrastRatio(fg, bg)
     const lowContrast = ratio != null && ratio < 4.5
+    // Same check for the language switcher, but only once BOTH of its colours
+    // are set: with one unset it tints itself from the hero text, and comparing
+    // against a placeholder would cry wolf about a pairing that never renders.
+    const langRatio =
+      theme.lang_bg && theme.lang_text ? contrastRatio(theme.lang_text, theme.lang_bg) : null
+    const langLowContrast = langRatio != null && langRatio < 4.5
 
     return (
       <>
@@ -1025,6 +1031,33 @@ export function EventPageEditor({ initialEvent }) {
             />
           )}
         </Field>
+
+        {/* ---- Language switcher ---- */}
+        <h4 className={styles.panelSubhead}>{t('langSwitcherStyle')}</h4>
+        <div className={styles.colorPair}>
+          <ColorField
+            label={t('langSwitcherBackground')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.lang_bg}
+            defaultValue={isDark ? '#000000' : '#ffffff'}
+            onChange={(c) => setTheme({ lang_bg: c ?? undefined })}
+          />
+          <ColorField
+            label={t('langSwitcherTextColor')}
+            addLabel={t('addColor')}
+            resetLabel={t('resetColor')}
+            value={theme.lang_text}
+            defaultValue={isDark ? '#ffffff' : '#000000'}
+            onChange={(c) => setTheme({ lang_text: c ?? undefined })}
+          />
+        </div>
+        <p className="field-help">{t('langSwitcherHelp')}</p>
+        {langLowContrast && (
+          <p className={`alert alert-error ${styles.uploadNote}`}>
+            {t('contrastWarning', { ratio: langRatio.toFixed(1) })}
+          </p>
+        )}
 
         {/* ---- Typography ---- */}
         <h4 className={styles.panelSubhead}>{t('groupTypography')}</h4>

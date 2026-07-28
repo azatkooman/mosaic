@@ -610,11 +610,17 @@
   font-weight: 400;
 }
 
-/* Hero variant: sits on organizer-chosen photos and brand colours, so inherit
-   the surrounding colour instead of painting a solid control. */
+/* Hero variant: sits on organizer-chosen photos and brand colours, so by
+   default it inherits the surrounding colour instead of painting a solid
+   control — a tint of currentColor reads against whatever is behind it.
+   --ep-lang-text / --ep-lang-bg override that when the organizer picks their
+   own; the fallbacks are what keep an untouched page looking untouched.
+   Colour is set first on purpose, so a chosen text colour re-tints the border
+   and background through currentColor without needing all three picked. */
 .lang-picker-wrap[data-variant='hero'] .lang-picker {
-  border-color: color-mix(in srgb, currentColor 35%, transparent);
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--ep-lang-text, inherit);
+  border-color: var(--ep-lang-border, color-mix(in srgb, currentColor 35%, transparent));
+  background: var(--ep-lang-bg, color-mix(in srgb, currentColor 12%, transparent));
   font-weight: 700;
   letter-spacing: 0.04em;
 }
