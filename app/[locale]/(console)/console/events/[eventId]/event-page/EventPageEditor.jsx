@@ -528,9 +528,13 @@ export function EventPageEditor({ initialEvent }) {
     }
   }
 
+  // A single-language event has nowhere to translate INTO. Distinct from "no
+  // fields changed", so the buttons can say which of the two it is.
+  const hasTranslateTargets = availableLocales.some((l) => l && l !== event.default_locale)
+
   // Is anything out of date for the safe pass? Mirrors the bundle, targets and
-  // codes translateInto builds, so the button's label reflects what a click
-  // would really do. Recomputed as the organizer edits.
+  // codes translateInto builds, so "modified" means exactly what a run would
+  // act on. Recomputed as the organizer edits.
   const hasTranslateUpdates = useMemo(() => {
     const source = event.default_locale
     const customCodes = Array.isArray(content.i18n?.custom)
@@ -1155,46 +1159,60 @@ export function EventPageEditor({ initialEvent }) {
           {t('addLanguagesInSettings')}
         </Link>
         <p className="field-help">{t('autoTranslateHelp')}</p>
-        {/* Switching languages already translates in the background, but that
-            only ever covers the language being switched to. This runs every
-            language at once, on demand, and reports what it did.
+        {/* Switching languages already translates in the background, but only
+            into the language being switched to. Both of these run every
+            language at once, on demand, and report what they did.
 
-            One button, two modes: while anything is out of date it does the
-            safe pass; once everything is current the same button becomes the
-            forced redo — because a redo is the only thing left worth doing.
-            hasTranslateUpdates is derived from the same bundle translateInto
-            builds, so the label always matches what a click will actually do. */}
-        {hasTranslateUpdates ? (
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={translateState === 'working'}
-              onClick={() => translateInto(availableLocales, { announce: true })}
-            >
-              {translateState === 'working' ? t('translating') : t('translateAll')}
-            </Button>
-            <p className="field-help">{t('translateAllHelp')}</p>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={translateState === 'working'}
-              onClick={() => {
-                // Nothing is stale, so a click here can only mean "redo it all",
-                // which overwrites translations a human typed — warn first.
-                if (window.confirm(t('translateForceNoChangesConfirm'))) {
-                  translateInto(availableLocales, { force: true, announce: true })
-                }
-              }}
-            >
-              {translateState === 'working' ? t('translating') : t('translateForce')}
-            </Button>
-            <p className="field-help">{t('translateForceHelp')}</p>
-          </>
-        )}
+            Two standing buttons rather than one that renames itself: the label
+            you clicked last time is the label you look for next time, and the
+            safe pass and the destructive redo are different enough decisions
+            that the organizer should pick between them, not have one offered.
+
+            hasTranslateUpdates comes from the same bundle translateInto builds,
+            so "modified" here means exactly what a run would act on. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={translateState === 'working'}
+          onClick={() => {
+            // Say so rather than appearing to work and changing nothing.
+            if (!hasTranslateTargets) {
+              window.alert(t('translateNoTargets'))
+              return
+            }
+            if (!hasTranslateUpdates) {
+              window.alert(t('translateNoChanges'))
+              return
+            }
+            translateInto(availableLocales, { announce: true })
+          }}
+        >
+          {translateState === 'working' ? t('translating') : t('translateAll')}
+        </Button>
+        <p className="field-help">{t('translateAllHelp')}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={translateState === 'working'}
+          onClick={() => {
+            if (!hasTranslateTargets) {
+              window.alert(t('translateNoTargets'))
+              return
+            }
+            // Always destructive — it overwrites hand-written translations — so
+            // it always asks. When nothing is stale the prompt says that too,
+            // so a stray click can't be mistaken for a routine catch-up.
+            const prompt = hasTranslateUpdates
+              ? t('translateForceConfirm')
+              : t('translateForceNoChangesConfirm')
+            if (window.confirm(prompt)) {
+              translateInto(availableLocales, { force: true, announce: true })
+            }
+          }}
+        >
+          {t('translateForce')}
+        </Button>
+        <p className="field-help">{t('translateForceHelp')}</p>
         {translateMsg && (
           <p
             className={`alert ${translateState === 'error' ? 'alert-error' : 'alert-success'} ${styles.uploadNote}`}
