@@ -2,17 +2,22 @@
 --
 -- 0023 added a duplicate-registration guard: a second submission for the same
 -- event by the same account was refused while an earlier one still had a
--- non-cancelled participant, with an exemption for registrars (the
--- add-registrants privilege or any global role). In practice registrants need
--- to sign up other people (family, colleagues, walk-ins they're hosting)
--- without holding an organizer privilege, so the guard is dropped here for
--- everyone.
+-- non-cancelled participant, exempting only registrars (the add-registrants
+-- privilege or any global role). In practice registrants need to sign up other
+-- people (family, colleagues) without holding an organizer privilege, so the
+-- guard is dropped here for everyone.
 --
--- This recreates submit_registration exactly as 0023 defined it, minus the
--- duplicate-registration check. Every other server-side check is retained:
--- authentication, known registrant, payload size, event published/not-deleted,
--- registration window, per-type min/max, published-form-version ownership,
--- capacity/waitlist, and the concurrency locks.
+-- This recreates submit_registration exactly as 0031 left it -- registration
+-- number allocation, the profile snapshot, and the unconditional event-row
+-- lock all intact -- with only the duplicate-registration block removed.
+-- Rebasing on 0031 rather than 0023 matters: the seq / reg_seq / member_index
+-- columns are NOT NULL, so a function body without the allocation logic would
+-- fail every insert.
+--
+-- Every other server-side check is retained: authentication, known registrant,
+-- payload size, event published/not-deleted, registration window, per-type
+-- min/max, published-form-version ownership, capacity/waitlist, and the
+-- concurrency locks.
 
 create or replace function public.submit_registration(
   p_event_id uuid,
@@ -36,6 +41,10 @@ declare
   v_new_id uuid;
   v_results jsonb := '[]'::jsonb;
   v_group record;
+  v_seq integer;
+  v_member_index integer := 0;
+  v_profile_name text;
+  v_profile_email text;
 begin
   if v_uid is null then
     raise exception 'authentication required' using errcode = '42501';
@@ -81,7 +90,10 @@ begin
   end loop;
 
   -- Serialize concurrent submissions: lock involved type rows in id order,
-  -- then the event row when event-wide capacity applies.
+  -- then the event row. The event lock used to be taken only when event-wide
+  -- capacity applied; it is now unconditional because allocating the next
+  -- per-event `seq` needs the same serialization (two submissions with
+  -- disjoint participant types share no type row to lock behind).
   perform 1 from participant_types
     where id in (
       select distinct (x->>'participant_type_id')::uuid
@@ -89,15 +101,24 @@ begin
     )
     order by id
     for update;
-  if v_event.capacity is not null then
-    perform 1 from events where id = p_event_id for update;
-  end if;
+  perform 1 from events where id = p_event_id for update;
 
-  insert into registrations (event_id, registered_by, locale)
-  values (p_event_id, v_uid, coalesce(p_locale, 'en'))
+  select coalesce(max(seq), 0) + 1 into v_seq
+    from registrations where event_id = p_event_id;
+
+  -- Snapshot of who submitted. full_name is nullable (magic-link sign-ins
+  -- carry no name); the empty string is normalized away so the console can
+  -- fall back to a placeholder.
+  select nullif(trim(coalesce(full_name, '')), ''), email
+    into v_profile_name, v_profile_email
+    from profiles where id = v_uid;
+
+  insert into registrations (event_id, registered_by, locale, seq)
+  values (p_event_id, v_uid, coalesce(p_locale, 'en'), v_seq)
   returning id into v_registration_id;
 
   for v_p in select * from jsonb_array_elements(p_participants) loop
+    v_member_index := v_member_index + 1;
     select * into v_type from participant_types
       where id = (v_p->>'participant_type_id')::uuid and event_id = p_event_id;
     if not found then
@@ -130,24 +151,31 @@ begin
 
     insert into participants (
       registration_id, event_id, participant_type_id, form_version_id,
-      status, first_name, last_name, email, answers, waitlisted_at
+      status, first_name, last_name, email, answers, waitlisted_at,
+      reg_seq, member_index, profile_name, profile_email
     ) values (
       v_registration_id, p_event_id, v_type.id,
       (v_p->>'form_version_id')::uuid,
       v_status,
       trim(coalesce(v_p->>'first_name', '')), trim(coalesce(v_p->>'last_name', '')), nullif(trim(coalesce(v_p->>'email', '')), ''),
       coalesce(v_p->'answers', '{}'::jsonb),
-      case when v_status = 'waitlisted' then now() end
+      case when v_status = 'waitlisted' then now() end,
+      v_seq, v_member_index, v_profile_name, v_profile_email
     ) returning id into v_new_id;
 
     v_results := v_results || jsonb_build_object(
       'participant_id', v_new_id,
       'first_name', trim(coalesce(v_p->>'first_name', '')),
+      'reg_no', v_seq || '.' || v_member_index,
       'status', v_status
     );
   end loop;
 
-  return jsonb_build_object('registration_id', v_registration_id, 'participants', v_results);
+  return jsonb_build_object(
+    'registration_id', v_registration_id,
+    'reg_seq', v_seq,
+    'participants', v_results
+  );
 end;
 $$;
 
