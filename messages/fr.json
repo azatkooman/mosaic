@@ -132,6 +132,7 @@
     "title": "Mes inscriptions",
     "empty": "Vous ne vous êtes encore inscrit à aucun événement.",
     "browseEvents": "Voir les événements",
+    "addAnother": "Inscrire une autre personne",
     "cancelParticipant": "Annuler ce participant",
     "cancelConfirm": "Annuler {name} ? Une personne sur liste d'attente pourrait prendre cette place.",
     "registeredOn": "Inscrit le {date}",

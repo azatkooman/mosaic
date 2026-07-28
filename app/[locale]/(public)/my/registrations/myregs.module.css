@@ -202,3 +202,11 @@
   align-items: center;
   gap: var(--s-2);
 }
+
+.cardActions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+}

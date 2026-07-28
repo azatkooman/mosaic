@@ -135,6 +135,19 @@ export default async function MyRegistrationsPage({ params }) {
                   </li>
                 ))}
               </ul>
+              {/* Repeat registrations are allowed (0031 dropped the duplicate
+                  guard) so a registrant can sign up other people. Gated on the
+                  registration window, same as the per-participant edits. */}
+              {editable && (
+                <div className={styles.cardActions}>
+                  <Link
+                    href={`/events/${reg.events.slug}/register`}
+                    className="btn btn-secondary"
+                  >
+                    {t('myRegs.addAnother')}
+                  </Link>
+                </div>
+              )}
             </li>
           )})}
         </ul>

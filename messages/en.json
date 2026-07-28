@@ -132,6 +132,7 @@
     "title": "My registrations",
     "empty": "You have not registered for any events yet.",
     "browseEvents": "Browse events",
+    "addAnother": "Register someone else",
     "cancelParticipant": "Cancel this participant",
     "cancelConfirm": "Cancel {name}? A waitlisted participant may take this spot.",
     "registeredOn": "Registered {date}",
