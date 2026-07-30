@@ -1,6 +1,6 @@
 # Mosaic
 
-Event registration for Cru — conferences, camps and gatherings, with flexible
+Event registration — conferences, camps and gatherings, with flexible
 multilingual registration forms, group (family) registration, capacity +
 waitlists, and an organizer console with filtering and Excel export.
 
@@ -85,7 +85,7 @@ After your first real sign-in, grant yourself admin in the SQL editor:
 insert into user_roles (user_id, org_id, role)
 select u.id, o.id, 'admin'
 from auth.users u, organizations o
-where u.email = 'you@cru.org';
+where u.email = 'you@example.org';
 ```
 
 Admins can create events and add per-event organizers/viewers from the
