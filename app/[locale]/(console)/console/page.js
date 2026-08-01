@@ -74,30 +74,32 @@ export default async function ConsoleHome({ params }) {
       {events.length === 0 ? (
         <p className="alert alert-info">{t('console.noMyEvents')}</p>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap table-cards">
+          {/* table-cards: below 40rem each row stacks into a labelled card,
+              so the status badges aren't stranded off the right edge. */}
           <table className="table">
             <thead>
               <tr>
                 <th>{t('console.eventName')}</th>
                 <th>{t('console.startsAt')}</th>
                 <th>{t('console.participants')}</th>
-                <th></th>
+                <th>{t('console.status')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {events.map((event) => (
                 <tr key={event.id}>
-                  <td>
+                  <td data-cell="title">
                     <Link href={`/console/events/${event.id}`}>
                       <strong>{lt(event.name, locale, event.default_locale)}</strong>
                     </Link>
                   </td>
-                  <td>
+                  <td data-label={t('console.startsAt')}>
                     {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale, dateFmt)}
                   </td>
-                  <td>{totals.get(event.id) ?? 0}</td>
-                  <td>
+                  <td data-label={t('console.participants')}>{totals.get(event.id) ?? 0}</td>
+                  <td data-label={t('console.status')}>
                     <span style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <Badge tone={event.status}>{t(`status.${event.status}`)}</Badge>
                       {event.status === 'published' && (
@@ -107,7 +109,7 @@ export default async function ConsoleHome({ params }) {
                       )}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'end' }}>
+                  <td data-cell="actions">
                     {(isAdmin || event.created_by === user.id) && (
                       <DeleteEventButton
                         eventId={event.id}

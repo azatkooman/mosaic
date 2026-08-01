@@ -283,8 +283,94 @@
   border-bottom: none;
 }
 
+/* Row controls sit at the trailing edge on wide screens; the stacked-card
+   rules below re-align them once the row becomes a card. */
+.table td[data-cell='actions'] {
+  text-align: end;
+}
+
 .table tbody tr:hover {
   background: color-mix(in srgb, var(--surface-sunken) 55%, transparent);
+}
+
+/* Stacked table rows for narrow screens.
+   `overflow-x: auto` alone means a phone can only scroll a wide table
+   sideways, which pushes whichever column carries the row's meaning off the
+   edge — on the events list the status badges simply weren't reachable. Add
+   `table-cards` to the .table-wrap and a data-label to each <td>; below 40rem
+   every row becomes a labelled card instead of a scroll strip.
+   The wrapper carries the class (rather than :has() on the table) so this
+   works on every browser the app targets. */
+@media (max-width: 40rem) {
+  .table-cards {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .table-cards .table,
+  .table-cards tbody,
+  .table-cards tr,
+  .table-cards td {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tbody tr {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    padding: var(--s-4);
+  }
+
+  .table-cards tbody tr + tr {
+    margin-block-start: var(--s-3);
+  }
+
+  /* The row is a card now, so the hover wash reads as a selection bug. */
+  .table-cards tbody tr:hover {
+    background: var(--surface);
+  }
+
+  .table-cards td {
+    border: none;
+    padding: 0;
+  }
+
+  .table-cards td + td {
+    margin-block-start: var(--s-3);
+  }
+
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+    margin-block-end: 0.15rem;
+  }
+
+  /* The row's headline — first cell, no label, sized to lead the card. */
+  .table-cards td[data-cell='title'] {
+    font-size: var(--text-lg);
+    line-height: 1.3;
+  }
+
+  .table-cards td[data-cell='actions'] {
+    text-align: end;
+  }
+
+  /* A conditionally-rendered cell (e.g. a delete button the viewer may not
+     be allowed to see) would otherwise leave a gap in the card. */
+  .table-cards td:empty {
+    display: none;
+  }
 }
 
 /* --- Dialog (Radix) --- */
