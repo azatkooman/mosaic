@@ -2,6 +2,15 @@
   display: flow-root;
   background: var(--ep-bg, var(--paper));
   color: var(--ep-text, var(--ink));
+  /* The sections below size themselves against THIS box, not the viewport.
+     Two reasons. The console's Desktop/Mobile preview constrains the frame to
+     390px, and viewport queries ignored that — "Mobile" rendered the desktop
+     layout squeezed, so organizers could not actually check the phone view.
+     And 56rem is 896px, so every iPad in portrait (768–834px) was being
+     served the phone layout on the real site.
+     Container queries are supported wherever color-mix() is (which --focus-ring
+     already depends on), so this adds no browser floor. */
+  container: eventPage / inline-size;
 }
 
 /* --- Global layout/shape/scale tokens (scoped to the event page) --- */
@@ -388,7 +397,9 @@
   align-items: stretch;
 }
 
-@media (min-width: 56rem) {
+/* 48rem (768px), not 56rem: an iPad in portrait is 768–834px and was
+   getting the phone layout. Text beside media is comfortable from here. */
+@container eventPage (min-width: 48rem) {
   .aboutGrid {
     grid-template-columns: 1.1fr 0.9fr;
   }
@@ -814,7 +825,7 @@
   min-height: 20rem;
 }
 
-@media (min-width: 56rem) {
+@container eventPage (min-width: 56rem) {
   .heroSplitInner {
     grid-template-columns: 1fr 1fr;
     min-height: 32rem;

@@ -16,17 +16,13 @@ import {
   PreferenceDateInput,
 } from '@/components/ui'
 import { FileUploadField } from './FileUploadField'
+import styles from './form-runtime.module.css'
 
 const subLabelStyle = {
   fontSize: 'var(--text-xs)',
   color: 'var(--ink-soft)',
   display: 'block',
   marginBottom: '0.25rem',
-}
-const subGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(9rem, 1fr))',
-  gap: 'var(--s-3, 0.75rem)',
 }
 
 /** Renders one question of any type. Value semantics per type:
@@ -102,7 +98,7 @@ export function QuestionField({
       return (
         <Field {...common}>
           {({ id, describedBy, invalid }) => (
-            <div style={{ display: 'flex', gap: 'var(--s-2, 0.5rem)' }}>
+            <div className={styles.phoneRow}>
               <NativeSelect
                 aria-label={tr('phoneCountryCode')}
                 value={selectedIso}
@@ -114,15 +110,20 @@ export function QuestionField({
               >
                 <option value="">{tr('phoneCountryCode')}</option>
                 {dialOptions.map((o) => (
+                  /* Code first: a native select can't ellipsise, and at 45% of
+                     a phone screen "Bosnia and Herzegovina (+387)" clips well
+                     before the code — the one part the user must be able to
+                     check. Leading with it means clipping eats the name. */
                   <option key={o.iso} value={o.iso}>
-                    {o.name} ({o.code})
+                    {o.code} {o.name}
                   </option>
                 ))}
               </NativeSelect>
               <Input
                 id={id}
                 type="tel"
-                style={{ flex: 1 }}
+                inputMode="tel"
+                autoComplete="tel-national"
                 value={phone.number ?? ''}
                 aria-describedby={describedBy}
                 aria-invalid={invalid}
@@ -147,7 +148,7 @@ export function QuestionField({
       return (
         <Field {...common}>
           {({ describedBy, invalid }) => (
-            <div style={subGridStyle} role="group" aria-label={label}>
+            <div className={styles.subGrid} role="group" aria-label={label}>
               {parts.map((key) => (
                 <label key={key}>
                   <span style={subLabelStyle}>{partLabel[key]}</span>
@@ -189,7 +190,7 @@ export function QuestionField({
                   />
                 </label>
               ))}
-              <div style={subGridStyle}>
+              <div className={styles.subGrid}>
                 {parts.filter((p) => !wide.has(p.key)).map((p) => (
                   <label key={p.key}>
                     <span style={subLabelStyle}>

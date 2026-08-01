@@ -194,9 +194,16 @@
   border: 0;
   display: block;
 }
-@media (max-width: 40rem) {
+@container eventPage (max-width: 40rem) {
   .galleryGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Between phone and desktop, four tiles are too small to read. */
+@container eventPage (min-width: 40rem) and (max-width: 56rem) {
+  .galleryGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -258,7 +265,8 @@
   gap: var(--s-5);
   align-items: start;
 }
-@media (min-width: 56rem) {
+/* Tablet portrait gets the address beside the map — see .aboutGrid. */
+@container eventPage (min-width: 48rem) {
   .mapGrid {
     grid-template-columns: 0.8fr 1.2fr;
   }
