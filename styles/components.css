@@ -448,7 +448,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(92vw, 34rem);
-  max-height: 85vh;
+  /* dvh, not vh: on iOS the expanded URL bar makes 100vh taller than what's
+     actually on screen, so a tall dialog ran off the bottom. */
+  max-height: 85dvh;
   overflow-y: auto;
   background: var(--surface);
   border-radius: var(--r-lg);

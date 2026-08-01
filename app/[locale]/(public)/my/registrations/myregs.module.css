@@ -201,4 +201,16 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
+  /* Badge + ticket + edit + cancel is wider than a phone card; without this
+     the row cannot give way and .regCard's overflow:hidden clips whatever
+     lands last — which was Cancel, in every language. */
+  flex-wrap: wrap;
+}
+
+@media (max-width: 40rem) {
+  .participants li {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-2);
+  }
 }

@@ -63,7 +63,7 @@
 }
 
 /* A privilege toggle that can't be changed reads as static, not clickable. */
-.privList .choice-row[data-disabled='true'] {
+.privList :global(.choice-row)[data-disabled='true'] {
   cursor: default;
   opacity: 0.7;
 }
