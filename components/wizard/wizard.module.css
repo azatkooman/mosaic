@@ -43,22 +43,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-.nameGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-4);
-}
-
-.nameGrid > :last-child {
-  grid-column: 1 / -1;
-}
-
 .nav {
   display: flex;
   justify-content: space-between;
+  /* .btn is white-space: nowrap, so without a gap and a wrap the Back and
+     Submit buttons run into each other — the Russian and Ukrainian labels
+     ("Отправить регистрацию") are ~200px on their own. */
+  flex-wrap: wrap;
+  gap: var(--s-3);
   margin-top: var(--s-4);
   padding-top: var(--s-4);
   border-top: 1px solid var(--line);
+}
+
+/* Once wrapped, a lone button should own the row rather than sit half-width. */
+.nav > :only-child {
+  margin-inline-start: auto;
 }
 
 .reviewList {
@@ -99,8 +99,7 @@
   background: var(--surface);
 }
 
-@media (max-width: 560px) {
-  .nameGrid {
-    grid-template-columns: 1fr;
-  }
-}
+/* (A `.nameGrid` rule lived here and was the wizard's only media query. No
+   JSX ever referenced the class — QuestionField builds the name layout
+   itself — so it styled nothing. That layout is now `.subGrid` in
+   form-runtime.module.css, which does collapse on narrow screens.) */

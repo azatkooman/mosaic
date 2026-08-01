@@ -1,5 +1,12 @@
 /* Mosaic design tokens. Every component derives from these. */
 :root {
+  /* Tells the browser to theme what CSS can't reach: the <select> dropdown
+     popup, the date picker, the file-input button, form-control focus rings
+     and scrollbars. Without it a dark page opens a white 250-entry dial-code
+     list. Mirrors the three-way theme resolution below. */
+  color-scheme: light;
+  accent-color: var(--pine);
+
   /* Palette */
   --paper: #faf9f6;
   --surface: #ffffff;
@@ -63,6 +70,7 @@
 @media (prefers-color-scheme: dark) {
   /* System preference — applies only when the user hasn't forced a theme. */
   :root:not([data-theme='light']):not([data-theme='dark']) {
+    color-scheme: dark;
     --paper: #17191e;
     --surface: #1f232a;
     --surface-sunken: #14161b;
@@ -94,6 +102,7 @@
 
 /* Explicit "Dark" choice — wins regardless of the device setting. */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --paper: #17191e;
   --surface: #1f232a;
   --surface-sunken: #14161b;

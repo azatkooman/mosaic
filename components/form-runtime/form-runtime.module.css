@@ -20,3 +20,32 @@
   font-size: var(--text-sm);
   margin-top: var(--s-1);
 }
+
+/* The parts of one composite answer — name (first/middle/last), address,
+   phone. auto-fit packs them side by side wherever there's room. */
+.subGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--s-3);
+}
+
+/* On a phone auto-fit still fits two 9rem tracks, which leaves an odd part
+   stranded at half width on its own row (first + middle, then last alone).
+   One field per row also gives each a full-width tap target. */
+@media (max-width: 30rem) {
+  .subGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Country code + number. The code must keep its own width — see the label
+   ordering in QuestionField — while the number takes the rest. */
+.phoneRow {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.phoneRow > :last-child {
+  flex: 1;
+  min-inline-size: 0;
+}
