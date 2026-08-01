@@ -32,7 +32,7 @@ export default async function FormsPage({ params }) {
           }))}
         />
       </div>
-      <div className="table-wrap">
+      <div className="table-wrap table-cards">
         <table className="table">
           <tbody>
             {(forms ?? []).map((form) => {
@@ -41,7 +41,7 @@ export default async function FormsPage({ params }) {
                 .sort((a, b) => b.version - a.version)[0]
               return (
                 <tr key={form.id}>
-                  <td>
+                  <td data-cell="title">
                     <strong>{form.title}</strong>{' '}
                     {form.registration_mode ? (
                       <Badge>
@@ -65,7 +65,7 @@ export default async function FormsPage({ params }) {
                       {published ? `v${published.version}` : t('draftSaved')}
                     </div>
                   </td>
-                  <td style={{ textAlign: 'end' }}>
+                  <td data-cell="actions">
                     <Link
                       href={`/console/events/${eventId}/forms/${form.id}`}
                       className="btn btn-secondary btn-sm"

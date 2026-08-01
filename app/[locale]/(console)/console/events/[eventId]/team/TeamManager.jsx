@@ -131,18 +131,18 @@ export function TeamManager({ eventId, eventSlug, orgId, initialMembers, roles }
       {requests.length > 0 && (
         <section aria-label={t('accessRequests')}>
           <h2>{t('accessRequests')}</h2>
-          <div className="table-wrap" style={{ maxInlineSize: '44rem' }}>
+          <div className="table-wrap table-cards" style={{ maxInlineSize: '44rem' }}>
             <table className="table">
               <tbody>
                 {requests.map((m) => (
                   <tr key={m.user_id}>
-                    <td>
+                    <td data-cell="title">
                       <strong>{m.profiles?.full_name || '—'}</strong>
                       <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                         {m.profiles?.email}
                       </div>
                     </td>
-                    <td style={{ textAlign: 'end' }}>
+                    <td data-cell="actions">
                       <NativeSelect
                         aria-label={t('accessLevel')}
                         value={approveRoleIds[m.user_id] ?? defaultRoleId ?? ''}
@@ -171,18 +171,18 @@ export function TeamManager({ eventId, eventSlug, orgId, initialMembers, roles }
         </section>
       )}
 
-      <div className="table-wrap" style={{ maxInlineSize: '44rem' }}>
+      <div className="table-wrap table-cards" style={{ maxInlineSize: '44rem' }}>
         <table className="table">
           <tbody>
             {members.map((m) => (
               <tr key={m.user_id}>
-                <td>
+                <td data-cell="title">
                   <strong>{m.profiles?.full_name || '—'}</strong>
                   <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                     {m.profiles?.email}
                   </div>
                 </td>
-                <td>
+                <td data-label={t('accessLevel')}>
                   <NativeSelect
                     aria-label={t('accessLevel')}
                     value={m.role_id ?? ''}
@@ -192,7 +192,7 @@ export function TeamManager({ eventId, eventSlug, orgId, initialMembers, roles }
                     {roleOptions()}
                   </NativeSelect>
                 </td>
-                <td style={{ textAlign: 'end' }}>
+                <td data-cell="actions">
                   <Button variant="ghost" size="sm" onClick={() => remove(m.user_id)}>
                     {t('remove')}
                   </Button>

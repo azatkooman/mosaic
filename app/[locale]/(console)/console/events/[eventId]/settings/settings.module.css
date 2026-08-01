@@ -175,3 +175,30 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Two-up leaves ~120px per cell on a phone — too narrow for a labelled input
+   or the form picker. Go single-column, and stop bottom-aligning once each
+   control owns its own row. */
+@media (max-width: 40rem) {
+  .typeRow {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  /* The preset buttons carry `white-space: nowrap`, so two columns inside a
+     345px dialog pushed longer names outside the rounded box. */
+  .presetList {
+    grid-template-columns: 1fr;
+  }
+  /* Sticky bar: keep it clear of the iOS home indicator, and let a long
+     status badge wrap rather than shove the Save button off the edge. */
+  .footer {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    padding-block-end: calc(var(--s-3) + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+  }
+  .footerActions {
+    flex-wrap: wrap;
+    margin-inline-start: auto;
+  }
+}

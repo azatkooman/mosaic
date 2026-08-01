@@ -652,7 +652,8 @@
     "ariaRedo": "Повторити",
     "ariaQuestion": "Запитання",
     "ariaOperator": "Оператор",
-    "ariaValue": "Значення"
+    "ariaValue": "Значення",
+    "tapRegNoForAnswers": "Натисніть номер реєстрації, щоб побачити всі відповіді."
   },
   "questionTypes": {
     "text": "Короткий текст",

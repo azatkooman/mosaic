@@ -22,6 +22,11 @@ body {
   font-size: var(--text-md);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* A token with no break opportunity — a long slug, an ID, a pasted string
+     without punctuation — otherwise renders straight out of its container.
+     (Emails and URLs mostly break on their own at @ . / and -.) break-word
+     engages only when a word genuinely cannot fit, so prose is unaffected. */
+  overflow-wrap: break-word;
 }
 
 h1, h2, h3, h4 {
@@ -69,17 +74,23 @@ button, input, select, textarea {
   }
 }
 
-/* Layout helpers */
+/* Layout helpers.
+   With viewport-fit=cover (set in the locale layout) the page extends under a
+   notch in landscape, so the gutters take whichever is larger: the design
+   spacing, or the hardware inset. On every other device the env() values are
+   0 and these behave exactly as plain padding. */
 .container {
   max-inline-size: var(--container);
   margin-inline: auto;
-  padding-inline: var(--s-4);
+  padding-inline-start: max(var(--s-4), env(safe-area-inset-left));
+  padding-inline-end: max(var(--s-4), env(safe-area-inset-right));
 }
 
 .container-narrow {
   max-inline-size: var(--container-narrow);
   margin-inline: auto;
-  padding-inline: var(--s-4);
+  padding-inline-start: max(var(--s-4), env(safe-area-inset-left));
+  padding-inline-end: max(var(--s-4), env(safe-area-inset-right));
 }
 
 .visually-hidden {

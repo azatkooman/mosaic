@@ -652,7 +652,8 @@
     "ariaRedo": "Rehacer",
     "ariaQuestion": "Pregunta",
     "ariaOperator": "Operador",
-    "ariaValue": "Valor"
+    "ariaValue": "Valor",
+    "tapRegNoForAnswers": "Toca un número de registro para ver todas las respuestas."
   },
   "questionTypes": {
     "text": "Texto corto",

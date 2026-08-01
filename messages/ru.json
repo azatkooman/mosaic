@@ -652,7 +652,8 @@
     "ariaRedo": "Повторить",
     "ariaQuestion": "Вопрос",
     "ariaOperator": "Оператор",
-    "ariaValue": "Значение"
+    "ariaValue": "Значение",
+    "tapRegNoForAnswers": "Нажмите номер регистрации, чтобы увидеть все ответы."
   },
   "questionTypes": {
     "text": "Короткий текст",

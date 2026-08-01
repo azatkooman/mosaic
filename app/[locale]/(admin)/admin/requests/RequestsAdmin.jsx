@@ -60,21 +60,23 @@ export function RequestsAdmin({ requests, eventRoles }) {
       {requests.length === 0 ? (
         <p className="alert alert-info">{t('noRequests')}</p>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap table-cards">
           <table className="table">
             <tbody>
               {requests.map((r) => {
                 const key = `${r.event_id}:${r.user_id}`
                 return (
                   <tr key={key}>
-                    <td>
+                    <td data-cell="title">
                       <strong>{r.profiles?.full_name || '—'}</strong>
                       <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                         {r.profiles?.email}
                       </div>
                     </td>
-                    <td>{lt(r.events?.name, locale, r.events?.default_locale)}</td>
-                    <td>
+                    <td data-label={t('eventName')}>
+                      {lt(r.events?.name, locale, r.events?.default_locale)}
+                    </td>
+                    <td data-cell="actions">
                       <div className={styles.rowActions}>
                         <NativeSelect
                           aria-label={t('accessLevel')}

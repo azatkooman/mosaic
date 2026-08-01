@@ -383,7 +383,11 @@ export function ParticipantsTable({
         <p className="alert alert-error" role="alert">{statusError}</p>
       )}
 
-      <div className="table-wrap">
+      {shownQuestions.length > 0 && (
+        <p className={styles.stackHint}>{t('console.tapRegNoForAnswers')}</p>
+      )}
+
+      <div className="table-wrap table-cards">
         <table className="table">
           <thead>
             <tr>
@@ -427,7 +431,7 @@ export function ParticipantsTable({
             ) : (
               rows.map((p) => (
                 <tr key={p.id}>
-                  <td>
+                  <td data-cell="select">
                     {/* Identified by Reg. #, not by name — a form need not ask
                         for a name at all. */}
                     <input
@@ -437,7 +441,7 @@ export function ParticipantsTable({
                       aria-label={`Select ${formatRegNo(p)}`}
                     />
                   </td>
-                  <td>
+                  <td data-cell="title">
                     {/* The Reg. # is the row's view control — it replaced a
                         separate "View" button in the actions cell. */}
                     <button
@@ -448,15 +452,27 @@ export function ParticipantsTable({
                       {formatRegNo(p) || '—'}
                     </button>
                   </td>
+                  {/* One column per form question. A 20-question form makes ~27
+                      columns, so the stacked card drops them and points at the
+                      detail drawer, which already shows every answer. */}
                   {shownQuestions.map((q) => (
-                    <Cell key={q.id} value={formatAnswer(p.answers?.[q.id], q, locale, dateFmt)} />
+                    <Cell
+                      key={q.id}
+                      cell="answer"
+                      label={lt(q.label, locale)}
+                      value={formatAnswer(p.answers?.[q.id], q, locale, dateFmt)}
+                    />
                   ))}
-                  <td>{lt(typeById.get(p.participant_type_id)?.name, locale)}</td>
-                  <td><Badge tone={p.status}>{t(`status.${p.status}`)}</Badge></td>
-                  <Cell value={p.profile_name} />
-                  <Cell value={p.profile_email} />
+                  <td data-label={t('console.byType')}>
+                    {lt(typeById.get(p.participant_type_id)?.name, locale)}
+                  </td>
+                  <td data-label={t('console.byStatus')}>
+                    <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
+                  </td>
+                  <Cell label={t('console.profileName')} value={p.profile_name} />
+                  <Cell label={t('console.profileEmail')} value={p.profile_email} />
                   {canChangeStatus && (
-                    <td>
+                    <td data-cell="actions">
                       <div className={styles.rowActions}>
                         <NativeSelect
                           value={p.status}
@@ -515,10 +531,10 @@ export function ParticipantsTable({
  * A body cell that clips overlong content to a single line ending in "…".
  * The full text stays reachable as the title tooltip (and in the export).
  */
-function Cell({ value }) {
+function Cell({ value, label, cell }) {
   const text = value == null || value === '' ? '' : String(value)
   return (
-    <td className={styles.clipCell}>
+    <td className={styles.clipCell} data-label={label} data-cell={cell}>
       <span className={styles.clip} title={text || undefined}>
         {text || '—'}
       </span>

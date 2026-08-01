@@ -652,7 +652,8 @@
     "ariaRedo": "Redo",
     "ariaQuestion": "Question",
     "ariaOperator": "Operator",
-    "ariaValue": "Value"
+    "ariaValue": "Value",
+    "tapRegNoForAnswers": "Tap a registration number to see every answer."
   },
   "questionTypes": {
     "text": "Short text",

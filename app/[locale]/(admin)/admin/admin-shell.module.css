@@ -8,7 +8,9 @@
   display: flex;
   align-items: center;
   gap: var(--s-5);
-  padding-inline: var(--s-5);
+  /* viewport-fit=cover lets the page slide under a notch in landscape. */
+  padding-inline-start: max(var(--s-5), env(safe-area-inset-left));
+  padding-inline-end: max(var(--s-5), env(safe-area-inset-right));
   min-height: 3.5rem;
   border-bottom: 1px solid var(--line);
   background: var(--surface);

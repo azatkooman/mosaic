@@ -150,7 +150,7 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
         </Button>
         <p className={styles.inviteHelp}>{t('addByEmailHelp')}</p>
       </form>
-      <div className="table-wrap">
+      <div className="table-wrap table-cards">
         <table className="table">
           <thead>
             <tr>
@@ -162,13 +162,13 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
           <tbody>
             {visibleUsers.map((user) => (
               <tr key={user.id}>
-                <td>
+                <td data-cell="title">
                   <strong>{user.full_name || '—'}</strong>
                   <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                     {user.email}
                   </div>
                 </td>
-                <td>
+                <td data-label={t('globalRoleLabel')}>
                   {user.role === 'super_admin' ? (
                     <Badge tone="published">{t('roleSuperAdmin')}</Badge>
                   ) : (
@@ -184,14 +184,16 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
                     </NativeSelect>
                   )}
                 </td>
-                <td>
-                  <div className={styles.rowActions}>
-                    {isSuperAdmin && user.id !== currentUserId && user.role !== 'super_admin' && (
+                {/* Rendered only when there's a control — an always-present
+                    wrapper would leave an empty band in the stacked card. */}
+                <td data-cell="actions">
+                  {isSuperAdmin && user.id !== currentUserId && user.role !== 'super_admin' && (
+                    <div className={styles.rowActions}>
                       <Button variant="secondary" size="sm" onClick={() => transferSuperAdmin(user)}>
                         {t('makeSuperAdmin')}
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

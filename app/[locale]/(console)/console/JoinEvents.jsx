@@ -76,18 +76,18 @@ export function JoinEvents({ events, requestedEventIds, allAccess = false }) {
       ) : events.length === 0 ? (
         <p className="alert alert-info">{t('joinEventsEmpty')}</p>
       ) : (
-      <div className="table-wrap" style={{ maxInlineSize: '44rem' }}>
+      <div className="table-wrap table-cards" style={{ maxInlineSize: '44rem' }}>
         <table className="table">
           <tbody>
             {events.map((event) => (
               <tr key={event.id}>
-                <td>
+                <td data-cell="title">
                   <strong>{lt(event.name, locale, event.default_locale)}</strong>
                   <div style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-xs)' }}>
                     {formatEventDateRange(event.starts_at, event.ends_at, event.timezone, locale, dateFmt)}
                   </div>
                 </td>
-                <td style={{ textAlign: 'end' }}>
+                <td data-cell="actions">
                   {requested.has(event.id) ? (
                     <>
                       <Badge tone="draft">{t('accessRequested')}</Badge>{' '}

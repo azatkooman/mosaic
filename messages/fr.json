@@ -652,7 +652,8 @@
     "ariaRedo": "Rétablir",
     "ariaQuestion": "Question",
     "ariaOperator": "Opérateur",
-    "ariaValue": "Valeur"
+    "ariaValue": "Valeur",
+    "tapRegNoForAnswers": "Touchez un numéro d’inscription pour voir toutes les réponses."
   },
   "questionTypes": {
     "text": "Texte court",

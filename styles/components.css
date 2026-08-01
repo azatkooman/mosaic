@@ -362,14 +362,74 @@
     line-height: 1.3;
   }
 
+  /* A leading bulk-select checkbox belongs beside the headline, not stacked
+     above it on a line of its own. */
+  .table-cards td[data-cell='select'],
+  .table-cards td[data-cell='select'] + td[data-cell='title'] {
+    display: inline-block;
+    inline-size: auto;
+    vertical-align: middle;
+    margin-block-start: 0;
+  }
+
+  .table-cards td[data-cell='select'] {
+    margin-inline-end: var(--s-3);
+  }
+
+  /* Per-question answer columns. A wide form yields dozens; the card shows
+     identity and status, and the detail drawer carries every answer. */
+  .table-cards td[data-cell='answer'] {
+    display: none;
+  }
+
+  /* Row controls — a select plus one or two buttons. Left to themselves these
+     set the row's min-content width and force the whole table wide, so let
+     them wrap across the card instead. */
   .table-cards td[data-cell='actions'] {
-    text-align: end;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+  }
+
+  .table-cards td[data-cell='actions'] > * {
+    flex: 0 1 auto;
+    min-inline-size: 0;
   }
 
   /* A conditionally-rendered cell (e.g. a delete button the viewer may not
      be allowed to see) would otherwise leave a gap in the card. */
   .table-cards td:empty {
     display: none;
+  }
+}
+
+/* Touch devices.
+   Scoped to coarse pointers so desktop density is untouched.
+
+   1. Targets. Most controls here compute to 27-38px tall; the platform
+      minimum is 44. A finger is not a mouse cursor.
+   2. Font size. iOS Safari zooms the whole page whenever a focused field is
+      under 16px, and --text-sm is 14px — so every question in the
+      registration form zoomed on focus and stayed zoomed on blur. max()
+      keeps the design value anywhere it is already big enough. */
+@media (pointer: coarse) {
+  .btn,
+  .tabs-trigger {
+    min-block-size: 2.75rem;
+  }
+
+  .input,
+  .textarea,
+  .select-native,
+  .lang-picker {
+    min-block-size: 2.75rem;
+    font-size: max(16px, var(--text-sm));
+  }
+
+  .textarea {
+    /* min-block-size would otherwise fight the author's rows attribute. */
+    min-block-size: 4rem;
   }
 }
 

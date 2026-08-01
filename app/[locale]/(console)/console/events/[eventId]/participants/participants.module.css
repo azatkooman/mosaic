@@ -105,7 +105,17 @@
 }
 
 .drawerClose {
+  /* On a phone the drawer covers the overlay, so this is the only way out.
+     It was an unpadded glyph — about 18x28px. Give it a real target. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+  margin: calc(var(--s-2) * -1);
   border: none;
+  border-radius: var(--r-md);
   background: none;
   cursor: pointer;
   font-size: var(--text-2xl);
@@ -198,4 +208,19 @@
 
 .sortHeader:hover .sortArrow {
   color: var(--pine);
+}
+
+/* Points at the detail drawer once the stacked cards drop the per-question
+   answer columns. Hidden wherever the real table is showing them. */
+.stackHint {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .stackHint {
+    display: block;
+    margin-block-end: var(--s-3);
+    color: var(--ink-soft);
+    font-size: var(--text-xs);
+  }
 }

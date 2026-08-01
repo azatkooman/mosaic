@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { lt } from '@/lib/i18n/locales'
 import { visibleQuestions, appliesToType } from '@/lib/form-engine/visibility'
@@ -108,10 +108,35 @@ export function ParticipantDetail({
   // Read-only rendering of the answers the participant actually sees.
   const shownQuestions = visibleQuestions(definition, typeKey, participant.answers ?? {})
 
+  // On a phone the drawer is full-bleed, so the overlay is completely covered
+  // and the ✕ is the only way out — Escape has to work. Locking body scroll
+  // also stops the table behind scrolling away under the drawer on iOS.
+  const panelRef = useRef(null)
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    panelRef.current?.focus()
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose])
+
   return (
     <Portal>
       <div className={styles.drawerOverlay} onClick={onClose} />
-      <aside className={styles.drawer} role="dialog" aria-label={t('console.participantDetail')}>
+      <aside
+        ref={panelRef}
+        tabIndex={-1}
+        className={styles.drawer}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('console.participantDetail')}
+      >
         <header className={styles.drawerHead}>
           <div>
             <h2 style={{ fontSize: 'var(--text-xl)' }}>{title}</h2>

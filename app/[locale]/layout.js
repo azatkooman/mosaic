@@ -68,6 +68,17 @@ export const metadata = {
   description: 'Event registration for conferences, camps and gatherings.',
 }
 
+// Next injects width/initial-scale by default; declaring it makes the contract
+// explicit and adds viewport-fit=cover, which is what turns on env(safe-area-
+// inset-*). Layout helpers and the sticky bars pad by those insets so a notch
+// or home indicator never covers content. No maximum-scale or user-scalable —
+// pinch-zoom must stay available.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export default async function LocaleLayout({ children, params }) {
   const { locale } = await params
   if (!hasLocale(routing.locales, locale)) {
