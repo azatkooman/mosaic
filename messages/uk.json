@@ -52,6 +52,7 @@
     "noSearchResults": "Немає подій, що відповідають вашому запиту."
   },
   "event": {
+    "backToHome": "На головну",
     "register": "Зареєструватися",
     "registrationClosed": "Реєстрацію закрито",
     "registrationNotOpen": "Реєстрація відкриється {date}",
@@ -79,6 +80,7 @@
     "countdownSeconds": "с"
   },
   "wizard": {
+    "backToEvent": "Назад до сторінки події",
     "title": "Реєстрація на {event}",
     "whoIsComing": "Хто братиме участь?",
     "typeCountHelp": "Вкажіть, скільки людей ви реєструєте в кожній категорії.",

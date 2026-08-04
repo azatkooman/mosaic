@@ -46,6 +46,16 @@ export default async function RegisterPage({ params, searchParams }) {
   const contentLocale =
     lang && customCodes.includes(lang) && localeOptions.includes(lang) ? lang : locale
 
+  // Back to the event page in the language the reader is already in. A plain
+  // <a>, not next-intl's Link: eventPageUrl already carries the locale prefix
+  // (and a ?lang= for custom languages), which Link would prefix a second time.
+  const eventHref = eventPageUrl({ slug, code: contentLocale, uiLocale: locale })
+  const backToEvent = (
+    <a href={eventHref} className="btn btn-ghost btn-sm">
+      <span aria-hidden="true">&larr;</span> {t('backToEvent')}
+    </a>
+  )
+
   // One registration per account per event (the submit RPC enforces this
   // authoritatively) — send returning registrants to their registration
   // instead of the wizard.
@@ -81,6 +91,7 @@ export default async function RegisterPage({ params, searchParams }) {
   if (alreadyRegistered) {
     return (
       <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+        <div style={{ marginBottom: 'var(--s-3)' }}>{backToEvent}</div>
         <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
           {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
         </h1>
@@ -144,7 +155,19 @@ export default async function RegisterPage({ params, searchParams }) {
 
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--s-3)' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 'var(--s-3)',
+          // The picker keeps the right edge on a narrow screen; the back link
+          // drops to its own line rather than squeezing both onto one.
+          flexWrap: 'wrap',
+          marginBottom: 'var(--s-3)',
+        }}
+      >
+        {backToEvent}
         <LanguagePicker
           options={localeOptions.map((code) => ({
             value: code,

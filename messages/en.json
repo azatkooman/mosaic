@@ -52,6 +52,7 @@
     "noSearchResults": "No events match your search."
   },
   "event": {
+    "backToHome": "Back to home",
     "register": "Register",
     "registrationClosed": "Registration is closed",
     "registrationNotOpen": "Registration opens {date}",
@@ -79,6 +80,7 @@
     "countdownSeconds": "sec"
   },
   "wizard": {
+    "backToEvent": "Back to event page",
     "title": "Register for {event}",
     "whoIsComing": "Who is coming?",
     "typeCountHelp": "Choose how many people you are registering in each category.",

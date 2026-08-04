@@ -52,6 +52,7 @@
     "noSearchResults": "Aucun événement ne correspond à votre recherche."
   },
   "event": {
+    "backToHome": "Retour à l'accueil",
     "register": "S'inscrire",
     "registrationClosed": "Les inscriptions sont closes",
     "registrationNotOpen": "Les inscriptions ouvrent le {date}",
@@ -79,6 +80,7 @@
     "countdownSeconds": "s"
   },
   "wizard": {
+    "backToEvent": "Retour à la page de l'événement",
     "title": "Inscription à {event}",
     "whoIsComing": "Qui participera ?",
     "typeCountHelp": "Choisissez combien de personnes vous inscrivez dans chaque catégorie.",
