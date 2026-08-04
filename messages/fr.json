@@ -100,7 +100,7 @@
     "modeTitle": "S'agit-il d'une inscription individuelle ou de groupe ?",
     "modeHelp": "Vous pouvez vous inscrire seul(e) ou inscrire plusieurs personnes à la fois.",
     "modeSingle": "Inscription individuelle",
-    "modeSingleHelp": "Je m'inscris uniquement moi-même.",
+    "modeSingleHelp": "Je m'inscris uniquement moi-même/un participant.",
     "modeFamily": "Inscription de groupe",
     "modeFamilyHelp": "J'inscris un groupe (par exemple ma famille).",
     "noModeSelected": "Choisissez un type d'inscription pour continuer.",

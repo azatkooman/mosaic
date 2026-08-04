@@ -100,7 +100,7 @@
     "modeTitle": "Is this a single or a group registration?",
     "modeHelp": "You can register just yourself, or several people at once.",
     "modeSingle": "Single registration",
-    "modeSingleHelp": "I'm registering only myself.",
+    "modeSingleHelp": "I'm registering only myself/one participant.",
     "modeFamily": "Group registration",
     "modeFamilyHelp": "I'm registering a group (e.g. my family).",
     "noModeSelected": "Choose a registration type to continue.",
