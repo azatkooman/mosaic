@@ -123,6 +123,46 @@ function SectionHeading({ text, headingStyle, centered, defaultAlign }) {
   )
 }
 
+function ArrowLeftIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true">
+      <path
+        d="M12.5 4.5 7 10l5.5 5.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Back to the site home page — the event route has its own standalone layout
+ * with no site header (see app/[locale]/(event)/layout.js), so without this
+ * there is no way off the page but the browser's own back button.
+ *
+ * Inert in the console preview, matching RegisterCta: the preview should show
+ * what a visitor sees without navigating the organizer out of the editor.
+ */
+function HomeBackLink({ editable, href, label }) {
+  if (editable) {
+    return (
+      <span className={styles.heroBack} aria-disabled="true">
+        <ArrowLeftIcon />
+      </span>
+    )
+  }
+  // A plain <a> with an explicit locale path, like RegisterCta and langHref:
+  // next-intl's Link would prefix the locale a second time, and this component
+  // renders inside the console too, where that router context differs.
+  return (
+    <a href={href} className={styles.heroBack} aria-label={label} title={label}>
+      <ArrowLeftIcon />
+    </a>
+  )
+}
+
 function RegisterCta({ editable, registerHref, label }) {
   const cls = `btn ${styles.registerBtn}`
   if (editable) {
@@ -318,12 +358,22 @@ export function EventPageView({
   // route locale via a ?lang= param (they aren't platform routes).
   const langHref = (code) => eventPageUrl({ slug: eventSlug, code, uiLocale: locale })
 
+  // `locale` (not `cl`) — home is a platform route, and cl may be a custom
+  // language code that has none.
+  const heroBack = (
+    <HomeBackLink editable={editable} href={`/${locale}`} label={t('backToHome')} />
+  )
+
   const heroTopBar = (logoUrl || showLangSwitch) && (
     <div
       className={styles.heroTopBar}
       data-logo-pos={logoPos}
       data-bottom={logoAtBottom ? '' : undefined}
       data-lang-side={heroVariant === 'split' && hero.image_side === 'left' ? 'left' : 'right'}
+      // The back control is pinned to the hero's top-left corner independently
+      // of this bar (which flips to row-reverse in several configurations), so
+      // the bar has to yield that corner or the two overlap.
+      data-has-back=""
     >
       {logoUrl ? (
         /* eslint-disable-next-line @next/next/no-img-element */
@@ -693,6 +743,7 @@ export function EventPageView({
           dataHasBg={!!theme.hero_bg}
           {...sectionProps}
         >
+          {heroBack}
           {heroTopBar}
           <div className={styles.heroSplitInner} data-image-side={hero.image_side === 'left' ? 'left' : 'right'}>
             <div className={styles.heroSplitText}>{heroBody}</div>
@@ -755,6 +806,7 @@ export function EventPageView({
           {(coverUrl || heroVideo) && heroTint && (
             <div className={styles.heroTint} style={{ background: heroTint }} aria-hidden="true" />
           )}
+          {heroBack}
           {heroTopBar}
           <div
             className={`container ${styles.heroInner}`}

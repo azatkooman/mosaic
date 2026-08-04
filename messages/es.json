@@ -52,6 +52,7 @@
     "noSearchResults": "Ningún evento coincide con tu búsqueda."
   },
   "event": {
+    "backToHome": "Volver al inicio",
     "register": "Inscribirse",
     "registrationClosed": "La inscripción está cerrada",
     "registrationNotOpen": "La inscripción abre el {date}",
@@ -79,6 +80,7 @@
     "countdownSeconds": "seg"
   },
   "wizard": {
+    "backToEvent": "Volver a la página del evento",
     "title": "Inscripción a {event}",
     "whoIsComing": "¿Quiénes asistirán?",
     "typeCountHelp": "Elige cuántas personas inscribes en cada categoría.",
@@ -100,7 +102,7 @@
     "modeTitle": "¿Es una inscripción individual o grupal?",
     "modeHelp": "Puedes inscribirte solo tú o varias personas a la vez.",
     "modeSingle": "Inscripción individual",
-    "modeSingleHelp": "Me inscribo solo yo.",
+    "modeSingleHelp": "Me inscribo solo yo/un participante.",
     "modeFamily": "Inscripción grupal",
     "modeFamilyHelp": "Inscribo a un grupo (por ejemplo, mi familia).",
     "noModeSelected": "Elige un tipo de inscripción para continuar.",

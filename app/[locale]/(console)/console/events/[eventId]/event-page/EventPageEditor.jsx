@@ -15,6 +15,7 @@ import {
   retranslateDocument,
   setLocalizedText,
 } from '@/lib/form-localization'
+import { DEFAULT_TEXT_FIELDS, withDefaultLabels } from '@/lib/event-page-defaults'
 import { eventMediaUrl } from '@/lib/storage'
 import {
   Button,
@@ -140,6 +141,26 @@ const PREVIEW_MESSAGES = {
   fr: frMessages,
   ru: ruMessages,
   uk: ukMessages,
+}
+
+/**
+ * Built-in wording for the seven default labels, per message key per platform
+ * locale, read straight out of the catalogs the preview already bundles.
+ * `withDefaultLabels` seeds these into page_content so auto-translate has a
+ * source to work from — see lib/event-page-defaults.
+ */
+function defaultLabelsFor(locales) {
+  const labels = {}
+  for (const locale of locales) {
+    const messages = PREVIEW_MESSAGES[locale]?.event
+    if (!messages) continue
+    for (const { message } of DEFAULT_TEXT_FIELDS) {
+      if (typeof messages[message] !== 'string') continue
+      labels[message] ??= {}
+      labels[message][locale] = messages[message]
+    }
+  }
+  return labels
 }
 
 function useIsDarkMode() {
@@ -329,7 +350,27 @@ export function EventPageEditor({ initialEvent }) {
   const supabase = getSupabaseBrowserClient()
   const isDark = useIsDarkMode()
 
-  const [event, setEvent] = useState({ page_content: {}, ...initialEvent })
+  // The seven built-in labels start as real text rather than empty slots, so
+  // the translator has something to translate FROM (see lib/event-page-defaults).
+  // Deliberately does NOT mark the editor dirty: an organizer who opens the
+  // customizer and changes nothing should not be told they have unsaved work.
+  // The seeds ride along with their next save, and with a translate run —
+  // which is the only moment they actually need to be persisted.
+  const [event, setEvent] = useState(() => {
+    const base = { page_content: {}, ...initialEvent }
+    // ALL five platform locales, not just the ones this event offers. Once any
+    // text exists in these maps lt() falls back to the default locale, so a
+    // locale left unseeded would lose the correct t() string it renders today —
+    // including a reader whose UI language the event does not offer, who still
+    // reaches the page on their own /{locale}/ route. Custom languages have no
+    // catalog to seed from and are left to the translator. See
+    // lib/event-page-defaults.
+    const labels = defaultLabelsFor(LOCALES)
+    return {
+      ...base,
+      page_content: withDefaultLabels(base.page_content, base.default_locale, labels),
+    }
+  })
   const [previewLocale, setPreviewLocale] = useState(
     LOCALES.includes(uiLocale) ? uiLocale : initialEvent.default_locale
   )
