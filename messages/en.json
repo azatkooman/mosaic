@@ -145,6 +145,11 @@
     "id": "ID"
   },
   "console": {
+    "deleteParticipant": "Delete",
+    "deleteParticipantTitle": "Delete “{name}”?",
+    "deleteParticipantsTitle": "Delete {count} participants?",
+    "deleteParticipantWarning": "This cancels the registration and hides it from everyone — including you — but keeps it in the database as archive history. A freed place may go to someone on the waitlist.",
+    "deleteParticipantError": "Could not delete. Please try again.",
     "title": "Events Hub",
     "dashboard": "Dashboard",
     "events": "Events",

@@ -145,6 +145,11 @@
     "id": "ID"
   },
   "console": {
+    "deleteParticipant": "Удалить",
+    "deleteParticipantTitle": "Удалить «{name}»?",
+    "deleteParticipantsTitle": "Удалить участников: {count}?",
+    "deleteParticipantWarning": "Это отменит регистрацию и скроет её от всех — включая вас, — но она сохранится в базе данных как архив. Освободившееся место может достаться человеку из списка ожидания.",
+    "deleteParticipantError": "Не удалось удалить. Попробуйте ещё раз.",
     "title": "Центр событий",
     "dashboard": "Панель",
     "events": "События",
