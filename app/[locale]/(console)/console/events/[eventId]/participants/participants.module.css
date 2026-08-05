@@ -71,15 +71,28 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
+  /* The status <select> and the trash button share a narrow column; let them
+     wrap instead of crushing each other when the column can't hold both. */
+  flex-wrap: wrap;
 }
 
-/* Icon-only action (the row's trash button): square, so the glyph is centered
-   rather than sitting in a text button's wider horizontal padding. */
+/* Icon-only action (the row's trash button): a fixed square so the glyph is
+   centered rather than sitting in a text button's wider horizontal padding.
+   flex: none is load-bearing — without it the button shrinks in the cramped
+   actions row, and the global `svg { max-inline-size: 100% }` reset then
+   collapses the icon to nothing, leaving a bare red sliver. */
 .iconBtn {
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding-inline: 0.4rem;
+}
+/* Pin the glyph so neither the flex row nor that same reset can shrink it. */
+.iconBtn svg {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
 }
 
 /* --- Detail drawer --- */
