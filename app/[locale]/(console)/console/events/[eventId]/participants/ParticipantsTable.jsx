@@ -14,6 +14,20 @@ import { Badge, Button, Dialog, Field, Input, NativeSelect } from '@/components/
 import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
 
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+      <path
+        d="M4 6h12M8.5 6V4.5h3V6M6 6l.6 9a1 1 0 0 0 1 1h4.8a1 1 0 0 0 1-1L15 6M8.5 9v5M11.5 9v5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 const PAGE_SIZE = 50
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
 const STATUS_TRANSITIONS = {
@@ -541,16 +555,17 @@ export function ParticipantsTable({
                         {canDelete && (
                           <button
                             type="button"
-                            className="btn btn-danger btn-sm"
+                            className={`btn btn-danger btn-sm ${styles.iconBtn}`}
                             aria-label={`${t('console.deleteParticipant')}: ${
                               formatRegNo(p) || p.first_name || p.id
                             }`}
+                            title={t('console.deleteParticipant')}
                             onClick={() => {
                               setArchiveState('idle')
                               setPendingArchive([p])
                             }}
                           >
-                            {t('console.deleteParticipant')}
+                            <TrashIcon />
                           </button>
                         )}
                       </div>

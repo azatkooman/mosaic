@@ -73,6 +73,15 @@
   gap: var(--s-2);
 }
 
+/* Icon-only action (the row's trash button): square, so the glyph is centered
+   rather than sitting in a text button's wider horizontal padding. */
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.4rem;
+}
+
 /* --- Detail drawer --- */
 .drawerOverlay {
   position: fixed;

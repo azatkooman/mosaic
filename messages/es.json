@@ -131,6 +131,7 @@
     "archived": "Archivado"
   },
   "myRegs": {
+    "participantDeleted": "Participante eliminado",
     "title": "Mis inscripciones",
     "empty": "Aún no te has inscrito en ningún evento.",
     "browseEvents": "Ver eventos",
