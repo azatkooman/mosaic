@@ -10,7 +10,13 @@ export default async function ParticipantsPage({ params }) {
   setRequestLocale(locale)
 
   const supabase = await getSupabaseServerClient()
-  const [{ data: types }, { data: versions }, { data: canEdit }, { data: canChangeStatus }] = await Promise.all([
+  const [
+    { data: types },
+    { data: versions },
+    { data: canEdit },
+    { data: canChangeStatus },
+    { data: canDelete },
+  ] = await Promise.all([
     supabase
       .from('participant_types')
       .select('id, key, name')
@@ -28,6 +34,8 @@ export default async function ParticipantsPage({ params }) {
     supabase.rpc('can_add_registrants_api', { eid: eventId }),
     // Status changes are restricted to roles with the check-in privilege.
     supabase.rpc('can_checkin_event_api', { eid: eventId }),
+    // Archiving is its own privilege (soft_delete_participants re-checks it).
+    supabase.rpc('can_delete_registrants_api', { eid: eventId }),
   ])
 
   // Every version is still needed by the detail drawer, which renders each
@@ -49,6 +57,7 @@ export default async function ParticipantsPage({ params }) {
       definitionByVersion={definitionByVersion}
       canEdit={Boolean(canEdit)}
       canChangeStatus={Boolean(canChangeStatus)}
+      canDelete={Boolean(canDelete)}
     />
   )
 }

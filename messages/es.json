@@ -131,6 +131,7 @@
     "archived": "Archivado"
   },
   "myRegs": {
+    "participantDeleted": "Participante eliminado",
     "title": "Mis inscripciones",
     "empty": "Aún no te has inscrito en ningún evento.",
     "browseEvents": "Ver eventos",
@@ -145,6 +146,11 @@
     "id": "ID"
   },
   "console": {
+    "deleteParticipant": "Eliminar",
+    "deleteParticipantTitle": "¿Eliminar “{name}”?",
+    "deleteParticipantsTitle": "¿Eliminar {count} participantes?",
+    "deleteParticipantWarning": "Esto cancela la inscripción y la oculta para todos — incluido tú — pero se conserva en la base de datos como historial. Una plaza liberada puede pasar a alguien de la lista de espera.",
+    "deleteParticipantError": "No se pudo eliminar. Inténtalo de nuevo.",
     "title": "Centro de eventos",
     "dashboard": "Panel",
     "events": "Eventos",

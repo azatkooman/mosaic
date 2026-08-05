@@ -131,6 +131,7 @@
     "archived": "Archivé"
   },
   "myRegs": {
+    "participantDeleted": "Participant supprimé",
     "title": "Mes inscriptions",
     "empty": "Vous ne vous êtes encore inscrit à aucun événement.",
     "browseEvents": "Voir les événements",
@@ -145,6 +146,11 @@
     "id": "ID"
   },
   "console": {
+    "deleteParticipant": "Supprimer",
+    "deleteParticipantTitle": "Supprimer « {name} » ?",
+    "deleteParticipantsTitle": "Supprimer {count} participants ?",
+    "deleteParticipantWarning": "Cela annule l'inscription et la masque pour tout le monde — y compris vous — mais elle est conservée dans la base de données comme historique. Une place libérée peut revenir à une personne en liste d'attente.",
+    "deleteParticipantError": "Impossible de supprimer. Veuillez réessayer.",
     "title": "Espace événements",
     "dashboard": "Tableau de bord",
     "events": "Événements",

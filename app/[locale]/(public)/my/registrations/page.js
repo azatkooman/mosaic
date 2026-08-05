@@ -35,7 +35,7 @@ export default async function MyRegistrationsPage({ params }) {
       events ( id, slug, name, default_locale, timezone, starts_at, ends_at,
         registration_opens_at, registration_closes_at ),
       participants ( id, first_name, last_name, email, status, answers,
-        reg_seq, member_index, profile_name,
+        reg_seq, member_index, profile_name, deleted_at,
         participant_types ( key, name ),
         form_versions ( definition ) )
     `)
@@ -98,7 +98,17 @@ export default async function MyRegistrationsPage({ params }) {
                 </span>
               </div>
               <ul className={styles.participants}>
-                {reg.participants.map((p) => (
+                {reg.participants.map((p) =>
+                  // Archived by an organizer: keep a placeholder so the deletion
+                  // is legible (and the card is never left empty), but show
+                  // nothing about the participant and no actions. It reads
+                  // 'cancelled' for the same light-red badge the registrant
+                  // already knows from cancelling their own participant.
+                  p.deleted_at ? (
+                    <li key={p.id}>
+                      <Badge tone="cancelled">{t('myRegs.participantDeleted')}</Badge>
+                    </li>
+                  ) : (
                   <li key={p.id}>
                     <span>
                       {p.first_name} {p.last_name}
