@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { Link } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
 import { formatEventDate, formatEventDateRange } from '@/lib/dates'
@@ -75,7 +76,11 @@ export default async function AdminEventsPage({ params }) {
     return rows.map((event) => (
       <tr key={event.id}>
         <td data-cell="title">
-          <strong>{lt(event.name, locale, event.default_locale)}</strong>
+          {/* Into the read-only detail, never the Events Hub — this section
+              must not become a back door to the editors. */}
+          <Link href={`/admin/events/${event.id}`}>
+            <strong>{lt(event.name, locale, event.default_locale)}</strong>
+          </Link>
         </td>
         <td data-label={t('console.startsAt')}>
           {formatEventDateRange(
