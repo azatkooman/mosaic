@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from '@/lib/i18n/navigation'
-import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { Badge, Button, Checkbox, Dialog } from '@/components/ui'
 
 /**
@@ -49,7 +48,6 @@ export function AdminParticipantsTable({ rows, labels, eventArchived = false }) 
   const [confirming, setConfirming] = useState(false)
   const [state, setState] = useState('idle') // idle | working | error
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
 
   // On an archived event the record is already out of circulation, so any row
   // may go. On a live one, only a cancelled registration may — purging must
@@ -97,10 +95,21 @@ export function AdminParticipantsTable({ rows, labels, eventArchived = false }) 
 
   async function purge() {
     setState('working')
-    const { error } = await supabase.rpc('purge_participants', {
-      p_participant_ids: selected.map((r) => r.id),
-    })
-    if (error) {
+    // Through the API route, not the RPC directly: deleting the rows is only
+    // half the job — the uploaded file answers have to go with them, and only
+    // the server can reach storage.
+    let ok = false
+    try {
+      const res = await fetch('/api/admin/purge-participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: selected.map((r) => r.id) }),
+      })
+      ok = res.ok
+    } catch {
+      ok = false
+    }
+    if (!ok) {
       setState('error')
       return
     }

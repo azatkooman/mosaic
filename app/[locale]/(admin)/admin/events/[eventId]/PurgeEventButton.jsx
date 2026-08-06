@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from '@/lib/i18n/navigation'
-import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { Button, Dialog } from '@/components/ui'
 
 /**
@@ -18,12 +17,23 @@ export function PurgeEventButton({ eventId, eventName, eligible, participantCoun
   const [open, setOpen] = useState(false)
   const [state, setState] = useState('idle') // idle | working | error
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
 
   async function purge() {
     setState('working')
-    const { error } = await supabase.rpc('purge_event', { p_event_id: eventId })
-    if (error) {
+    // Through the API route, not the RPC directly: the event's cover images
+    // and every registration file live in storage, which SQL cannot reach.
+    let ok = false
+    try {
+      const res = await fetch('/api/admin/purge-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      })
+      ok = res.ok
+    } catch {
+      ok = false
+    }
+    if (!ok) {
       setState('error')
       return
     }
