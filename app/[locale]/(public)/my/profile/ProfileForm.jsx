@@ -6,6 +6,7 @@ import { usePathname, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales'
 import { THEMES, applyThemeClient } from '@/lib/theme'
+import { useThemeState } from '@/lib/use-theme-state'
 import { DATE_FORMATS, TIME_FORMATS, applyDateFormatClient } from '@/lib/date-format'
 import { formatEventDate, formatSampleDate, formatSampleTime } from '@/lib/dates'
 import { Button, Field, Input, NativeSelect } from '@/components/ui'
@@ -26,6 +27,7 @@ export function ProfileForm({ userId, initialProfile }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
+  const { preference: themePreference } = useThemeState()
 
   // Keep the Appearance dropdown in sync with the header toggle. If an
   // explicit theme is currently applied (the cookie/attribute the toggle
@@ -48,18 +50,12 @@ export function ProfileForm({ userId, initialProfile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProfile.theme, initialProfile.date_format, initialProfile.time_format])
 
-  // Live-follow the header toggle: when it changes the applied theme
-  // (the data-theme attribute), reflect it in this dropdown immediately,
-  // no page refresh needed.
+  // Live-follow whatever theme is actually in force, so this dropdown agrees
+  // with the header toggle no matter which of them changed it. Shared with
+  // the toggle so the two can't drift apart again.
   useEffect(() => {
-    const el = document.documentElement
-    const observer = new MutationObserver(() => {
-      const applied = el.dataset.theme
-      setTheme(applied === 'light' || applied === 'dark' ? applied : 'system')
-    })
-    observer.observe(el, { attributes: true, attributeFilter: ['data-theme'] })
-    return () => observer.disconnect()
-  }, [])
+    if (themePreference) setTheme(themePreference)
+  }, [themePreference])
 
   // Preview the theme live as the user picks it, before saving.
   function pickTheme(next) {

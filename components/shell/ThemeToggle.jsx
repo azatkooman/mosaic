@@ -1,30 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { applyThemeClient } from '@/lib/theme'
+import { useThemeState } from '@/lib/use-theme-state'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
-/** Header light/dark toggle. Reads the theme that's actually applied (the
- *  data-theme attribute the server set, or the system preference), flips it,
- *  and persists via applyThemeClient (cookie + attribute → no flash on the
- *  next server render). When signed in it also saves to the profile so the
- *  Profile → Appearance setting stays in sync with this toggle. */
+/** Header light/dark toggle. The icon is derived from the theme actually in
+ *  force rather than from local state, so it stays correct when the theme is
+ *  changed somewhere else — Profile → Appearance, or the OS switching while
+ *  the preference is 'system'. Flipping it persists via applyThemeClient
+ *  (cookie + attribute → no flash on the next server render) and, when signed
+ *  in, to the profile. */
 export function ThemeToggle({ label }) {
-  const [dark, setDark] = useState(null)
+  const { applied } = useThemeState()
+  const dark = applied === 'dark'
   const supabase = getSupabaseBrowserClient()
-
-  useEffect(() => {
-    const attr = document.documentElement.dataset.theme
-    const isDark =
-      attr === 'dark' ||
-      (!attr && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    setDark(isDark)
-  }, [])
 
   async function toggle() {
     const next = dark ? 'light' : 'dark'
+    // Sets data-theme, which useThemeState observes — no local state to keep.
     applyThemeClient(next)
-    setDark(!dark)
     // Keep the profile's Appearance setting in sync (signed-in users only).
     const {
       data: { user },
