@@ -159,3 +159,48 @@ describe('language switcher colours', () => {
     expect(html).toContain('--ep-lang-text:#ffffff')
   })
 })
+
+/**
+ * `navigable` is the axis the admin's read-only view turns off: it should be
+ * able to READ the published page without any chrome that carries the viewer
+ * out of the admin console. Separate from `editable`, which only controls the
+ * per-section edit pencils.
+ */
+describe('EventPageView navigable', () => {
+  function renderNav(props) {
+    return renderToStaticMarkup(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
+        <EventPageView
+          event={makeEvent()}
+          locale="en"
+          contentLocale="en"
+          registerHref="/en/events/demo/register"
+          {...props}
+        />
+      </NextIntlClientProvider>
+    )
+  }
+
+  it('navigates by default, so the public page is unchanged', () => {
+    const html = renderNav({})
+    expect(html).toContain('href="/en"')
+    expect(html).toContain('href="/en/events/demo/register"')
+  })
+
+  it('renders the back control and register CTA inert when not navigable', () => {
+    const html = renderNav({ navigable: false })
+    // Both become aria-disabled spans rather than links.
+    expect(html).not.toContain('href="/en"')
+    expect(html).not.toContain('href="/en/events/demo/register"')
+    expect(html).toContain('aria-disabled="true"')
+  })
+
+  it('keeps the language switcher usable when not navigable', () => {
+    // It must still be operable — it is how the admin swaps language in place
+    // — so it is NOT disabled; it simply reports through onChange instead of
+    // carrying an href.
+    const html = renderNav({ navigable: false })
+    expect(html).toContain('lang-picker')
+    expect(html).not.toContain('disabled=""')
+  })
+})

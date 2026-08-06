@@ -463,6 +463,54 @@
   margin-bottom: var(--s-3);
 }
 
+/* --- Dropdown menu (Radix) --- */
+/* Sits above the dialog overlay's 40 but below .dialog-content's 50: a menu
+   opens over the page, and the dialog it opens must cover the menu. */
+.menu-content {
+  z-index: 45;
+  min-inline-size: 11rem;
+  padding: var(--s-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  /* Radix manages focus itself and draws no outline of its own. */
+  outline: none;
+  user-select: none;
+}
+
+.menu-item[data-highlighted] {
+  background: var(--surface-sunken);
+}
+
+.menu-item-danger {
+  color: var(--danger);
+}
+
+.menu-item-danger[data-highlighted] {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+@media (pointer: coarse) {
+  .menu-item {
+    min-block-size: 2.75rem;
+    font-size: max(16px, var(--text-sm));
+  }
+}
+
 /* --- Tabs (Radix) --- */
 .tabs-list {
   display: flex;

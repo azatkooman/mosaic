@@ -10,25 +10,26 @@ import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue } from '@/lib/dates'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
-import { Badge, Button, Dialog, Field, Input, NativeSelect } from '@/components/ui'
+import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
 
-function TrashIcon() {
+const PAGE_SIZE = 50
+// A bulk selection can run to 500; the confirm dialog names this many and
+// counts the rest rather than growing without bound.
+const ARCHIVE_LIST_LIMIT = 12
+
+/** Best available human label for a participant row. */
+function participantLabel(p) {
   return (
-    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
-      <path
-        d="M4 6h12M8.5 6V4.5h3V6M6 6l.6 9a1 1 0 0 0 1 1h4.8a1 1 0 0 0 1-1L15 6M8.5 9v5M11.5 9v5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    [p?.first_name, p?.last_name].filter(Boolean).join(' ') ||
+    p?.profile_name ||
+    formatRegNo(p) ||
+    p?.id ||
+    ''
   )
 }
 
-const PAGE_SIZE = 50
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
 const STATUS_TRANSITIONS = {
   pending: ['confirmed', 'waitlisted', 'cancelled'],
@@ -70,10 +71,13 @@ export function ParticipantsTable({
   const [bulkStatus, setBulkStatus] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
   // Participant rows pending archive confirmation — [] means the dialog is
-  // closed. Holding the rows (not just ids) lets the dialog name a single
-  // target, and survives the list refetching underneath it.
+  // closed. Holding the rows (not just ids) lets the dialog name each target
+  // and read their statuses, and survives the list refetching underneath it.
   const [pendingArchive, setPendingArchive] = useState([])
   const [archiveState, setArchiveState] = useState('idle') // idle | working | error
+  // Archiving requires an already-cancelled registration (migration 0035), so
+  // the dialog can explain and block instead of letting the RPC reject the lot.
+  const notCancelled = pendingArchive.filter((p) => p.status !== 'cancelled')
 
   const typeById = useMemo(
     () => new Map(participantTypes.map((pt) => [pt.id, pt])),
@@ -424,17 +428,27 @@ export function ParticipantsTable({
           <Button variant="ghost" size="sm" onClick={handleCopyEmails}>
             Copy Emails
           </Button>
+          {/* Archiving is tucked behind More actions on purpose: it should be
+              rare, and a red Delete sitting beside the status control invited
+              being read as a synonym for cancelling. */}
           {canDelete && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                setArchiveState('idle')
-                setPendingArchive(rows.filter((r) => selectedIds.has(r.id)))
-              }}
+            <DropdownMenu
+              trigger={
+                <button type="button" className="btn btn-secondary btn-sm">
+                  {t('console.moreActions')}
+                </button>
+              }
             >
-              {t('console.deleteParticipant')}
-            </Button>
+              <DropdownMenu.Item
+                tone="danger"
+                onSelect={() => {
+                  setArchiveState('idle')
+                  setPendingArchive(rows.filter((r) => selectedIds.has(r.id)))
+                }}
+              >
+                {t('console.archiveParticipant')}
+              </DropdownMenu.Item>
+            </DropdownMenu>
           )}
           <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
             Deselect All
@@ -472,12 +486,13 @@ export function ParticipantsTable({
               <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.profileName')} column="profile_name" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.profileEmail')} column="profile_email" sort={sort} onSort={toggleSort} />
-              {/* Actions holds the status control and the archive button now
-                  that Reg. # is the view link — so the column disappears
-                  entirely for roles that can do neither, rather than sitting
-                  empty. The two privileges are independent: a role may hold
-                  one without the other. */}
-              {(canChangeStatus || canDelete) && <th>{t('common.actions')}</th>}
+              {/* Actions holds only the status control now that Reg. # is the
+                  view link — so the column disappears entirely for roles that
+                  cannot change status, rather than sitting empty. Archiving
+                  lives in the bulk bar's More-actions menu, deliberately not
+                  here: a per-row delete beside a per-row status control read as
+                  two ways to do the same thing. */}
+              {canChangeStatus && <th>{t('common.actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -536,38 +551,20 @@ export function ParticipantsTable({
                   </td>
                   <Cell label={t('console.profileName')} value={p.profile_name} />
                   <Cell label={t('console.profileEmail')} value={p.profile_email} />
-                  {(canChangeStatus || canDelete) && (
+                  {canChangeStatus && (
                     <td data-cell="actions">
                       <div className={styles.rowActions}>
-                        {canChangeStatus && (
-                          <NativeSelect
-                            value={p.status}
-                            aria-label={t('console.changeStatus')}
-                            style={{ width: 'auto', paddingBlock: '0.2rem' }}
-                            onChange={(e) => changeStatus(p.id, e.target.value)}
-                          >
-                            <option value={p.status}>{t(`status.${p.status}`)}</option>
-                            {(STATUS_TRANSITIONS[p.status] ?? []).map((s) => (
-                              <option key={s} value={s}>{t(`status.${s}`)}</option>
-                            ))}
-                          </NativeSelect>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            className={`btn btn-danger btn-sm ${styles.iconBtn}`}
-                            aria-label={`${t('console.deleteParticipant')}: ${
-                              formatRegNo(p) || p.first_name || p.id
-                            }`}
-                            title={t('console.deleteParticipant')}
-                            onClick={() => {
-                              setArchiveState('idle')
-                              setPendingArchive([p])
-                            }}
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
+                        <NativeSelect
+                          value={p.status}
+                          aria-label={t('console.changeStatus')}
+                          style={{ width: 'auto', paddingBlock: '0.2rem' }}
+                          onChange={(e) => changeStatus(p.id, e.target.value)}
+                        >
+                          <option value={p.status}>{t(`status.${p.status}`)}</option>
+                          {(STATUS_TRANSITIONS[p.status] ?? []).map((s) => (
+                            <option key={s} value={s}>{t(`status.${s}`)}</option>
+                          ))}
+                        </NativeSelect>
                       </div>
                     </td>
                   )}
@@ -603,24 +600,65 @@ export function ParticipantsTable({
         }}
         title={
           pendingArchive.length === 1
-            ? t('console.deleteParticipantTitle', {
-                name:
-                  [pendingArchive[0]?.first_name, pendingArchive[0]?.last_name]
-                    .filter(Boolean)
-                    .join(' ') ||
-                  pendingArchive[0]?.profile_name ||
-                  formatRegNo(pendingArchive[0]) ||
-                  '',
+            ? t('console.archiveParticipantTitle', {
+                name: participantLabel(pendingArchive[0]),
               })
-            : t('console.deleteParticipantsTitle', { count: pendingArchive.length })
+            : t('console.archiveParticipantsTitle', { count: pendingArchive.length })
         }
       >
-        <p style={{ color: 'var(--ink-soft)', marginBlock: 'var(--s-3) var(--s-4)' }}>
-          {t('console.deleteParticipantWarning')}
-        </p>
+        {/* Only cancelled registrations can be archived (migration 0035 enforces
+            it). Say so up front and block, rather than letting the RPC reject
+            the batch — and list the offenders with their status so the reason
+            is visible rather than described. */}
+        {notCancelled.length > 0 ? (
+          <p className="alert alert-error" role="alert" style={{ marginBlock: 'var(--s-3)' }}>
+            {t('console.archiveNeedsCancelled')}
+          </p>
+        ) : (
+          <p style={{ color: 'var(--ink-soft)', marginBlock: 'var(--s-3) var(--s-4)' }}>
+            {t('console.archiveParticipantWarning')}
+          </p>
+        )}
+
+        {/* What is actually about to happen, by name — so a mis-selection is
+            caught here rather than after the fact. Capped: a 500-row selection
+            should not produce a 500-line dialog. */}
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: '0 0 var(--s-4)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--s-2)',
+          }}
+        >
+          {(notCancelled.length > 0 ? notCancelled : pendingArchive)
+            .slice(0, ARCHIVE_LIST_LIMIT)
+            .map((p) => (
+              <li
+                key={p.id}
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}
+              >
+                <span>{participantLabel(p)}</span>
+                <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
+              </li>
+            ))}
+          {(notCancelled.length > 0 ? notCancelled : pendingArchive).length >
+            ARCHIVE_LIST_LIMIT && (
+            <li className={styles.muted}>
+              {t('console.andNMore', {
+                count:
+                  (notCancelled.length > 0 ? notCancelled : pendingArchive).length -
+                  ARCHIVE_LIST_LIMIT,
+              })}
+            </li>
+          )}
+        </ul>
+
         {archiveState === 'error' && (
           <p className="alert alert-error" role="alert">
-            {t('console.deleteParticipantError')}
+            {t('console.archiveParticipantError')}
           </p>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s-3)' }}>
@@ -632,11 +670,11 @@ export function ParticipantsTable({
           <Button
             variant="danger"
             onClick={confirmArchive}
-            disabled={archiveState === 'working'}
+            disabled={archiveState === 'working' || notCancelled.length > 0}
           >
             {archiveState === 'working'
-              ? t('console.deleting')
-              : t('console.deleteParticipant')}
+              ? t('console.archiving')
+              : t('console.archiveParticipant')}
           </Button>
         </div>
       </Dialog>
