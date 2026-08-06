@@ -48,6 +48,7 @@ export default async function AdminLayout({ children, params }) {
           <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
           <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
           <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
+          <NavLink href="/admin/events">{t('console.adminArchivedEvents')}</NavLink>
           <Link href="/console">{t('console.title')} ↗</Link>
         </nav>
         <div className={styles.actions}>
@@ -65,6 +66,7 @@ export default async function AdminLayout({ children, params }) {
             <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
             <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
             <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
+            <NavLink href="/admin/events">{t('console.adminArchivedEvents')}</NavLink>
             <Link href="/console">{t('console.title')} ↗</Link>
             <Link href="/my/profile">{t('nav.profile')}</Link>
             <LocaleSwitcher label={t('common.language')} />

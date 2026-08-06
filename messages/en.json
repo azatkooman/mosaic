@@ -146,6 +146,14 @@
     "id": "ID"
   },
   "console": {
+    "adminArchivedEvents": "Archived Events",
+    "adminArchivedEventsIntro": "Events and registrations that are hidden everywhere else. View only — editing belongs in the Events Hub.",
+    "tabArchivedEvents": "Archived events",
+    "tabNonArchivedEvents": "Non-archived events",
+    "archivedAt": "Archived",
+    "archivedParticipants": "Archived registrations",
+    "noArchivedEvents": "No events have been archived.",
+    "noNonArchivedEvents": "No published events.",
     "archiveParticipant": "Archive",
     "archiveParticipantTitle": "Archive “{name}”?",
     "archiveParticipantsTitle": "Archive {count} participants?",

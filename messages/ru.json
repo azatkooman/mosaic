@@ -146,6 +146,14 @@
     "id": "ID"
   },
   "console": {
+    "adminArchivedEvents": "Архив событий",
+    "adminArchivedEventsIntro": "События и регистрации, скрытые во всех остальных разделах. Только просмотр — редактирование выполняется в Центре событий.",
+    "tabArchivedEvents": "Архивные события",
+    "tabNonArchivedEvents": "Неархивные события",
+    "archivedAt": "Архивировано",
+    "archivedParticipants": "Архивные регистрации",
+    "noArchivedEvents": "Ни одно событие не архивировано.",
+    "noNonArchivedEvents": "Нет опубликованных событий.",
     "archiveParticipant": "Архивировать",
     "archiveParticipantTitle": "Архивировать «{name}»?",
     "archiveParticipantsTitle": "Архивировать участников: {count}?",

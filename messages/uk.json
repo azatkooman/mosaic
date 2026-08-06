@@ -146,6 +146,14 @@
     "id": "ID"
   },
   "console": {
+    "adminArchivedEvents": "Архів подій",
+    "adminArchivedEventsIntro": "Події та реєстрації, приховані в усіх інших розділах. Лише перегляд — редагування виконується в Центрі подій.",
+    "tabArchivedEvents": "Архівні події",
+    "tabNonArchivedEvents": "Неархівні події",
+    "archivedAt": "Архівовано",
+    "archivedParticipants": "Архівні реєстрації",
+    "noArchivedEvents": "Жодної події не архівовано.",
+    "noNonArchivedEvents": "Немає опублікованих подій.",
     "archiveParticipant": "Архівувати",
     "archiveParticipantTitle": "Архівувати «{name}»?",
     "archiveParticipantsTitle": "Архівувати учасників: {count}?",

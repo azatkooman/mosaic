@@ -146,6 +146,14 @@
     "id": "ID"
   },
   "console": {
+    "adminArchivedEvents": "Eventos archivados",
+    "adminArchivedEventsIntro": "Eventos e inscripciones ocultos en todo lo demás. Solo lectura: la edición se hace en el Centro de eventos.",
+    "tabArchivedEvents": "Eventos archivados",
+    "tabNonArchivedEvents": "Eventos no archivados",
+    "archivedAt": "Archivado",
+    "archivedParticipants": "Inscripciones archivadas",
+    "noArchivedEvents": "No se ha archivado ningún evento.",
+    "noNonArchivedEvents": "No hay eventos publicados.",
     "archiveParticipant": "Archivar",
     "archiveParticipantTitle": "¿Archivar “{name}”?",
     "archiveParticipantsTitle": "¿Archivar {count} participantes?",

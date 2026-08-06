@@ -146,6 +146,14 @@
     "id": "ID"
   },
   "console": {
+    "adminArchivedEvents": "Événements archivés",
+    "adminArchivedEventsIntro": "Événements et inscriptions masqués partout ailleurs. Consultation seule : la modification se fait dans le Centre d'événements.",
+    "tabArchivedEvents": "Événements archivés",
+    "tabNonArchivedEvents": "Événements non archivés",
+    "archivedAt": "Archivé",
+    "archivedParticipants": "Inscriptions archivées",
+    "noArchivedEvents": "Aucun événement archivé.",
+    "noNonArchivedEvents": "Aucun événement publié.",
     "archiveParticipant": "Archiver",
     "archiveParticipantTitle": "Archiver « {name} » ?",
     "archiveParticipantsTitle": "Archiver {count} participants ?",
