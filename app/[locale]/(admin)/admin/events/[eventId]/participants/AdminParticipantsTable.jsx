@@ -1,10 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Badge } from '@/components/ui'
+import { useRouter } from '@/lib/i18n/navigation'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { Badge, Button, Checkbox, Dialog } from '@/components/ui'
 
 /**
- * Read-only participants list with client-side sorting.
+ * Read-only participants list with client-side sorting, plus the one write
+ * this section allows: permanent deletion.
  *
  * Sorting is in the browser, not the database, because this list is not paged
  * — the server already sent every row for the event, so re-querying to reorder
@@ -13,6 +16,10 @@ import { Badge } from '@/components/ui'
  *
  * Rows arrive pre-shaped (labels resolved, answers formatted) so this stays
  * presentational and the server keeps the i18n and locale work.
+ *
+ * Eligibility for deletion mirrors purge_participants (migration 0036): on an
+ * archived event anything may go; on a live one only a cancelled registration
+ * may. The RPC re-checks, so this is the explanation, not the enforcement.
  */
 
 // Comparator inputs per column. Everything falls back to a string compare;
@@ -34,10 +41,23 @@ function compare(a, b, key, type) {
   return String(a[key] ?? '').localeCompare(String(b[key] ?? ''))
 }
 
-export function AdminParticipantsTable({ rows, labels }) {
+export function AdminParticipantsTable({ rows, labels, eventArchived = false }) {
   // Reg. # ascending matches the order the server sent and the console's own
   // default reading order.
   const [sort, setSort] = useState({ key: 'regNo', dir: 'asc' })
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [confirming, setConfirming] = useState(false)
+  const [state, setState] = useState('idle') // idle | working | error
+  const router = useRouter()
+  const supabase = getSupabaseBrowserClient()
+
+  // On an archived event the record is already out of circulation, so any row
+  // may go. On a live one, only a cancelled registration may — purging must
+  // not become a shortcut past cancelling.
+  const eligible = (r) => eventArchived || r.status === 'cancelled'
+
+  const selected = rows.filter((r) => selectedIds.has(r.id))
+  const blocked = selected.filter((r) => !eligible(r))
 
   const sorted = useMemo(() => {
     const col = COLUMNS.find((c) => c.key === sort.key) ?? COLUMNS[0]
@@ -61,11 +81,82 @@ export function AdminParticipantsTable({ rows, labels }) {
     )
   }
 
+  function toggleOne(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    const ids = sorted.map((r) => r.id)
+    setSelectedIds((prev) => (ids.every((id) => prev.has(id)) ? new Set() : new Set(ids)))
+  }
+
+  async function purge() {
+    setState('working')
+    const { error } = await supabase.rpc('purge_participants', {
+      p_participant_ids: selected.map((r) => r.id),
+    })
+    if (error) {
+      setState('error')
+      return
+    }
+    setSelectedIds(new Set())
+    setConfirming(false)
+    setState('idle')
+    // Server component: refetch rather than mutating a local copy, so the
+    // summary line and every other tab agree with the database.
+    router.refresh()
+  }
+
+  const allSelected = sorted.length > 0 && sorted.every((r) => selectedIds.has(r.id))
+
   return (
-    <div className="table-wrap table-cards">
+    <>
+      {selected.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+            flexWrap: 'wrap',
+            padding: 'var(--s-3) var(--s-4)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--r-md)',
+            marginBlockEnd: 'var(--s-3)',
+          }}
+        >
+          <strong>{labels.nSelected.replace('{count}', selected.length)}</strong>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              setState('idle')
+              setConfirming(true)
+            }}
+          >
+            {labels.deletePermanently}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            {labels.deselectAll}
+          </Button>
+        </div>
+      )}
+
+      <div className="table-wrap table-cards">
       <table className="table">
         <thead>
           <tr>
+            <th>
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={toggleAll}
+                aria-label={labels.selectAll}
+              />
+            </th>
             {COLUMNS.map((col) => {
               const active = sort.key === col.key
               return (
@@ -89,6 +180,13 @@ export function AdminParticipantsTable({ rows, labels }) {
         <tbody>
           {sorted.map((p) => (
             <tr key={p.id}>
+              <td>
+                <Checkbox
+                  checked={selectedIds.has(p.id)}
+                  onCheckedChange={() => toggleOne(p.id)}
+                  aria-label={`${labels.select}: ${p.name || p.regSeq || p.id}`}
+                />
+              </td>
               <td data-cell="title">{p.regNo ? `${p.regSeq}.${p.memberIndex}` : '—'}</td>
               <td data-label={labels.name}>
                 <div>
@@ -127,6 +225,79 @@ export function AdminParticipantsTable({ rows, labels }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+
+      <Dialog
+        open={confirming}
+        onOpenChange={(next) => {
+          if (!next) {
+            setConfirming(false)
+            setState('idle')
+          }
+        }}
+        title={labels.purgeTitle.replace('{count}', selected.length)}
+      >
+        {blocked.length > 0 ? (
+          <p className="alert alert-error" role="alert" style={{ marginBlock: 'var(--s-3)' }}>
+            {labels.purgeNeedsCancelled}
+          </p>
+        ) : (
+          <p className="alert alert-error" role="alert" style={{ marginBlock: 'var(--s-3)' }}>
+            {labels.purgeWarning}
+          </p>
+        )}
+
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: '0 0 var(--s-4)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--s-2)',
+          }}
+        >
+          {(blocked.length > 0 ? blocked : selected).slice(0, 12).map((p) => (
+            <li
+              key={p.id}
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}
+            >
+              <span>{p.name || `${p.regSeq}.${p.memberIndex}`}</span>
+              <Badge tone={p.status}>{p.statusLabel}</Badge>
+              {p.archived && <Badge tone="archived">{labels.archived}</Badge>}
+            </li>
+          ))}
+          {(blocked.length > 0 ? blocked : selected).length > 12 && (
+            <li style={{ color: 'var(--ink-soft)' }}>
+              {labels.andNMore.replace(
+                '{count}',
+                (blocked.length > 0 ? blocked : selected).length - 12
+              )}
+            </li>
+          )}
+        </ul>
+
+        {state === 'error' && (
+          <p className="alert alert-error" role="alert">
+            {labels.purgeError}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s-3)' }}>
+          <Dialog.Close asChild>
+            <Button variant="ghost" type="button">
+              {labels.cancel}
+            </Button>
+          </Dialog.Close>
+          <Button
+            variant="danger"
+            onClick={purge}
+            disabled={state === 'working' || blocked.length > 0}
+          >
+            {state === 'working' ? labels.deleting : labels.deletePermanently}
+          </Button>
+        </div>
+      </Dialog>
+    </>
   )
 }

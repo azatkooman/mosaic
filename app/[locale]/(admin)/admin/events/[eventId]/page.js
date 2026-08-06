@@ -1,6 +1,8 @@
+import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
+import { PurgeEventButton } from './PurgeEventButton'
 import consoleStyles from '../../../../(console)/console/console.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +18,12 @@ export default async function AdminEventOverview({ params }) {
   const t = await getTranslations()
 
   const supabase = await getSupabaseServerClient()
-  const [{ data: counts }, { data: types }, { data: archivedRows }] = await Promise.all([
+  const [{ data: event }, { data: counts }, { data: types }, { data: archivedRows }] = await Promise.all([
+    supabase
+      .from('events')
+      .select('id, name, default_locale, ends_at, deleted_at')
+      .eq('id', eventId)
+      .maybeSingle(),
     // Live participants only (the view filters archived rows).
     supabase.from('event_participant_counts').select('*').eq('event_id', eventId),
     supabase
@@ -30,6 +37,8 @@ export default async function AdminEventOverview({ params }) {
       .eq('event_id', eventId)
       .not('deleted_at', 'is', null),
   ])
+
+  if (!event) notFound()
 
   const byStatus = {}
   const byType = new Map()
@@ -91,6 +100,27 @@ export default async function AdminEventOverview({ params }) {
           </table>
         </div>
       )}
+
+      {/* Mirrors purge_event's rule: archived events may go, live ones only
+          once they are over. Deleting an event mid-registration would take
+          registrations out from under people still counting on them. */}
+      <PurgeEventButton
+        eventId={event.id}
+        eventName={lt(event.name, locale, event.default_locale)}
+        eligible={Boolean(event.deleted_at) || (!!event.ends_at && Date.parse(event.ends_at) < Date.now())}
+        participantCount={total + (byStatus.cancelled ?? 0) + (archivedRows ?? []).length}
+        labels={{
+          dangerZone: t('console.adminDangerZone'),
+          purgeEvent: t('console.adminPurgeEvent'),
+          purgeEventHelp: t('console.adminPurgeEventHelp'),
+          purgeEventBlocked: t('console.adminPurgeEventBlocked'),
+          purgeEventTitle: t('console.adminPurgeEventTitle', { name: '{name}' }),
+          purgeEventWarning: t('console.adminPurgeEventWarning', { count: '{count}' }),
+          purgeEventError: t('console.adminPurgeEventError'),
+          deleting: t('console.deleting'),
+          cancel: t('common.cancel'),
+        }}
+      />
     </>
   )
 }

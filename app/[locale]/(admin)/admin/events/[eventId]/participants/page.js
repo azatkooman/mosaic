@@ -106,6 +106,9 @@ export default async function AdminEventParticipants({ params }) {
 
       <AdminParticipantsTable
         rows={rows}
+        // On an archived event every row may be purged; on a live one only a
+        // cancelled registration may. purge_participants re-checks.
+        eventArchived={Boolean(event?.deleted_at)}
         labels={{
           regNo: t('console.regNo'),
           name: t('console.adminParticipant'),
@@ -116,6 +119,19 @@ export default async function AdminEventParticipants({ params }) {
           profileEmail: t('console.profileEmail'),
           registeredAt: t('console.adminRegisteredAt'),
           answers: t('console.adminAnswers'),
+          // Placeholders are substituted client-side, where the counts live.
+          nSelected: t('console.adminNSelected', { count: '{count}' }),
+          purgeTitle: t('console.adminPurgeTitle', { count: '{count}' }),
+          andNMore: t('console.andNMore', { count: '{count}' }),
+          selectAll: t('console.adminSelectAll'),
+          select: t('console.adminSelect'),
+          deselectAll: t('console.adminDeselectAll'),
+          deletePermanently: t('console.adminDeletePermanently'),
+          purgeWarning: t('console.adminPurgeWarning'),
+          purgeNeedsCancelled: t('console.adminPurgeNeedsCancelled'),
+          purgeError: t('console.adminPurgeError'),
+          deleting: t('console.deleting'),
+          cancel: t('common.cancel'),
         }}
       />
     </>
