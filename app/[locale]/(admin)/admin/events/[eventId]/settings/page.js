@@ -33,6 +33,14 @@ export default async function AdminEventSettings({ params }) {
   // date/time-format preference.
   const when = (iso) => (iso ? formatEventDate(iso, event.timezone, locale, dateFmt) : '—')
 
+  // Primary contact first, then the extras, with fully blank entries dropped —
+  // the same combine EventPageView does for the public Contact section.
+  const contact = event.contact ?? {}
+  const contacts = [
+    { name: contact.name, email: contact.email, phone: contact.phone, website: contact.website },
+    ...(Array.isArray(contact.people) ? contact.people : []),
+  ].filter((c) => c && (c.name || c.email || c.phone || c.website))
+
   const rows = [
     { label: t('console.eventName'), value: lt(event.name, locale, event.default_locale) },
     { label: t('console.slug'), value: event.slug },
@@ -57,6 +65,40 @@ export default async function AdminEventSettings({ params }) {
   return (
     <>
       <DescriptionList rows={rows} />
+
+      {/* Contact lives on events.contact (a top-level column, not page_content):
+          the primary contact is the flat name/email/phone/website, and any
+          extras are contact.people[] — the same shape the Settings form edits
+          and the event page's Contact section renders. */}
+      <h2 className="eyebrow" style={{ marginBlock: 'var(--s-5) var(--s-3)' }}>
+        {t('console.contactInfo')}
+      </h2>
+      {contacts.length === 0 ? (
+        <p className="alert alert-info">{t('console.adminNothingHere')}</p>
+      ) : (
+        <div className="table-wrap table-cards">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('console.contactName')}</th>
+                <th>{t('console.contactEmail')}</th>
+                <th>{t('console.contactPhone')}</th>
+                <th>{t('console.contactWebsite')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((c, i) => (
+                <tr key={i}>
+                  <td data-cell="title">{c.name || '—'}</td>
+                  <td data-label={t('console.contactEmail')}>{c.email || '—'}</td>
+                  <td data-label={t('console.contactPhone')}>{c.phone || '—'}</td>
+                  <td data-label={t('console.contactWebsite')}>{c.website || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 className="eyebrow" style={{ marginBlock: 'var(--s-5) var(--s-3)' }}>
         {t('console.participantTypes')}

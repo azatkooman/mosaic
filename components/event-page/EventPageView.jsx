@@ -142,11 +142,12 @@ function ArrowLeftIcon() {
  * with no site header (see app/[locale]/(event)/layout.js), so without this
  * there is no way off the page but the browser's own back button.
  *
- * Inert in the console preview, matching RegisterCta: the preview should show
- * what a visitor sees without navigating the organizer out of the editor.
+ * Inert wherever the page is being looked AT rather than used — the console
+ * preview and the admin's read-only view — matching RegisterCta: both should
+ * show what a visitor sees without navigating the viewer out of their tool.
  */
-function HomeBackLink({ editable, href, label }) {
-  if (editable) {
+function HomeBackLink({ inert, href, label }) {
+  if (inert) {
     return (
       <span className={styles.heroBack} aria-disabled="true">
         <ArrowLeftIcon />
@@ -163,9 +164,9 @@ function HomeBackLink({ editable, href, label }) {
   )
 }
 
-function RegisterCta({ editable, registerHref, label }) {
+function RegisterCta({ inert, registerHref, label }) {
   const cls = `btn ${styles.registerBtn}`
-  if (editable) {
+  if (inert) {
     return (
       <span className={cls} aria-disabled="true">
         {label}
@@ -180,8 +181,18 @@ function RegisterCta({ editable, registerHref, label }) {
 }
 
 /**
- * The public event landing page. Rendered by the public route AND by the
- * console's Event Page tab (editable=true adds hover pencils per section).
+ * The public event landing page. Rendered by the public route, the console's
+ * Event Page tab (editable=true adds hover pencils per section), and the
+ * admin's read-only view.
+ *
+ * `editable` and `navigable` are separate axes on purpose. The admin view wants
+ * neither edit affordances NOR working navigation: it is a place to READ the
+ * page, and a back link or register button that leaves the admin console would
+ * be a trapdoor out of it. With `navigable={false}` the chrome (back, register,
+ * language) stops navigating; the language switcher instead reports the chosen
+ * code through `onContentLocaleChange`, so the caller can re-render the SAVED
+ * content in that language — no translation is performed, and hand-edits made
+ * after an auto-translate show exactly as a registrant would see them.
  */
 export function EventPageView({
   event,
@@ -190,6 +201,8 @@ export function EventPageView({
   registerHref,
   editable = false,
   onEditSection,
+  navigable = true,
+  onContentLocaleChange,
 }) {
   const t = useTranslations('event')
   const tCommon = useTranslations('common')
@@ -334,7 +347,7 @@ export function EventPageView({
     />
   )
   const registerButton = (
-    <RegisterCta editable={editable} registerHref={registerHref} label={L(theme.register_btn_text) || t('register')} />
+    <RegisterCta inert={editable || !navigable} registerHref={registerHref} label={L(theme.register_btn_text) || t('register')} />
   )
 
   // Logo + language switcher bar. Position controls horizontal alignment,
@@ -361,7 +374,11 @@ export function EventPageView({
   // `locale` (not `cl`) — home is a platform route, and cl may be a custom
   // language code that has none.
   const heroBack = (
-    <HomeBackLink editable={editable} href={`/${locale}`} label={t('backToHome')} />
+    <HomeBackLink
+      inert={editable || !navigable}
+      href={`/${locale}`}
+      label={t('backToHome')}
+    />
   )
 
   const heroTopBar = (logoUrl || showLangSwitch) && (
@@ -382,13 +399,17 @@ export function EventPageView({
         <span />
       )}
       {/* Inside the console preview the picker is inert — the editor's own
-          preview-language control above the canvas drives the language there. */}
+          preview-language control above the canvas drives the language there.
+          Elsewhere an option carries an href only when navigation is wanted;
+          without one LanguagePicker falls back to onChange, which is how the
+          admin's read-only view swaps language in place. */}
       <LanguagePicker
         options={availableLocales.map((l) => ({
           value: l,
           label: langLabel(l),
-          href: editable ? undefined : langHref(l),
+          href: editable || !navigable ? undefined : langHref(l),
         }))}
+        onChange={onContentLocaleChange}
         value={cl}
         disabled={editable}
         ariaLabel={tCommon('language')}

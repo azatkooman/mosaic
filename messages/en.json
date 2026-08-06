@@ -155,6 +155,7 @@
     "adminArchivedRow": "Archived",
     "adminRegisteredAt": "Registered",
     "adminParticipantsSummary": "{total} registrations, {archived} archived.",
+    "adminParticipant": "Participant",
     "adminPerRegistration": "Per registration",
     "adminMember": "Member",
     "adminRole": "Role",

@@ -3,9 +3,8 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
 import { formatEventDate } from '@/lib/dates'
 import { getDateFormatPrefs } from '@/lib/date-format-server'
-import { formatRegNo } from '@/lib/participants-query'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
-import { Badge } from '@/components/ui'
+import { AdminParticipantsTable } from './AdminParticipantsTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,11 +15,12 @@ export const dynamic = 'force-dynamic'
  * Purpose-built rather than reusing the console's ParticipantsTable: that one
  * filters `deleted_at is null` through the shared query helper (by design, so
  * the Hub list and the export agree), which would hide exactly what an admin
- * comes here to see. This one is also entirely server-rendered — no filtering,
- * sorting or paging, because it is a review surface, not a working list.
+ * comes here to see.
  *
- * Answers live in a <details> per row so a wide form does not force a
- * horizontal scroll, and so no client JavaScript is needed to expand them.
+ * Rows are shaped here and sorted in the browser. Every row is already loaded
+ * — this list does not page — so sorting needs no round trip, and keeping the
+ * shaping server-side keeps locale resolution and answer formatting off the
+ * client.
  */
 export default async function AdminEventParticipants({ params }) {
   const { locale, eventId } = await params
@@ -45,10 +45,9 @@ export default async function AdminEventParticipants({ params }) {
 
   const dl = event?.default_locale
   const tz = event?.timezone ?? 'UTC'
-  const rows = participants ?? []
-  const archivedCount = rows.filter((p) => p.deleted_at).length
+  const raw = participants ?? []
 
-  if (rows.length === 0) {
+  if (raw.length === 0) {
     return <p className="alert alert-info">{t('console.adminNothingHere')}</p>
   }
 
@@ -59,17 +58,42 @@ export default async function AdminEventParticipants({ params }) {
     return questions
       .filter((q) => q.type !== 'section' && p.answers?.[q.id] != null)
       .map((q) => {
-        const raw = p.answers[q.id]
-        // formatStructuredAnswer takes (question, value) — it renders the
-        // composite name/address/phone shapes that would otherwise stringify
-        // to "[object Object]".
-        const value =
-          typeof raw === 'object'
-            ? formatStructuredAnswer(q, raw) || JSON.stringify(raw)
-            : String(raw)
-        return { id: q.id, label: lt(q.label, locale, dl) || q.id, value }
+        const value = p.answers[q.id]
+        return {
+          id: q.id,
+          label: lt(q.label, locale, dl) || q.id,
+          // formatStructuredAnswer takes (question, value) — it renders the
+          // composite name/address/phone shapes that would otherwise
+          // stringify to "[object Object]".
+          value:
+            typeof value === 'object'
+              ? formatStructuredAnswer(q, value) || JSON.stringify(value)
+              : String(value),
+        }
       })
   }
+
+  const rows = raw.map((p) => ({
+    id: p.id,
+    // Sorting needs the two integers, not the "7.10" label, or 7.9 would sort
+    // after 7.10 (see formatRegNo in lib/participants-query).
+    regNo: p.reg_seq == null ? 0 : p.reg_seq * 1000 + (p.member_index ?? 1),
+    regSeq: p.reg_seq,
+    memberIndex: p.member_index ?? 1,
+    name: [p.first_name, p.last_name].filter(Boolean).join(' '),
+    email: p.email,
+    typeName: lt(p.participant_types?.name, locale, dl),
+    status: p.status,
+    statusLabel: t(`status.${p.status}`),
+    archived: Boolean(p.deleted_at),
+    profileName: p.profile_name,
+    profileEmail: p.profile_email,
+    createdAt: Date.parse(p.created_at) || 0,
+    createdAtLabel: formatEventDate(p.created_at, tz, locale, dateFmt),
+    answers: answerRows(p),
+  }))
+
+  const archivedCount = rows.filter((r) => r.archived).length
 
   return (
     <>
@@ -80,74 +104,20 @@ export default async function AdminEventParticipants({ params }) {
         })}
       </p>
 
-      <div className="table-wrap table-cards">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('console.regNo')}</th>
-              <th>{t('common.actions')}</th>
-              <th>{t('console.byType')}</th>
-              <th>{t('console.byStatus')}</th>
-              <th>{t('console.profileName')}</th>
-              <th>{t('console.profileEmail')}</th>
-              <th>{t('console.adminRegisteredAt')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => {
-              const answers = answerRows(p)
-              return (
-                <tr key={p.id} data-archived={p.deleted_at ? '' : undefined}>
-                  <td data-cell="title">{formatRegNo(p) || '—'}</td>
-                  <td data-label={t('common.actions')}>
-                    <div>
-                      {[p.first_name, p.last_name].filter(Boolean).join(' ') || '—'}
-                      {p.email && (
-                        <div style={{ color: 'var(--ink-soft)' }}>{p.email}</div>
-                      )}
-                    </div>
-                    {answers.length > 0 && (
-                      <details style={{ marginBlockStart: 'var(--s-1)' }}>
-                        <summary style={{ cursor: 'pointer', color: 'var(--ink-soft)' }}>
-                          {t('console.adminAnswers')} ({answers.length})
-                        </summary>
-                        <dl style={{ margin: 'var(--s-2) 0 0' }}>
-                          {answers.map((a) => (
-                            <div key={a.id} style={{ marginBlockEnd: 'var(--s-1)' }}>
-                              <dt style={{ color: 'var(--ink-soft)', fontWeight: 600 }}>
-                                {a.label}
-                              </dt>
-                              <dd style={{ margin: 0, overflowWrap: 'break-word' }}>{a.value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </details>
-                    )}
-                  </td>
-                  <td data-label={t('console.byType')}>
-                    {lt(p.participant_types?.name, locale, dl) || '—'}
-                  </td>
-                  <td data-label={t('console.byStatus')}>
-                    <span style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
-                      {/* The distinction this page exists for: archived rows
-                          are invisible to the organizer and the registrant. */}
-                      {p.deleted_at && (
-                        <Badge tone="archived">{t('console.adminArchivedRow')}</Badge>
-                      )}
-                    </span>
-                  </td>
-                  <td data-label={t('console.profileName')}>{p.profile_name || '—'}</td>
-                  <td data-label={t('console.profileEmail')}>{p.profile_email || '—'}</td>
-                  <td data-label={t('console.adminRegisteredAt')}>
-                    {formatEventDate(p.created_at, tz, locale, dateFmt)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <AdminParticipantsTable
+        rows={rows}
+        labels={{
+          regNo: t('console.regNo'),
+          name: t('console.adminParticipant'),
+          type: t('console.byType'),
+          status: t('console.byStatus'),
+          archived: t('console.adminArchivedRow'),
+          profileName: t('console.profileName'),
+          profileEmail: t('console.profileEmail'),
+          registeredAt: t('console.adminRegisteredAt'),
+          answers: t('console.adminAnswers'),
+        }}
+      />
     </>
   )
 }

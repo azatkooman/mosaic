@@ -155,6 +155,7 @@
     "adminArchivedRow": "В архиве",
     "adminRegisteredAt": "Зарегистрирован",
     "adminParticipantsSummary": "Регистраций: {total}, в архиве: {archived}.",
+    "adminParticipant": "Участник",
     "adminPerRegistration": "На регистрацию",
     "adminMember": "Участник команды",
     "adminRole": "Роль",
