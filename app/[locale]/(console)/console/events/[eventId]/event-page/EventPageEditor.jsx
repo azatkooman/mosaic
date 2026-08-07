@@ -144,8 +144,8 @@ const PREVIEW_MESSAGES = {
 }
 
 /**
- * Built-in wording for the seven default labels, per message key per platform
- * locale, read straight out of the catalogs the preview already bundles.
+ * Built-in wording for the default labels and section headings, per message key
+ * per platform locale, read straight out of the catalogs the preview bundles.
  * `withDefaultLabels` seeds these into page_content so auto-translate has a
  * source to work from — see lib/event-page-defaults.
  */
@@ -350,8 +350,9 @@ export function EventPageEditor({ initialEvent }) {
   const supabase = getSupabaseBrowserClient()
   const isDark = useIsDarkMode()
 
-  // The seven built-in labels start as real text rather than empty slots, so
-  // the translator has something to translate FROM (see lib/event-page-defaults).
+  // The built-in labels and section headings start as real text rather than
+  // empty slots, so the translator has something to translate FROM (see
+  // lib/event-page-defaults).
   // Deliberately does NOT mark the editor dirty: an organizer who opens the
   // customizer and changes nothing should not be told they have unsaved work.
   // The seeds ride along with their next save, and with a translate run —
