@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
+import { NextIntlClientProvider } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { eventPageUrl } from '@/lib/url'
 import { getSupabaseAnonClient } from '@/lib/supabase/server'
 import { lt, LOCALES } from '@/lib/i18n/locales'
+import { getContentMessages } from '@/lib/i18n/ui-messages-server'
 import { eventMediaUrl } from '@/lib/storage'
 import { EventPageView } from '@/components/event-page/EventPageView'
 
@@ -54,7 +56,15 @@ export default async function EventPage({ params, searchParams }) {
   const contentLocale =
     lang && customCodes.includes(lang) && available.includes(lang) ? lang : locale
 
-  return (
+  // Most of this page's text is event content and already follows
+  // contentLocale. What is left is our own chrome — "Registration closed",
+  // "Back to home", the language switcher's aria-label — which lives in the
+  // message catalog and so only exists in the five platform locales. For a
+  // custom language those stayed in the route locale. See lib/i18n/ui-messages.
+  const { messages: contentMessages, changed: hasContentMessages } =
+    await getContentMessages(contentLocale)
+
+  const view = (
     <EventPageView
       event={event}
       locale={locale}
@@ -68,5 +78,15 @@ export default async function EventPage({ params, searchParams }) {
         subPath: '/register',
       })}
     />
+  )
+
+  // `locale`, not contentLocale: the provider's locale drives Intl formatting
+  // and a custom code may not be a locale Intl knows. Only the catalog changes.
+  return hasContentMessages ? (
+    <NextIntlClientProvider locale={locale} messages={contentMessages}>
+      {view}
+    </NextIntlClientProvider>
+  ) : (
+    view
   )
 }

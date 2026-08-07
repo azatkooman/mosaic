@@ -144,8 +144,8 @@ const PREVIEW_MESSAGES = {
 }
 
 /**
- * Built-in wording for the seven default labels, per message key per platform
- * locale, read straight out of the catalogs the preview already bundles.
+ * Built-in wording for the default labels and section headings, per message key
+ * per platform locale, read straight out of the catalogs the preview bundles.
  * `withDefaultLabels` seeds these into page_content so auto-translate has a
  * source to work from — see lib/event-page-defaults.
  */
@@ -350,8 +350,9 @@ export function EventPageEditor({ initialEvent }) {
   const supabase = getSupabaseBrowserClient()
   const isDark = useIsDarkMode()
 
-  // The seven built-in labels start as real text rather than empty slots, so
-  // the translator has something to translate FROM (see lib/event-page-defaults).
+  // The built-in labels and section headings start as real text rather than
+  // empty slots, so the translator has something to translate FROM (see
+  // lib/event-page-defaults).
   // Deliberately does NOT mark the editor dirty: an organizer who opens the
   // customizer and changes nothing should not be told they have unsaved work.
   // The seeds ride along with their next save, and with a translate run —
@@ -489,6 +490,21 @@ export function EventPageEditor({ initialEvent }) {
     // Organizer-added languages come from the Google-supported list, so they
     // are valid auto-translate targets too. The API drops any it can't handle.
     const realTargets = targets.filter((l) => l && l !== source)
+    // Make sure the PLATFORM text exists in every custom language this run
+    // touches. Event content and platform text are translated by different
+    // machinery — content per event into this row, platform text once per
+    // language into a shared table — but they are needed at the same moment, so
+    // the organizer triggers both with one action. Fire-and-forget: it writes
+    // nothing belonging to this event, it is idempotent and near-free when the
+    // language is already cached, and a failure must not derail the content
+    // translation the organizer actually asked for. See lib/i18n/ui-messages.
+    for (const code of realTargets.filter((l) => !LOCALES.includes(l))) {
+      fetch('/api/ui-translations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code }),
+      }).catch(() => {})
+    }
     if (!realTargets.length) {
       // Silent for the automatic path — switching to the default language has
       // nothing to do and isn't an error.

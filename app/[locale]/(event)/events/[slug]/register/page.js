@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
-import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { createTranslator, NextIntlClientProvider } from 'next-intl'
+import { setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt, eventLocales, localeAcronym } from '@/lib/i18n/locales'
+import { getContentMessages } from '@/lib/i18n/ui-messages-server'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
@@ -13,8 +15,6 @@ export default async function RegisterPage({ params, searchParams }) {
   const { slug, locale } = await params
   const { lang } = (await searchParams) ?? {}
   setRequestLocale(locale)
-  const t = await getTranslations('wizard')
-  const tCommon = await getTranslations('common')
 
   const supabase = await getSupabaseServerClient()
   const {
@@ -45,6 +45,24 @@ export default async function RegisterPage({ params, searchParams }) {
   const localeOptions = eventLocales(event)
   const contentLocale =
     lang && customCodes.includes(lang) && localeOptions.includes(lang) ? lang : locale
+
+  // The wizard's own text — "Register for…", "Single registration", "Next",
+  // "First name", the validation errors — is platform text, not event content,
+  // so it lives in messages/{locale}.json and only exists in the five platform
+  // locales. A custom language has no route to carry it (it rides ?lang=), so
+  // the chrome stayed in the route locale while everything around it was
+  // translated. These are the cached machine translations for that language,
+  // laid over the route locale's catalog; `changed` is false for a platform
+  // locale, which already resolves correctly, and whenever the cache is empty.
+  // See lib/i18n/ui-messages.js.
+  const { messages: contentMessages, changed: hasContentMessages } =
+    await getContentMessages(contentLocale)
+  // createTranslator, not getTranslations: the latter reads the request's own
+  // catalog and cannot be handed a merged one. Formatting stays on `locale` —
+  // a real platform locale — because some Google language codes are not valid
+  // Intl locales and must never reach a date formatter.
+  const t = createTranslator({ locale, messages: contentMessages, namespace: 'wizard' })
+  const tCommon = createTranslator({ locale, messages: contentMessages, namespace: 'common' })
 
   // Back to the event page in the language the reader is already in. A plain
   // <a>, not next-intl's Link: eventPageUrl already carries the locale prefix
@@ -153,6 +171,30 @@ export default async function RegisterPage({ params, searchParams }) {
         : null,
     }))
 
+  // The wizard and the form runtime call useTranslations in ~30 places. Nesting
+  // a provider swaps the catalog for that whole subtree without touching any of
+  // them: IntlProvider inherits everything but `messages` from the surrounding
+  // context, so locale, time zone and formatters stay exactly as the root layout
+  // set them. Skipped when there is nothing to override, so a platform locale
+  // keeps the single provider it has always had.
+  const wizardElement = (
+    <RegistrationWizard
+      event={event}
+      participantTypes={participantTypes}
+      modeForms={modeForms}
+      userId={user.id}
+      profile={profile}
+      contentLocale={contentLocale}
+    />
+  )
+  const wizard = hasContentMessages ? (
+    <NextIntlClientProvider locale={locale} messages={contentMessages}>
+      {wizardElement}
+    </NextIntlClientProvider>
+  ) : (
+    wizardElement
+  )
+
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
       <div
@@ -185,14 +227,7 @@ export default async function RegisterPage({ params, searchParams }) {
       <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
         {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
       </h1>
-      <RegistrationWizard
-        event={event}
-        participantTypes={participantTypes}
-        modeForms={modeForms}
-        userId={user.id}
-        profile={profile}
-        contentLocale={contentLocale}
-      />
+      {wizard}
     </div>
   )
 }
