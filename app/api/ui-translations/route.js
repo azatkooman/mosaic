@@ -10,6 +10,8 @@ import {
   applyUiTranslations,
   flattenMessages,
   pickUiMessages,
+  protectPlaceholders,
+  restorePlaceholders,
   staleUiKeys,
 } from '@/lib/i18n/ui-messages'
 import sourceCatalog from '@/messages/en.json'
@@ -97,13 +99,18 @@ export async function POST(request) {
     return NextResponse.json({ code, fresh: true, translated: 0 })
   }
 
+  // Placeholders go out as `{0}`, not `{event}`: Google translates the words
+  // inside braces for some targets, which used to cost the string its whole
+  // translation. See protectPlaceholders.
+  const masked = stale.map((path) => protectPlaceholders(sourceFlat[path]))
+
   // One request per language, and the attendee namespaces are ~114 keys, so
   // this never approaches Google's 128-segment limit that translateBatch
   // chunks for. Sent as a per-target map because that is the helper's shape.
   let translations
   try {
     translations = await translateRequests(
-      { [code]: stale.map((path) => sourceFlat[path]) },
+      { [code]: masked.map((m) => m.masked) },
       UI_SOURCE_LOCALE,
       apiKey,
       supported
@@ -119,7 +126,13 @@ export async function POST(request) {
   if (!Array.isArray(texts) || texts.length !== stale.length) {
     return NextResponse.json({ error: 'translation_failed' }, { status: 502 })
   }
-  const byPath = Object.fromEntries(stale.map((path, i) => [path, texts[i]]))
+  // A token that did not survive leaves the raw output in place, so
+  // applyUiTranslations rejects it through the same placeholder check as any
+  // other bad translation — one rejection path, one report.
+  const byPath = {}
+  for (let i = 0; i < stale.length; i++) {
+    byPath[stale[i]] = restorePlaceholders(texts[i], masked[i].names) ?? texts[i]
+  }
 
   const { messages, source_hashes, applied, rejected } = applyUiTranslations(
     existing,
@@ -136,10 +149,18 @@ export async function POST(request) {
     return NextResponse.json({ error: 'internal' }, { status: 500 })
   }
 
-  // A rejected key kept its placeholder mangled by the translator; it stays
-  // uncached (and so falls back to the route locale) and is retried next run.
+  // A rejected key came back with its placeholders mangled even after masking;
+  // it stays uncached (so it falls back to the route locale) and is retried on
+  // the next run. Logged WITH the offending output: masking should make this
+  // rare, and if it still happens the raw string is the only way to tell what
+  // the translator did to it.
   if (rejected.length > 0) {
-    console.warn(`ui-translations ${code}: ${rejected.length} key(s) rejected:`, rejected)
+    const detail = rejected.map((path) => ({
+      path,
+      source: sourceFlat[path],
+      returned: texts[stale.indexOf(path)],
+    }))
+    console.warn(`ui-translations ${code}: ${rejected.length} key(s) rejected`, detail)
   }
 
   return NextResponse.json({ code, fresh: false, translated: applied, rejected })
