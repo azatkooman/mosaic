@@ -35,8 +35,12 @@ import sourceCatalog from '@/messages/en.json'
  * Body: { code: string }  ·  a language from Google's supported list
  */
 export async function POST(request) {
+  // Generous enough for the admin refresh sweep, which calls this once per
+  // cached language in a loop. Still a real cap on the translation budget: an
+  // authenticated caller cannot burn more than this many Google calls a minute,
+  // and every call that finds nothing stale costs one SELECT and no API request.
   const rateLimitRes = enforceRateLimit(request, {
-    limit: 10,
+    limit: 60,
     windowMs: 60000,
     keyPrefix: 'ui-translations',
   })
