@@ -390,18 +390,7 @@ export function ParticipantsTable({
         </a>
       </div>
       {selectedIds.size > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--s-3)',
-            padding: 'var(--s-3) var(--s-4)',
-            backgroundColor: 'var(--surface-subtle, #f8fafc)',
-            border: '1px solid var(--line, #e2e8f0)',
-            borderRadius: '6px',
-            marginBottom: 'var(--s-2)',
-          }}
-        >
+        <div className={styles.bulkBar}>
           <strong>{selectedIds.size} selected</strong>
           {canChangeStatus && (
             <>

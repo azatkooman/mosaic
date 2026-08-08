@@ -15,6 +15,27 @@
   flex: 1;
 }
 
+/* Selection action bar. Wraps like the toolbar so a phone shows it as
+   stacked rows instead of forcing the whole page to scroll sideways. */
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  background-color: var(--surface-subtle, #f8fafc);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 6px;
+  margin-bottom: var(--s-2);
+}
+
+/* width:auto selects size to their longest option (question labels can be
+   long); never let one grow past the viewport. */
+.toolbar select,
+.bulkBar select {
+  max-inline-size: 100%;
+}
+
 .answerFilters {
   display: flex;
   align-items: center;
