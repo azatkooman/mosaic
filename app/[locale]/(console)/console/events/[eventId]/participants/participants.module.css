@@ -41,6 +41,11 @@
   align-items: center;
   gap: var(--s-2);
   flex-wrap: wrap;
+  /* As a flex item this would otherwise size to its content, so the
+     select's max-inline-size:100% below would resolve against a box that
+     is itself wider than the screen. Cap the chain at the toolbar. */
+  max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .pager {
