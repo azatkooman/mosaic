@@ -6,6 +6,7 @@ import { useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales, localeName } from '@/lib/i18n/locales'
 import { stripLocales } from '@/lib/form-localization'
+import { translateTypeNames } from './translate-type-names'
 import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
@@ -23,7 +24,7 @@ function newContactId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-export function EventSettingsForm({ event, initialTypes, forms }) {
+export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = {} }) {
   const t = useTranslations('console')
   const tCommon = useTranslations('common')
   const locale = useLocale()
@@ -295,9 +296,37 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
 
     // Participant-type names are localized too, so they get purged as well; the
     // rewritten name then differs from the saved one and is picked up below.
-    const typesToSave = removed.size
+    const purgedTypes = removed.size
       ? types.map((pt) => ({ ...pt, name: purge(pt.name) }))
       : types
+
+    // Fill in the other languages before writing, so each row is saved once
+    // rather than written and then written again. Only names whose
+    // default-language text actually changed are sent, so an edit to capacity or
+    // to a non-default language costs no API call. A translation failure must
+    // not lose the organizer's typed text, so it falls through to saving what
+    // they entered — the next save retries, since nothing was stamped.
+    let typesToSave = purgedTypes
+    try {
+      const result = await translateTypeNames(purgedTypes, {
+        source: defaultLocale,
+        locales: nextAvailable,
+        translate: async (requests) => {
+          const res = await fetch('/api/translate-event', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ requests, source: defaultLocale }),
+          })
+          if (!res.ok) throw new Error('translate_failed')
+          const data = await res.json().catch(() => ({}))
+          return data.translations ?? {}
+        },
+      })
+      typesToSave = result.types
+    } catch {
+      // Missing API key, an unsupported language, a network blip — all of them
+      // mean "no translations this time", never "do not save".
+    }
 
     // Participant types: persist every row that differs from the last known
     // saved state. Sequential (not parallel) so a failure stops before later
@@ -322,7 +351,11 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
     }
 
     setSaveState('saved')
-    if (removed.size) setTypes(typesToSave)
+    // Was `if (removed.size)`; translations rewrite the names too, so the
+    // condition is now simply "did anything rewrite them". Without this the
+    // inputs would keep showing the pre-translation maps and the next save would
+    // see them as an edit.
+    if (typesToSave !== types) setTypes(typesToSave)
     savedTypesRef.current = typesToSave
     savedLocalesRef.current = nextAvailable
     setSavedSnap(snapshotOf(typesToSave, slugValue))
@@ -362,8 +395,14 @@ export function EventSettingsForm({ event, initialTypes, forms }) {
   async function addType(preset) {
     const base = preset ?? {
       key: `type_${Date.now().toString(36)}`,
-      // Seed the name in the event's default language, translated for the UI.
-      name: { [defaultLocale]: t('newTypeDefault') },
+      // Seeded under the event's default language, in that language's own
+      // wording. t() would render in the CONSOLE locale instead, so a Spanish
+      // console on an English-default event stored Spanish text under `en` —
+      // which becomes the source string the other languages are translated FROM.
+      // Falls back to English when the default is an organizer-added language,
+      // which has no catalog: the placeholder must not be blank, and the
+      // organizer renames it immediately anyway.
+      name: { [defaultLocale]: newTypeLabels[defaultLocale] ?? newTypeLabels.en },
     }
     const key = uniqueTypeKey(base.key, types.map((pt) => pt.key))
     const { data, error } = await supabase
