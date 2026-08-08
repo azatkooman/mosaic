@@ -807,5 +807,30 @@
     "isNotEmptyCheckbox": "is checked",
     "isEmptyFile": "has no file",
     "isNotEmptyFile": "has a file"
+  },
+  "email": {
+    "confirmSubject": "Registration confirmation: {eventName}",
+    "confirmHeading": "Registration received for {eventName}",
+    "hello": "Hello {name},",
+    "confirmIntro": "Thank you for registering! Below are your registration details:",
+    "participant": "Participant",
+    "statusColumn": "Status",
+    "viewRegistrations": "View my registrations",
+    "statusSubjectConfirmed": "Great news! You are confirmed for {eventName}",
+    "statusSubjectUpdated": "Registration status updated for {eventName}",
+    "statusHeading": "Status update: {eventName}",
+    "statusLine": "Your registration status for {eventName} has been updated to: {status}.",
+    "waitlistPromoted": "You have been moved from the waitlist and your spot is now confirmed!",
+    "viewRegistration": "View registration details",
+    "roleInviteSubject": "You've been invited to Mosaic as a {roleName}",
+    "roleGrantedSubject": "You've been added as a {roleName} on Mosaic",
+    "roleInviteBody": "You have been invited to join Mosaic Events as a {roleName}. Sign in once to activate your access — your role will be applied automatically, and you'll be able to manage events from the organizer console.",
+    "roleGrantedBody": "You have been added as a {roleName} for Mosaic Events. You now have access to manage events from the organizer console.",
+    "roleSignIn": "Sign in to Mosaic",
+    "roleConsole": "Go to the Mosaic console",
+    "roleQuestions": "If you have questions, please reach out to your event administrator.",
+    "roleAdmin": "Admin",
+    "roleOrganizer": "Global Organizer",
+    "automated": "This is an automated message from Mosaic."
   }
 }

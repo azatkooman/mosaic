@@ -21,10 +21,13 @@ export function Countdown({
   labelSeconds,
 }) {
   const t = useTranslations('event')
-  const [remaining, setRemaining] = useState(() => diff(targetIso))
+  // Client-only: the value derives from Date.now(), so any server-rendered
+  // snapshot is already stale by hydration time and the texts can never match.
+  const [remaining, setRemaining] = useState(null)
 
   useEffect(() => {
     if (!targetIso) return
+    setRemaining(diff(targetIso))
     const id = setInterval(() => setRemaining(diff(targetIso)), 1000)
     return () => clearInterval(id)
   }, [targetIso])

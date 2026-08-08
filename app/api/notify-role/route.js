@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email'
+import { sendEmail, emailTranslator } from '@/lib/email'
 
 /**
  * POST /api/notify-role
- * Body: { email: string, role: string }
+ * Body: { email: string, role: string, mode?: 'invite' }
  *
  * Called by the admin console after successfully granting a global role.
  * Sends a notification email to the user. Only admins may call this
@@ -46,60 +46,44 @@ export async function POST(request) {
   // when they first sign in. Anything else = the role was granted now.
   const isInvite = mode === 'invite'
 
-  // Look up the target user's name (absent for a not-yet-registered invitee).
+  // Look up the target user's name and language (absent for a
+  // not-yet-registered invitee, who gets English).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, preferred_locale')
     .eq('email', email.trim().toLowerCase())
     .maybeSingle()
 
   const name = profile?.full_name || email
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mosaic.cru.org'
-  const consoleUrl = `${siteUrl}/en/console`
+  const locale = profile?.preferred_locale || 'en'
+  const t = emailTranslator(locale)
+  // Without a configured site URL there is nothing sane to link to — the
+  // email still goes out, just without the button.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+  const consoleUrl = `${siteUrl}/${locale}/console`
   // Invitees sign in first, then land in the console with the role applied.
-  const loginUrl = `${siteUrl}/en/login?next=${encodeURIComponent('/en/console')}`
+  const loginUrl = `${siteUrl}/${locale}/login?next=${encodeURIComponent(`/${locale}/console`)}`
 
-  const roleName =
-    role === 'admin' ? 'Admin' : 'Global Organizer'
+  const roleName = role === 'admin' ? t('roleAdmin') : t('roleOrganizer')
 
-  const html = isInvite
-    ? `
+  const buttonStyle =
+    'display: inline-block; padding: 12px 24px; background-color: #2c6e5a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;'
+  const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
       <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
-        Dear ${escapeHtml(name)},
+        ${t('hello', { name: escapeHtml(name) })}
       </p>
       <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
-        You have been invited to join Mosaic Events as a <strong>${roleName}</strong>.
-        Sign in once to activate your access — your ${roleName} role will be
-        applied automatically, and you'll be able to manage events from the
-        organizer console.
+        ${t(isInvite ? 'roleInviteBody' : 'roleGrantedBody', { roleName: `<strong>${escapeHtml(roleName)}</strong>` })}
       </p>
+      ${siteUrl ? `
       <p style="margin: 28px 0;">
-        <a href="${loginUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2c6e5a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">
-          Sign in to Mosaic →
+        <a href="${isInvite ? loginUrl : consoleUrl}" style="${buttonStyle}">
+          ${t(isInvite ? 'roleSignIn' : 'roleConsole')} →
         </a>
-      </p>
+      </p>` : ''}
       <p style="font-size: 13px; color: #666; line-height: 1.5;">
-        If you have questions, please reach out to your event administrator.
-      </p>
-    </div>
-  `.trim()
-    : `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-      <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
-        Dear ${escapeHtml(name)},
-      </p>
-      <p style="font-size: 16px; line-height: 1.6; color: #1a1a1a;">
-        You have been added as a <strong>${roleName}</strong> for Mosaic Events.
-        You now have access to manage events from the organizer console.
-      </p>
-      <p style="margin: 28px 0;">
-        <a href="${consoleUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2c6e5a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">
-          Go to Mosaic Console →
-        </a>
-      </p>
-      <p style="font-size: 13px; color: #666; line-height: 1.5;">
-        If you have questions, please reach out to your event administrator.
+        ${t('roleQuestions')}
       </p>
     </div>
   `.trim()
@@ -107,9 +91,7 @@ export async function POST(request) {
   try {
     await sendEmail({
       to: email.trim(),
-      subject: isInvite
-        ? `You've been invited to Mosaic as a ${roleName}`
-        : `You've been added as a ${roleName} on Mosaic`,
+      subject: t(isInvite ? 'roleInviteSubject' : 'roleGrantedSubject', { roleName }),
       html,
     })
   } catch (err) {

@@ -807,5 +807,30 @@
     "isNotEmptyCheckbox": "est cochée",
     "isEmptyFile": "n'a pas de fichier",
     "isNotEmptyFile": "a un fichier"
+  },
+  "email": {
+    "confirmSubject": "Confirmation d'inscription : {eventName}",
+    "confirmHeading": "Inscription reçue pour {eventName}",
+    "hello": "Bonjour {name},",
+    "confirmIntro": "Merci de votre inscription ! Voici les détails de votre inscription :",
+    "participant": "Participant",
+    "statusColumn": "Statut",
+    "viewRegistrations": "Voir mes inscriptions",
+    "statusSubjectConfirmed": "Bonne nouvelle ! Votre place pour {eventName} est confirmée",
+    "statusSubjectUpdated": "Statut d'inscription mis à jour pour {eventName}",
+    "statusHeading": "Mise à jour du statut : {eventName}",
+    "statusLine": "Le statut de votre inscription pour {eventName} est passé à : {status}.",
+    "waitlistPromoted": "Vous avez quitté la liste d'attente et votre place est désormais confirmée !",
+    "viewRegistration": "Voir les détails de l'inscription",
+    "roleInviteSubject": "Vous avez été invité·e à rejoindre Mosaic en tant que {roleName}",
+    "roleGrantedSubject": "Vous avez été ajouté·e comme {roleName} sur Mosaic",
+    "roleInviteBody": "Vous avez été invité·e à rejoindre Mosaic Events en tant que {roleName}. Connectez-vous une première fois pour activer votre accès : votre rôle sera appliqué automatiquement et vous pourrez gérer les événements depuis la console des organisateurs.",
+    "roleGrantedBody": "Vous avez été ajouté·e comme {roleName} sur Mosaic Events. Vous pouvez désormais gérer les événements depuis la console des organisateurs.",
+    "roleSignIn": "Se connecter à Mosaic",
+    "roleConsole": "Ouvrir la console Mosaic",
+    "roleQuestions": "Pour toute question, adressez-vous à l'administrateur de votre événement.",
+    "roleAdmin": "Administrateur",
+    "roleOrganizer": "Organisateur global",
+    "automated": "Ceci est un message automatique de Mosaic."
   }
 }

@@ -807,5 +807,30 @@
     "isNotEmptyCheckbox": "отмечено",
     "isEmptyFile": "без файла",
     "isNotEmptyFile": "с файлом"
+  },
+  "email": {
+    "confirmSubject": "Подтверждение регистрации: {eventName}",
+    "confirmHeading": "Регистрация на {eventName} получена",
+    "hello": "Здравствуйте, {name}!",
+    "confirmIntro": "Спасибо за регистрацию! Ниже приведены её детали:",
+    "participant": "Участник",
+    "statusColumn": "Статус",
+    "viewRegistrations": "Мои регистрации",
+    "statusSubjectConfirmed": "Отличные новости! Ваше участие в {eventName} подтверждено",
+    "statusSubjectUpdated": "Статус регистрации на {eventName} обновлён",
+    "statusHeading": "Обновление статуса: {eventName}",
+    "statusLine": "Статус вашей регистрации на {eventName} изменён на: {status}.",
+    "waitlistPromoted": "Вы перемещены из листа ожидания — ваше место подтверждено!",
+    "viewRegistration": "Посмотреть детали регистрации",
+    "roleInviteSubject": "Вас пригласили в Mosaic в роли «{roleName}»",
+    "roleGrantedSubject": "Вам назначена роль «{roleName}» в Mosaic",
+    "roleInviteBody": "Вас пригласили присоединиться к Mosaic Events в роли «{roleName}». Войдите один раз, чтобы активировать доступ: роль будет применена автоматически, и вы сможете управлять событиями в консоли организатора.",
+    "roleGrantedBody": "Вам назначена роль «{roleName}» в Mosaic Events. Теперь вы можете управлять событиями в консоли организатора.",
+    "roleSignIn": "Войти в Mosaic",
+    "roleConsole": "Открыть консоль Mosaic",
+    "roleQuestions": "Если у вас есть вопросы, обратитесь к администратору вашего события.",
+    "roleAdmin": "Администратор",
+    "roleOrganizer": "Глобальный организатор",
+    "automated": "Это автоматическое сообщение от Mosaic."
   }
 }
