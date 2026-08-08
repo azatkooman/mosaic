@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES, eventLocales, localeName } from '@/lib/i18n/locales'
 import { stripLocales } from '@/lib/form-localization'
 import { translateTypeNames } from './translate-type-names'
+import { planTypeWrites } from './participant-type-save'
 import { toLocalInput, fromLocalInput } from '@/lib/dates'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
@@ -328,37 +329,78 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
       // mean "no translations this time", never "do not save".
     }
 
-    // Participant types: persist every row that differs from the last known
-    // saved state. Sequential (not parallel) so a failure stops before later
-    // rows and the error is surfaced instead of silently swallowed.
-    for (const pt of typesToSave) {
-      const original = savedTypesRef.current.find((o) => o.id === pt.id)
-      const changed =
-        !original ||
-        original.key !== pt.key ||
-        original.capacity !== pt.capacity ||
-        original.form_id !== pt.form_id ||
-        JSON.stringify(original.name) !== JSON.stringify(pt.name)
-      if (!changed) continue
+    // Participant types: insert the ones staged by addType, and persist every
+    // existing row that differs from the last known saved state. Sequential
+    // (not parallel) so a failure stops before later rows and the error is
+    // surfaced instead of silently swallowed.
+    //
+    // `persistedTypes` collects what is actually in the database afterwards —
+    // an inserted row carries its real id, which the placeholder from addType
+    // has to be replaced by before it becomes the new baseline.
+    const persistedTypes = []
+    // A save that fails partway has already written the rows before the failing
+    // one. Those must stop being marked `isNew`, or retrying would insert them a
+    // second time and leave the event with duplicate participant types. The
+    // baseline is deliberately NOT advanced: a retry then re-issues an update
+    // for them, which is idempotent, and the rows from the failure onward stay
+    // dirty so Save remains available.
+    const commitPartial = (fromIndex) =>
+      setTypes([...persistedTypes, ...typesToSave.slice(fromIndex)])
+
+    for (const [index, { action, type: pt }] of planTypeWrites(
+      typesToSave,
+      savedTypesRef.current
+    ).entries()) {
+      if (action === 'skip') {
+        persistedTypes.push(pt)
+        continue
+      }
+      if (action === 'insert') {
+        const { data, error: insertError } = await supabase
+          .from('participant_types')
+          .insert({
+            event_id: event.id,
+            key: pt.key,
+            name: pt.name,
+            capacity: pt.capacity ?? null,
+            form_id: pt.form_id ?? null,
+            // Position in the list as shown, so a staged type lands where the
+            // organizer sees it rather than always at the end.
+            sort_order: index,
+          })
+          .select('*')
+          .single()
+        if (insertError || !data) {
+          commitPartial(index)
+          setSaveState('error')
+          return
+        }
+        persistedTypes.push(data)
+        continue
+      }
+
       const { error: typeError } = await supabase
         .from('participant_types')
         .update({ key: pt.key, name: pt.name, capacity: pt.capacity, form_id: pt.form_id })
         .eq('id', pt.id)
       if (typeError) {
+        commitPartial(index)
         setSaveState('error')
         return
       }
+      persistedTypes.push(pt)
     }
 
     setSaveState('saved')
-    // Was `if (removed.size)`; translations rewrite the names too, so the
-    // condition is now simply "did anything rewrite them". Without this the
-    // inputs would keep showing the pre-translation maps and the next save would
-    // see them as an edit.
-    if (typesToSave !== types) setTypes(typesToSave)
-    savedTypesRef.current = typesToSave
+    // Always re-seat state from what was persisted: translations rewrite the
+    // names, and an inserted row's placeholder id has to give way to its real
+    // one. Skipping this would leave the inputs showing pre-translation maps and
+    // placeholder ids, and the next save would read both as fresh edits — and
+    // would try to insert the same type a second time.
+    setTypes(persistedTypes)
+    savedTypesRef.current = persistedTypes
     savedLocalesRef.current = nextAvailable
-    setSavedSnap(snapshotOf(typesToSave, slugValue))
+    setSavedSnap(snapshotOf(persistedTypes, slugValue))
     router.refresh()
   }
 
@@ -392,7 +434,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
     }
   }
 
-  async function addType(preset) {
+  function addType(preset) {
     const base = preset ?? {
       key: `type_${Date.now().toString(36)}`,
       // Seeded under the event's default language, in that language's own
@@ -405,25 +447,28 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
       name: { [defaultLocale]: newTypeLabels[defaultLocale] ?? newTypeLabels.en },
     }
     const key = uniqueTypeKey(base.key, types.map((pt) => pt.key))
-    const { data, error } = await supabase
-      .from('participant_types')
-      .insert({
-        event_id: event.id,
-        key,
-        name: base.name,
-        form_id: forms[0]?.id ?? null,
-        sort_order: types.length,
-      })
-      .select('*')
-      .single()
-    // Add/remove are discrete actions that persist immediately; re-baseline
-    // the dirty snapshot so they don't leave Save spuriously enabled.
-    if (!error && data) {
-      const next = [...types, data]
-      setTypes(next)
-      savedTypesRef.current = next
-      setSavedSnap(snapshotOf(next))
+    // Staged locally, not inserted here. Adding used to write straight to the
+    // database and then re-baseline the dirty snapshot, which left Save
+    // disabled — so the new type existed on the event but never went through
+    // save(), and save() is what auto-translates the names. The type was
+    // therefore permanently untranslated unless the organizer happened to edit
+    // something else afterwards.
+    //
+    // `id` is a client-side placeholder so the row can be keyed, edited and
+    // removed like any other; save() inserts it and swaps in the real id. It
+    // never reaches the database — `isNew` is what save() branches on, rather
+    // than sniffing the id's shape.
+    const staged = {
+      id: `new-${Math.random().toString(36).slice(2, 10)}`,
+      isNew: true,
+      key,
+      name: base.name,
+      capacity: null,
+      form_id: forms[0]?.id ?? null,
     }
+    // Deliberately does NOT touch savedTypesRef/savedSnap: leaving the baseline
+    // alone is exactly what makes Save light up.
+    setTypes([...types, staged])
     setTypePickerOpen(false)
   }
 
@@ -435,6 +480,13 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   }
 
   async function removeType(id) {
+    // A staged type has no database row yet, so dropping it is purely local —
+    // and the baseline must NOT be re-based, or removing one staged type would
+    // also mark the others as saved.
+    if (types.find((pt) => pt.id === id)?.isNew) {
+      setTypes(types.filter((pt) => pt.id !== id))
+      return
+    }
     const { error } = await supabase.from('participant_types').delete().eq('id', id)
     if (!error) {
       const next = types.filter((pt) => pt.id !== id)
