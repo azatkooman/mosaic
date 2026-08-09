@@ -722,7 +722,10 @@
     "ariaQuestion": "Question",
     "ariaOperator": "Operator",
     "ariaValue": "Value",
-    "tapRegNoForAnswers": "Tap a registration number to see every answer."
+    "tapRegNoForAnswers": "Tap a registration number to see every answer.",
+    "byCheckin": "By check-in",
+    "checkedIn": "Checked in",
+    "notCheckedIn": "Not checked in"
   },
   "questionTypes": {
     "text": "Short text",
@@ -832,5 +835,36 @@
     "roleAdmin": "Admin",
     "roleOrganizer": "Global Organizer",
     "automated": "This is an automated message from Mosaic."
+  },
+  "checkin": {
+    "scanTickets": "Scan tickets",
+    "title": "On-site check-in",
+    "noAccess": "You do not have check-in access for this event.",
+    "tally": "{checkedIn} / {confirmed} checked in",
+    "startCamera": "Start camera",
+    "cameraStarting": "Starting camera…",
+    "cameraDenied": "Camera access was denied. Allow it in your browser settings, or use the search below.",
+    "recent": "Recent scans",
+    "manualTitle": "Manual check-in",
+    "manualHint": "No ticket at hand? Find the participant by name.",
+    "searchPlaceholder": "Search by name",
+    "noMatches": "No matching participants.",
+    "checkInAction": "Check in",
+    "checkingIn": "Checking in…",
+    "undo": "undo",
+    "outcome": {
+      "ok": "Checked in ✓",
+      "already": "Already checked in at {time}",
+      "rejected": "Not confirmed — status: {status}",
+      "not_found": "Unknown ticket",
+      "error": "Check-in failed — try again"
+    },
+    "ticketTitle": "Mosaic event ticket",
+    "ticketNoAccess": "This is a participant's ticket. Ask an event organizer to check it in.",
+    "ticketSignInHint": "Event staff can sign in to check this ticket in.",
+    "signIn": "Sign in",
+    "typeLabel": "Participant type",
+    "regNo": "Reg. #",
+    "openScanner": "Open the scanner"
   }
 }

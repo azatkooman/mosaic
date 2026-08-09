@@ -722,7 +722,10 @@
     "ariaQuestion": "Pregunta",
     "ariaOperator": "Operador",
     "ariaValue": "Valor",
-    "tapRegNoForAnswers": "Toca un número de registro para ver todas las respuestas."
+    "tapRegNoForAnswers": "Toca un número de registro para ver todas las respuestas.",
+    "byCheckin": "Por llegada",
+    "checkedIn": "Llegada registrada",
+    "notCheckedIn": "Llegada sin registrar"
   },
   "questionTypes": {
     "text": "Texto corto",
@@ -832,5 +835,36 @@
     "roleAdmin": "Administrador",
     "roleOrganizer": "Organizador global",
     "automated": "Este es un mensaje automático de Mosaic."
+  },
+  "checkin": {
+    "scanTickets": "Escanear entradas",
+    "title": "Check-in en el evento",
+    "noAccess": "No tienes acceso de check-in para este evento.",
+    "tally": "{checkedIn} / {confirmed} registrados",
+    "startCamera": "Iniciar cámara",
+    "cameraStarting": "Iniciando cámara…",
+    "cameraDenied": "Se denegó el acceso a la cámara. Permítelo en los ajustes del navegador o usa la búsqueda de abajo.",
+    "recent": "Escaneos recientes",
+    "manualTitle": "Check-in manual",
+    "manualHint": "¿Sin entrada a mano? Busca al participante por nombre.",
+    "searchPlaceholder": "Buscar por nombre",
+    "noMatches": "No hay participantes coincidentes.",
+    "checkInAction": "Registrar llegada",
+    "checkingIn": "Registrando…",
+    "undo": "deshacer",
+    "outcome": {
+      "ok": "Llegada registrada ✓",
+      "already": "Ya se registró a las {time}",
+      "rejected": "No confirmado — estado: {status}",
+      "not_found": "Entrada desconocida",
+      "error": "Error al registrar — inténtalo de nuevo"
+    },
+    "ticketTitle": "Entrada de evento de Mosaic",
+    "ticketNoAccess": "Esta es la entrada de un participante. Pide a un organizador del evento que registre su llegada.",
+    "ticketSignInHint": "El personal del evento puede iniciar sesión para registrar esta entrada.",
+    "signIn": "Iniciar sesión",
+    "typeLabel": "Tipo de participante",
+    "regNo": "N.º de inscripción",
+    "openScanner": "Abrir el escáner"
   }
 }

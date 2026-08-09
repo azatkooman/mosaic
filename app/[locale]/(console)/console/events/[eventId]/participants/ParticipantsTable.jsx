@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
 import { PARTICIPANT_BUCKETS } from '@/lib/event-questions'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
-import { formatDateValue } from '@/lib/dates'
+import { formatDateValue, formatEventDate } from '@/lib/dates'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
@@ -62,6 +63,7 @@ export function ParticipantsTable({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [checkinFilter, setCheckinFilter] = useState('') // '' | 'in' | 'out'
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
   const [sort, setSort] = useState({ column: null, dir: 'desc' }) // null = created_at desc
   const [page, setPage] = useState(0)
@@ -116,18 +118,21 @@ export function ParticipantsTable({
     setPage(0)
   }
 
-  const filters = { bucket, search, statusFilter, typeFilter, answerFilters, sort, page }
+  const filters = { bucket, search, statusFilter, typeFilter, answerFilters, checkinFilter, sort, page }
   const { data, isLoading, error } = useQuery({
     queryKey: ['participants', eventId, filters],
     queryFn: async () => {
       let q = supabase
         .from('participants')
         .select(
-          'id, first_name, last_name, email, status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email',
+          'id, first_name, last_name, email, status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email, checked_in_at',
           { count: 'exact' }
         )
         .eq('event_id', eventId)
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+
+      if (checkinFilter === 'in') q = q.not('checked_in_at', 'is', null)
+      if (checkinFilter === 'out') q = q.is('checked_in_at', null)
 
       // Same filter + sort logic the export uses, so the download matches.
       q = applyParticipantFilters(
@@ -260,6 +265,22 @@ export function ParticipantsTable({
     }
   }
 
+  // Manual check-in toggle — the on-site fallback when a ticket QR cannot be
+  // scanned. Same privilege and rules as the scanner (set_participant_checkin
+  // re-checks authoritatively).
+  async function toggleCheckin(p) {
+    setStatusError('')
+    const { error } = await supabase.rpc('set_participant_checkin', {
+      p_participant_id: p.id,
+      p_checked_in: !p.checked_in_at,
+    })
+    if (error) {
+      setStatusError(error.message)
+      return
+    }
+    queryClient.invalidateQueries({ queryKey: ['participants', eventId] })
+  }
+
   // Archive the confirmed rows. One RPC for a single row and for a bulk
   // selection alike; it cancels each participant first (releasing capacity and
   // promoting from the waitlist) and then hides them from every non-admin.
@@ -373,6 +394,17 @@ export function ParticipantsTable({
           ))}
         </NativeSelect>
 
+        <NativeSelect
+          value={checkinFilter}
+          onChange={(e) => { setCheckinFilter(e.target.value); setPage(0) }}
+          style={{ width: 'auto' }}
+          aria-label={t('console.byCheckin')}
+        >
+          <option value="">{t('console.byCheckin')}</option>
+          <option value="in">{t('console.checkedIn')}</option>
+          <option value="out">{t('console.notCheckedIn')}</option>
+        </NativeSelect>
+
         <AnswerFilterPicker
           questions={filterableQuestions}
           locale={locale}
@@ -382,6 +414,11 @@ export function ParticipantsTable({
         />
 
         <span className={styles.spacer} />
+        {canChangeStatus && (
+          <Link className="btn btn-secondary btn-sm" href={`/console/events/${eventId}/checkin`}>
+            {t('checkin.scanTickets')}
+          </Link>
+        )}
         <a className="btn btn-secondary btn-sm" href={exportUrl('xlsx')}>
           {t('console.exportExcel')}
         </a>
@@ -473,6 +510,7 @@ export function ParticipantsTable({
               ))}
               <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
+              <th>{t('console.checkedIn')}</th>
               <SortHeader label={t('console.profileName')} column="profile_name" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.profileEmail')} column="profile_email" sort={sort} onSort={toggleSort} />
               {/* Actions holds only the status control now that Reg. # is the
@@ -537,6 +575,28 @@ export function ParticipantsTable({
                   </td>
                   <td data-label={t('console.byStatus')}>
                     <Badge tone={p.status}>{t(`status.${p.status}`)}</Badge>
+                  </td>
+                  <td data-label={t('console.checkedIn')}>
+                    {canChangeStatus ? (
+                      <input
+                        type="checkbox"
+                        checked={Boolean(p.checked_in_at)}
+                        // Only confirmed participants can be checked IN;
+                        // unchecking (undo) is always allowed.
+                        disabled={!p.checked_in_at && p.status !== 'confirmed'}
+                        onChange={() => toggleCheckin(p)}
+                        aria-label={t('console.checkedIn')}
+                        title={
+                          p.checked_in_at
+                            ? formatEventDate(p.checked_in_at, undefined, locale, dateFmt)
+                            : undefined
+                        }
+                      />
+                    ) : p.checked_in_at ? (
+                      '✓'
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <Cell label={t('console.profileName')} value={p.profile_name} />
                   <Cell label={t('console.profileEmail')} value={p.profile_email} />

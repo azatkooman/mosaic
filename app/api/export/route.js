@@ -97,7 +97,7 @@ export async function GET(request) {
   const header = [
     tc('regNo'),
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
-    tc('byType'), tc('byStatus'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
+    tc('byType'), tc('byStatus'), tc('checkedIn'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
   ]
 
   // Page through all participants with the service client.
@@ -107,7 +107,7 @@ export async function GET(request) {
     let q = admin
       .from('participants')
       .select(
-        'status, answers, created_at, participant_type_id, reg_seq, member_index, profile_name, profile_email'
+        'status, answers, created_at, participant_type_id, reg_seq, member_index, profile_name, profile_email, checked_in_at'
       )
       .eq('event_id', eventId)
       .range(from, from + PAGE - 1)
@@ -127,6 +127,9 @@ export async function GET(request) {
         ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
         typeName.get(p.participant_type_id) ?? '',
         p.status,
+        p.checked_in_at
+          ? formatEventDate(p.checked_in_at, event?.timezone ?? 'UTC', locale, dateFmt)
+          : '',
         p.profile_name ?? '',
         p.profile_email ?? '',
         formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),

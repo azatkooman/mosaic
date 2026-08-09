@@ -722,7 +722,10 @@
     "ariaQuestion": "Question",
     "ariaOperator": "Opérateur",
     "ariaValue": "Valeur",
-    "tapRegNoForAnswers": "Touchez un numéro d’inscription pour voir toutes les réponses."
+    "tapRegNoForAnswers": "Touchez un numéro d’inscription pour voir toutes les réponses.",
+    "byCheckin": "Par arrivée",
+    "checkedIn": "Arrivée enregistrée",
+    "notCheckedIn": "Arrivée non enregistrée"
   },
   "questionTypes": {
     "text": "Texte court",
@@ -832,5 +835,36 @@
     "roleAdmin": "Administrateur",
     "roleOrganizer": "Organisateur global",
     "automated": "Ceci est un message automatique de Mosaic."
+  },
+  "checkin": {
+    "scanTickets": "Scanner les billets",
+    "title": "Enregistrement sur place",
+    "noAccess": "Vous n'avez pas l'accès check-in pour cet événement.",
+    "tally": "{checkedIn} / {confirmed} enregistrés",
+    "startCamera": "Démarrer la caméra",
+    "cameraStarting": "Démarrage de la caméra…",
+    "cameraDenied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur ou utilisez la recherche ci-dessous.",
+    "recent": "Scans récents",
+    "manualTitle": "Enregistrement manuel",
+    "manualHint": "Pas de billet sous la main ? Recherchez le participant par son nom.",
+    "searchPlaceholder": "Rechercher par nom",
+    "noMatches": "Aucun participant correspondant.",
+    "checkInAction": "Enregistrer l'arrivée",
+    "checkingIn": "Enregistrement…",
+    "undo": "annuler",
+    "outcome": {
+      "ok": "Arrivée enregistrée ✓",
+      "already": "Déjà enregistré à {time}",
+      "rejected": "Non confirmé — statut : {status}",
+      "not_found": "Billet inconnu",
+      "error": "Échec de l'enregistrement — réessayez"
+    },
+    "ticketTitle": "Billet d'événement Mosaic",
+    "ticketNoAccess": "Ceci est le billet d'un participant. Demandez à un organisateur de l'événement d'enregistrer son arrivée.",
+    "ticketSignInHint": "Le personnel de l'événement peut se connecter pour enregistrer ce billet.",
+    "signIn": "Se connecter",
+    "typeLabel": "Type de participant",
+    "regNo": "N° d'inscription",
+    "openScanner": "Ouvrir le scanner"
   }
 }

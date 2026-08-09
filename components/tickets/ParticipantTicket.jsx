@@ -1,95 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import QRCode from 'qrcode'
 import { Badge, Dialog } from '@/components/ui'
 import styles from './ticket.module.css'
 
 /**
- * Renders a clean SVG QR Code representation for a given payload text.
- * Generates deterministic 2D QR modules using a 21x21 grid (QR Version 1 style pattern).
+ * Real QR code as SVG (module matrix from the `qrcode` encoder). One path
+ * element instead of a rect per module keeps the DOM small, and the 4-module
+ * quiet zone is part of the drawing so scanners get their required margin
+ * whatever the surrounding layout does.
  */
-function QrCodeSvg({ value, size = 160 }) {
-  const grid = generateQrMatrix(value)
-  const cellSize = size / grid.length
+export function QrCodeSvg({ value, size = 160 }) {
+  const { path, dim } = useMemo(() => {
+    const { modules } = QRCode.create(value, { errorCorrectionLevel: 'M' })
+    const quiet = 4
+    const dim = modules.size + quiet * 2
+    let path = ''
+    for (let r = 0; r < modules.size; r++) {
+      for (let c = 0; c < modules.size; c++) {
+        if (modules.get(r, c)) path += `M${c + quiet} ${r + quiet}h1v1h-1z`
+      }
+    }
+    return { path, dim }
+  }, [value])
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <rect width={size} height={size} fill="#ffffff" />
-      {grid.map((row, r) =>
-        row.map((cell, c) =>
-          cell ? (
-            <rect
-              key={`${r}-${c}`}
-              x={c * cellSize}
-              y={r * cellSize}
-              width={cellSize + 0.3}
-              height={cellSize + 0.3}
-              fill="#0f172a"
-            />
-          ) : null
-        )
-      )}
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${dim} ${dim}`}
+      shapeRendering="crispEdges"
+      role="img"
+    >
+      <rect width={dim} height={dim} fill="#ffffff" />
+      <path d={path} fill="#0f172a" />
     </svg>
   )
-}
-
-function generateQrMatrix(text) {
-  const N = 21
-  const matrix = Array.from({ length: N }, () => Array(N).fill(false))
-
-  // Helper to draw finder patterns (7x7 outer, 5x5 inner white, 3x3 inner black)
-  const drawFinder = (row, col) => {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        if (
-          r === 0 || r === 6 || c === 0 || c === 6 ||
-          (r >= 2 && r <= 4 && c >= 2 && c <= 4)
-        ) {
-          matrix[row + r][col + c] = true
-        }
-      }
-    }
-  }
-
-  // Draw 3 finder patterns (Top-Left, Top-Right, Bottom-Left)
-  drawFinder(0, 0)
-  drawFinder(0, N - 7)
-  drawFinder(N - 7, 0)
-
-  // Timing patterns
-  for (let i = 8; i < N - 8; i += 2) {
-    matrix[6][i] = true
-    matrix[i][6] = true
-  }
-
-  // Simple deterministic hash mapping for data bits
-  let hash = 0
-  for (let i = 0; i < text.length; i++) {
-    hash = (hash << 5) - hash + text.charCodeAt(i)
-    hash |= 0
-  }
-
-  // Fill data cells
-  let bitIdx = 0
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      // Skip finder zones
-      if (
-        (r < 8 && c < 8) ||
-        (r < 8 && c >= N - 8) ||
-        (r >= N - 8 && c < 8) ||
-        (r === 6 || c === 6)
-      ) {
-        continue
-      }
-      const val = (Math.abs(hash ^ (r * 31 + c * 17 + bitIdx * 13))) % 3 !== 0
-      matrix[r][c] = val
-      bitIdx++
-    }
-  }
-
-  return matrix
 }
 
 /**
@@ -108,7 +56,13 @@ export function ParticipantTicket({ participant, eventName }) {
 
   if (!participant || participant.status !== 'confirmed') return null
 
-  const ticketPayload = `mosaic:ticket:${participant.id}`
+  // The QR encodes a URL around the opaque ticket code, so any camera app
+  // lands staff on /t/<code> (scanner flow) and everyone else on a generic
+  // ticket page. Dialog content only mounts client-side on open, so
+  // window is always available here.
+  const ticketPayload = `${typeof window === 'undefined' ? '' : window.location.origin}/t/${
+    participant.ticket_code ?? participant.id
+  }`
   const holder = `${participant.first_name ?? ''} ${participant.last_name ?? ''}`.trim()
 
   return (

@@ -8,6 +8,9 @@ import messages from '@/messages/en.json'
 // reachable in a unit test, and react-query does not run queryFn during a
 // server render, so a bare stub is enough to get the markup out.
 vi.mock('@/lib/supabase/client', () => ({ getSupabaseBrowserClient: () => ({}) }))
+// next-intl's createNavigation drags in next/navigation, which Node's ESM
+// resolver can't load outside the Next bundler; the table only needs an <a>.
+vi.mock('@/lib/i18n/navigation', () => ({ Link: ({ href, children, ...rest }) => <a href={String(href)} {...rest}>{children}</a> }))
 vi.mock('@/components/providers/DateFormatProvider', () => ({
   useDateFormatPrefs: () => ({ dateFormat: 'auto', timeFormat: 'auto' }),
 }))
