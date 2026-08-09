@@ -725,7 +725,11 @@
     "tapRegNoForAnswers": "Toca un número de registro para ver todas las respuestas.",
     "byCheckin": "Por llegada",
     "checkedIn": "Llegada registrada",
-    "notCheckedIn": "Llegada sin registrar"
+    "notCheckedIn": "Llegada sin registrar",
+    "bucketAll": "Todos los participantes",
+    "registrationKind": "Registro",
+    "kindIndividual": "Individual",
+    "kindGroup": "De grupo"
   },
   "questionTypes": {
     "text": "Texto corto",

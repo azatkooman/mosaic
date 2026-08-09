@@ -52,6 +52,9 @@ export function ParticipantsTable({
   canEdit = false,
   canChangeStatus = false,
   canDelete = false,
+  // Test hook: the default view is All whenever group forms exist, but a
+  // static render cannot click tabs, so tests pin the bucket they assert on.
+  initialBucket,
 }) {
   const t = useTranslations()
   const locale = useLocale()
@@ -59,7 +62,9 @@ export function ParticipantsTable({
   const supabase = getSupabaseBrowserClient()
   const queryClient = useQueryClient()
 
-  const [bucket, setBucket] = useState('individual')
+  const [bucket, setBucket] = useState(
+    () => initialBucket ?? (buckets.group.versionIds.length > 0 ? 'all' : 'individual')
+  )
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -89,10 +94,19 @@ export function ParticipantsTable({
   // questions of its own forms (lib/event-questions). Switching tabs therefore
   // swaps the whole answer-column set instead of showing one merged table where
   // half the cells are empty because the other mode's form never asked them.
-  const active = buckets[bucket] ?? buckets.individual
+  // The All tab shows both lists merged on the columns they share — no answer
+  // columns (they are per-form), plus a Registration kind column instead.
+  const active =
+    bucket === 'all'
+      ? {
+          questions: [],
+          versionIds: [...buckets.individual.versionIds, ...buckets.group.versionIds],
+        }
+      : buckets[bucket] ?? buckets.individual
   const questions = active.questions
   // Only worth a tab strip when the event actually runs both kinds of form.
   const hasGroupForms = buckets.group.versionIds.length > 0
+  const groupVersions = useMemo(() => new Set(buckets.group.versionIds), [buckets])
 
   // There are no fixed name/email columns: those are ordinary optional
   // questions, and their columns sat empty whenever an organizer removed them.
@@ -178,7 +192,7 @@ export function ParticipantsTable({
         countFor(buckets.individual.versionIds),
         countFor(buckets.group.versionIds),
       ])
-      return { individual, group }
+      return { individual, group, all: individual + group }
     },
   })
 
@@ -346,9 +360,18 @@ export function ParticipantsTable({
       {/* Plain buttons on the shared tab styles rather than the Radix Tabs
           primitive: the panel below is one table fed different data, so there
           is no second panel for a Radix trigger's aria-controls to point at. */}
+      {/* Event-level actions live above the tab strip: scanning belongs to
+          the event, not to whichever view happens to be open. */}
+      {canChangeStatus && (
+        <div className={styles.pageActions}>
+          <Link className="btn btn-secondary btn-sm" href={`/console/events/${eventId}/checkin`}>
+            {t('checkin.scanTickets')}
+          </Link>
+        </div>
+      )}
       {hasGroupForms && (
         <div className="tabs-list" role="tablist" aria-label={t('console.participants')}>
-          {PARTICIPANT_BUCKETS.map((key) => (
+          {['all', ...PARTICIPANT_BUCKETS].map((key) => (
             <button
               key={key}
               type="button"
@@ -358,7 +381,13 @@ export function ParticipantsTable({
               data-state={bucket === key ? 'active' : 'inactive'}
               onClick={() => switchBucket(key)}
             >
-              {t(key === 'group' ? 'console.bucketGroup' : 'console.bucketIndividual')}
+              {t(
+                key === 'all'
+                  ? 'console.bucketAll'
+                  : key === 'group'
+                    ? 'console.bucketGroup'
+                    : 'console.bucketIndividual'
+              )}
               {bucketCounts && ` (${bucketCounts[key]})`}
             </button>
           ))}
@@ -405,20 +434,17 @@ export function ParticipantsTable({
           <option value="out">{t('console.notCheckedIn')}</option>
         </NativeSelect>
 
-        <AnswerFilterPicker
-          questions={filterableQuestions}
-          locale={locale}
-          filters={answerFilters}
-          onChange={(next) => { setAnswerFilters(next); setPage(0) }}
-          labels={{ add: t('console.filterByAnswer'), clear: t('console.clearFilters') }}
-        />
+        {filterableQuestions.length > 0 && (
+          <AnswerFilterPicker
+            questions={filterableQuestions}
+            locale={locale}
+            filters={answerFilters}
+            onChange={(next) => { setAnswerFilters(next); setPage(0) }}
+            labels={{ add: t('console.filterByAnswer'), clear: t('console.clearFilters') }}
+          />
+        )}
 
         <span className={styles.spacer} />
-        {canChangeStatus && (
-          <Link className="btn btn-secondary btn-sm" href={`/console/events/${eventId}/checkin`}>
-            {t('checkin.scanTickets')}
-          </Link>
-        )}
         <a className="btn btn-secondary btn-sm" href={exportUrl('xlsx')}>
           {t('console.exportExcel')}
         </a>
@@ -505,6 +531,7 @@ export function ParticipantsTable({
                 />
               </th>
               <SortHeader label={t('console.regNo')} column="reg_no" sort={sort} onSort={toggleSort} />
+              {bucket === 'all' && <th>{t('console.registrationKind')}</th>}
               {shownQuestions.map((q) => (
                 <SortHeader key={q.id} label={lt(q.label, locale)} column={`q:${q.id}`} sort={sort} onSort={toggleSort} />
               ))}
@@ -559,6 +586,15 @@ export function ParticipantsTable({
                       {formatRegNo(p) || '—'}
                     </button>
                   </td>
+                  {bucket === 'all' && (
+                    <td data-label={t('console.registrationKind')}>
+                      {t(
+                        groupVersions.has(p.form_version_id)
+                          ? 'console.kindGroup'
+                          : 'console.kindIndividual'
+                      )}
+                    </td>
+                  )}
                   {/* One column per form question. A 20-question form makes ~27
                       columns, so the stacked card drops them and points at the
                       detail drawer, which already shows every answer. */}

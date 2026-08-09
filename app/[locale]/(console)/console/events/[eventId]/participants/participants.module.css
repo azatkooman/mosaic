@@ -11,6 +11,14 @@
   flex-wrap: wrap;
 }
 
+/* Event-level actions (scanning), pinned above the tab strip so they never
+   move or vanish when the view below changes. */
+.pageActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-3);
+}
+
 .spacer {
   flex: 1;
 }

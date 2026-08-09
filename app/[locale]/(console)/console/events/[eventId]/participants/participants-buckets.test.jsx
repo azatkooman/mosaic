@@ -40,7 +40,7 @@ const BUCKETS = {
   },
 }
 
-function render(buckets) {
+function render(buckets, initialBucket) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
       <QueryClientProvider client={new QueryClient()}>
@@ -49,6 +49,7 @@ function render(buckets) {
           participantTypes={[]}
           buckets={buckets}
           definitionByVersion={{}}
+          initialBucket={initialBucket}
         />
       </QueryClientProvider>
     </NextIntlClientProvider>
@@ -68,7 +69,7 @@ function headers(html) {
 
 describe('participants buckets', () => {
   it('shows the individual columns and none of the group columns', () => {
-    const html = render(BUCKETS)
+    const html = render(BUCKETS, 'individual')
     const cols = headers(html)
     expect(cols).toContain('Dietary needs')
     expect(cols).toContain('Shirt size')
@@ -76,8 +77,17 @@ describe('participants buckets', () => {
     expect(cols).not.toContain('Rooms needed')
   })
 
-  it('offers both tabs when the event runs a group form', () => {
+  it('defaults to the merged All view: kind column, no answer columns', () => {
     const html = render(BUCKETS)
+    const cols = headers(html)
+    expect(cols).toContain('Registration')
+    expect(cols).not.toContain('Dietary needs')
+    expect(cols).not.toContain('Group leader')
+  })
+
+  it('offers all three tabs when the event runs a group form', () => {
+    const html = render(BUCKETS)
+    expect(html).toContain('All participants')
     expect(html).toContain('Individual registrations')
     expect(html).toContain('Group registrations')
     expect(html).toContain('role="tablist"')
@@ -87,14 +97,22 @@ describe('participants buckets', () => {
     const html = render({ ...BUCKETS, group: { questions: [], versionIds: [] } })
     expect(html).not.toContain('role="tablist"')
     expect(html).not.toContain('Group registrations')
-    // The single list still renders its own columns.
+    // The single list still renders its own columns, without a kind column.
     expect(headers(html)).toContain('Dietary needs')
+    expect(headers(html)).not.toContain('Registration')
   })
 
   it('scopes both downloads to the active tab', () => {
+    const html = render(BUCKETS, 'group')
+    const exports = [...html.matchAll(/href="([^"]*\/api\/export[^"]*)"/g)].map((m) => m[1])
+    expect(exports).toHaveLength(2)
+    for (const href of exports) expect(href).toContain('bucket=group')
+  })
+
+  it('scopes the All download to the merged view', () => {
     const html = render(BUCKETS)
     const exports = [...html.matchAll(/href="([^"]*\/api\/export[^"]*)"/g)].map((m) => m[1])
     expect(exports).toHaveLength(2)
-    for (const href of exports) expect(href).toContain('bucket=individual')
+    for (const href of exports) expect(href).toContain('bucket=all')
   })
 })

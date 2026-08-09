@@ -725,7 +725,11 @@
     "tapRegNoForAnswers": "Touchez un numéro d’inscription pour voir toutes les réponses.",
     "byCheckin": "Par arrivée",
     "checkedIn": "Arrivée enregistrée",
-    "notCheckedIn": "Arrivée non enregistrée"
+    "notCheckedIn": "Arrivée non enregistrée",
+    "bucketAll": "Tous les participants",
+    "registrationKind": "Inscription",
+    "kindIndividual": "Individuelle",
+    "kindGroup": "De groupe"
   },
   "questionTypes": {
     "text": "Texte court",

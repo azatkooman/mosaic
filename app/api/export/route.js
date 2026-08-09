@@ -34,9 +34,12 @@ export async function GET(request) {
   const status = url.searchParams.get('status')
   const typeId = url.searchParams.get('typeId')
   const search = url.searchParams.get('q') ?? ''
-  // Which participants list this download is for. Anything but 'group' means
-  // the individual list, so an older link without the param still works.
-  const bucket = url.searchParams.get('bucket') === 'group' ? 'group' : 'individual'
+  // Which participants list this download is for. 'all' is the merged view
+  // (shared columns + registration kind, no per-form answer columns); anything
+  // else but 'group' means the individual list, so an older link without the
+  // param still works.
+  const bucketParam = url.searchParams.get('bucket')
+  const bucket = ['group', 'all'].includes(bucketParam) ? bucketParam : 'individual'
   const sort = { column: url.searchParams.get('sort'), dir: url.searchParams.get('dir') }
   let answerFilters = {}
   try {
@@ -84,7 +87,15 @@ export async function GET(request) {
   const typeName = new Map((types ?? []).map((t) => [t.id, lt(t.name, locale, event?.default_locale)]))
   // Same column set the console list builds for this tab, so the download
   // matches the view — including being restricted to that tab's own rows.
-  const { questions, versionIds } = eventQuestionBuckets(versions ?? [])[bucket]
+  const allBuckets = eventQuestionBuckets(versions ?? [])
+  const { questions, versionIds } =
+    bucket === 'all'
+      ? {
+          questions: [],
+          versionIds: [...allBuckets.individual.versionIds, ...allBuckets.group.versionIds],
+        }
+      : allBuckets[bucket]
+  const groupVersions = new Set(allBuckets.group.versionIds)
 
   // Column headers and cell literals follow the requester's locale. The
   // wizard namespace is no longer needed here: the first/last/email headers
@@ -96,6 +107,7 @@ export async function GET(request) {
   // spreadsheet has room for it and organizers rely on it.
   const header = [
     tc('regNo'),
+    ...(bucket === 'all' ? [tc('registrationKind')] : []),
     ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
     tc('byType'), tc('byStatus'), tc('checkedIn'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
   ]
@@ -107,7 +119,7 @@ export async function GET(request) {
     let q = admin
       .from('participants')
       .select(
-        'status, answers, created_at, participant_type_id, reg_seq, member_index, profile_name, profile_email, checked_in_at'
+        'status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email, checked_in_at'
       )
       .eq('event_id', eventId)
       .range(from, from + PAGE - 1)
@@ -123,6 +135,9 @@ export async function GET(request) {
     for (const p of data ?? []) {
       rows.push([
         formatRegNo(p),
+        ...(bucket === 'all'
+          ? [tc(groupVersions.has(p.form_version_id) ? 'kindGroup' : 'kindIndividual')]
+          : []),
         // tCommon reaches plainAnswer for the localized yes/no on checkboxes.
         ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
         typeName.get(p.participant_type_id) ?? '',

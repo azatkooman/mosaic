@@ -725,7 +725,11 @@
     "tapRegNoForAnswers": "Натисніть номер реєстрації, щоб побачити всі відповіді.",
     "byCheckin": "За прибуттям",
     "checkedIn": "Прибуття відмічено",
-    "notCheckedIn": "Прибуття не відмічено"
+    "notCheckedIn": "Прибуття не відмічено",
+    "bucketAll": "Усі учасники",
+    "registrationKind": "Реєстрація",
+    "kindIndividual": "Індивідуальна",
+    "kindGroup": "Групова"
   },
   "questionTypes": {
     "text": "Короткий текст",

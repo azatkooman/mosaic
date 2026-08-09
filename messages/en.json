@@ -725,7 +725,11 @@
     "tapRegNoForAnswers": "Tap a registration number to see every answer.",
     "byCheckin": "By check-in",
     "checkedIn": "Checked in",
-    "notCheckedIn": "Not checked in"
+    "notCheckedIn": "Not checked in",
+    "bucketAll": "All participants",
+    "registrationKind": "Registration",
+    "kindIndividual": "Individual",
+    "kindGroup": "Group"
   },
   "questionTypes": {
     "text": "Short text",
