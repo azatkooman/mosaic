@@ -17,6 +17,8 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--s-3);
+  /* Three buttons here now; on a phone they stack rather than overflow. */
+  flex-wrap: wrap;
 }
 
 .spacer {
