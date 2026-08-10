@@ -33,7 +33,7 @@ export default async function MyRegistrationsPage({ params }) {
     .select(`
       id, created_at,
       events ( id, slug, name, default_locale, timezone, starts_at, ends_at,
-        registration_opens_at, registration_closes_at ),
+        registration_opens_at, registration_closes_at, registration_manually_closed ),
       participants ( id, first_name, last_name, email, status, answers,
         reg_seq, member_index, profile_name, deleted_at, ticket_code,
         participant_types ( key, name ),

@@ -8,12 +8,13 @@ import { getContentMessages } from '@/lib/i18n/ui-messages-server'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
+import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
 
 export const dynamic = 'force-dynamic'
 
 export default async function RegisterPage({ params, searchParams }) {
   const { slug, locale } = await params
-  const { lang } = (await searchParams) ?? {}
+  const { lang, type: typeParam } = (await searchParams) ?? {}
   setRequestLocale(locale)
 
   const supabase = await getSupabaseServerClient()
@@ -23,7 +24,12 @@ export default async function RegisterPage({ params, searchParams }) {
   if (!user) {
     // Keep the reader's language across the login round-trip, or they come
     // back to an English form.
-    const next = eventPageUrl({ slug, code: lang, uiLocale: locale, subPath: '/register' })
+    const next = eventPageUrl({
+      slug, code: lang, uiLocale: locale, subPath: '/register',
+      // Or a staff member who signs in from their private link lands on
+      // the ordinary form with the type they were sent for missing.
+      params: { type: typeParam },
+    })
     redirect({ href: `/login?next=${encodeURIComponent(next)}`, locale })
   }
 
@@ -106,6 +112,21 @@ export default async function RegisterPage({ params, searchParams }) {
     (existing ?? []).some((r) =>
       (r.participants ?? []).some((p) => p.status !== 'cancelled')
     )
+  // The organizer's manual switch. submit_registration rejects these anyway,
+  // but a wizard that only fails at the last step is a waste of the
+  // registrant's time.
+  if (event.registration_manually_closed) {
+    return (
+      <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+        <div style={{ marginBottom: 'var(--s-3)' }}>{backToEvent}</div>
+        <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
+          {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
+        </h1>
+        <p className="alert alert-info">{t('registrationClosed')}</p>
+      </div>
+    )
+  }
+
   if (alreadyRegistered) {
     return (
       <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
@@ -123,7 +144,7 @@ export default async function RegisterPage({ params, searchParams }) {
 
   const { data: types } = await supabase
     .from('participant_types')
-    .select('id, key, name, capacity, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id )')
+    .select('id, key, name, capacity, hidden, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id )')
     .eq('event_id', event.id)
     .order('sort_order')
   if (!types?.length) notFound()
@@ -163,13 +184,36 @@ export default async function RegisterPage({ params, searchParams }) {
   const participantTypes = types
     .filter((pt) => pt.forms?.current_version_id || hasModeForms)
     .map((pt) => ({
+      id: pt.id,
       key: pt.key,
       name: pt.name,
+      hidden: Boolean(pt.hidden),
+      min_per_registration: pt.min_per_registration,
       max_per_registration: pt.max_per_registration,
       definition: pt.forms?.current_version_id
         ? defById.get(pt.forms.current_version_id) ?? { questions: [] }
         : null,
     }))
+
+  // Resolve the deep link against types that are actually registerable, then
+  // drop hidden types from the list — except the one being linked to, which is
+  // the whole reason to hide a type in the first place.
+  const preselectedTypeKey = resolvePreselectedType(participantTypes, typeParam)
+  const offeredTypes = visibleParticipantTypes(participantTypes, preselectedTypeKey)
+
+  // Every type hidden and no link to any of them: an empty wizard would render
+  // a mode step with nothing to pick.
+  if (offeredTypes.length === 0) {
+    return (
+      <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+        <div style={{ marginBottom: 'var(--s-3)' }}>{backToEvent}</div>
+        <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
+          {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
+        </h1>
+        <p className="alert alert-info">{t('noTypesAvailable')}</p>
+      </div>
+    )
+  }
 
   // The wizard and the form runtime call useTranslations in ~30 places. Nesting
   // a provider swaps the catalog for that whole subtree without touching any of
@@ -180,7 +224,8 @@ export default async function RegisterPage({ params, searchParams }) {
   const wizardElement = (
     <RegistrationWizard
       event={event}
-      participantTypes={participantTypes}
+      participantTypes={offeredTypes}
+      preselectedTypeKey={preselectedTypeKey}
       modeForms={modeForms}
       userId={user.id}
       profile={profile}
@@ -218,7 +263,10 @@ export default async function RegisterPage({ params, searchParams }) {
             label: localeAcronym(code),
             // Built-in locales have their own route; custom codes ride the
             // current route via ?lang=.
-            href: eventPageUrl({ slug, code, uiLocale: locale, subPath: '/register' }),
+            href: eventPageUrl({
+              slug, code, uiLocale: locale, subPath: '/register',
+              params: { type: typeParam },
+            }),
           }))}
           value={contentLocale}
           ariaLabel={tCommon('language')}

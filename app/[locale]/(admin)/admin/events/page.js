@@ -42,7 +42,7 @@ export default async function AdminEventsPage({ params }) {
       .from('events')
       .select(
         'id, slug, status, name, default_locale, timezone, starts_at, ends_at, ' +
-          'registration_opens_at, registration_closes_at, deleted_at, first_published_at'
+          'registration_opens_at, registration_closes_at, registration_manually_closed, deleted_at, first_published_at'
       )
       .order('starts_at', { ascending: false }),
     // Live participants only — the view filters archived rows (migration 0033).

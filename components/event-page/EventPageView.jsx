@@ -276,7 +276,10 @@ export function EventPageView({
   const opensAt = event.registration_opens_at ? Date.parse(event.registration_opens_at) : null
   const closesAt = event.registration_closes_at ? Date.parse(event.registration_closes_at) : null
   const notOpenYet = opensAt != null && now < opensAt
-  const closed = closesAt != null && now > closesAt
+  // The organizer's manual switch closes registration regardless of the dates.
+  // One flag here covers the hero notice, the countdown and the ticket CTAs,
+  // which all read `closed`.
+  const closed = event.registration_manually_closed || (closesAt != null && now > closesAt)
 
   const coverUrl = eventMediaUrl(event.cover_image_path)
   const coverIsVideo = event.cover_image_path && /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(event.cover_image_path)

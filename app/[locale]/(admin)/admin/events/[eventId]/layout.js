@@ -27,7 +27,7 @@ export default async function AdminEventLayout({ children, params }) {
   const supabase = await getSupabaseServerClient()
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, status, default_locale, starts_at, ends_at, registration_opens_at, registration_closes_at, deleted_at')
+    .select('id, name, status, default_locale, starts_at, ends_at, registration_opens_at, registration_closes_at, registration_manually_closed, deleted_at')
     .eq('id', eventId)
     .maybeSingle()
   if (!event) notFound()

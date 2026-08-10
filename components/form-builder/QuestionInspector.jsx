@@ -12,6 +12,11 @@ import {
   defaultOperatorFor,
 } from '@/lib/form-engine/operators'
 import {
+  PATTERN_PRESET_KEYS,
+  presetKeyFor,
+  patternSourceFor,
+} from '@/lib/form-engine/patterns'
+import {
   Field,
   Input,
   NativeSelect,
@@ -23,6 +28,43 @@ import styles from './builder.module.css'
 const NO_VALUE_OPERATORS = ['isEmpty', 'isNotEmpty']
 // The rule engine requires an ARRAY value for these operators.
 const ARRAY_OPERATORS = ['in', 'notIn']
+
+/**
+ * Which validation controls each question type gets. Only rules validate.js
+ * actually enforces appear here: it has no date-range, option-count or
+ * phone-length branch, so offering those controls would show a rule that
+ * silently does nothing. Types absent from this map get no section at all.
+ */
+export const VALIDATION_CONTROLS = {
+  text: ['minLength', 'maxLength', 'pattern'],
+  textarea: ['minLength', 'maxLength'],
+  number: ['min', 'max'],
+  file: ['accept', 'maxFileMb'],
+}
+
+/**
+ * Keep a question patch internally consistent.
+ *
+ * An admin-only question is pruned from the registrant's form, so `required`
+ * would never be checked for them — but it IS checked on the organizer's
+ * drawer, where it would block every save until the organizer filled it in.
+ * Turning admin-only on therefore clears required, mirroring how disabling an
+ * address part clears its required flag.
+ */
+export function normalizeQuestionPatch(patch, question = {}) {
+  const next = { ...patch }
+  const adminOnly = 'adminOnly' in next ? next.adminOnly : question.adminOnly
+  if (adminOnly) next.required = false
+  return next
+}
+
+/** Empty input → undefined (never '' or NaN, which read as "rule set" downstream). */
+function numOrUndefined(raw) {
+  const s = String(raw).trim()
+  if (s === '') return undefined
+  const n = Number(s)
+  return Number.isFinite(n) ? n : undefined
+}
 
 export function QuestionInspector({
   question: q,
@@ -66,6 +108,25 @@ export function QuestionInspector({
 
   const hasOptions = ['select', 'multiselect', 'radio'].includes(q.type)
   const rules = q.visibleIf?.rules ?? []
+
+  const validation = q.validation ?? {}
+  const controls = VALIDATION_CONTROLS[q.type] ?? []
+  const patternPreset = presetKeyFor(validation.pattern)
+  // Warn rather than block: a half-typed range is a normal intermediate state.
+  const badRange =
+    (validation.min != null && validation.max != null && validation.min > validation.max) ||
+    (validation.minLength != null &&
+      validation.maxLength != null &&
+      validation.minLength > validation.maxLength)
+
+  /** Merge a validation patch, dropping cleared keys so the JSONB stays clean. */
+  function setValidation(patch) {
+    const next = { ...validation, ...patch }
+    for (const [k, v] of Object.entries(next)) {
+      if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) delete next[k]
+    }
+    onChange({ validation: Object.keys(next).length ? next : undefined })
+  }
 
   // Typing into a NON-default language marks that field human-authored, so
   // auto-translate stops overwriting it. Typing into the default language
@@ -146,15 +207,157 @@ export function QuestionInspector({
         </Field>
       </div>
 
-      {/* Required */}
+      {/* Required + admin-only */}
       {q.type !== 'section' && (
-        <label className={styles.requiredRow}>
-          <Checkbox
-            checked={!!q.required}
-            onCheckedChange={(c) => onChange({ required: !!c })}
-          />
-          <span>{t('requiredField')}</span>
-        </label>
+        <>
+          <label className={styles.requiredRow}>
+            <Checkbox
+              checked={!!q.required}
+              disabled={!!q.adminOnly}
+              onCheckedChange={(c) => onChange({ required: !!c })}
+            />
+            <span>{t('requiredField')}</span>
+          </label>
+          <label className={styles.requiredRow}>
+            <Checkbox
+              checked={!!q.adminOnly}
+              onCheckedChange={(c) => onChange(normalizeQuestionPatch({ adminOnly: !!c }, q))}
+            />
+            <span>{t('adminOnly')}</span>
+          </label>
+          {q.adminOnly && <p className="field-help">{t('adminOnlyHelp')}</p>}
+        </>
+      )}
+
+      {/* Validation rules — only what validate.js actually enforces. */}
+      {controls.length > 0 && (
+        <div className={styles.inspectorSection}>
+          <span className="field-label">{t('validationRules')}</span>
+
+          {controls.includes('minLength') && (
+            <div className={styles.ruleRow}>
+              <Field label={t('minLength')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min="0"
+                    value={validation.minLength ?? ''}
+                    onChange={(e) => setValidation({ minLength: numOrUndefined(e.target.value) })}
+                  />
+                )}
+              </Field>
+              <Field label={t('maxLength')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min="0"
+                    value={validation.maxLength ?? ''}
+                    onChange={(e) => setValidation({ maxLength: numOrUndefined(e.target.value) })}
+                  />
+                )}
+              </Field>
+            </div>
+          )}
+
+          {controls.includes('min') && (
+            <div className={styles.ruleRow}>
+              <Field label={t('minValue')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    value={validation.min ?? ''}
+                    onChange={(e) => setValidation({ min: numOrUndefined(e.target.value) })}
+                  />
+                )}
+              </Field>
+              <Field label={t('maxValue')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    value={validation.max ?? ''}
+                    onChange={(e) => setValidation({ max: numOrUndefined(e.target.value) })}
+                  />
+                )}
+              </Field>
+            </div>
+          )}
+
+          {controls.includes('pattern') && (
+            <>
+              <Field label={t('pattern')}>
+                {({ id }) => (
+                  <NativeSelect
+                    id={id}
+                    value={patternPreset}
+                    onChange={(e) =>
+                      setValidation({
+                        pattern: patternSourceFor(e.target.value, validation.pattern),
+                      })
+                    }
+                  >
+                    {PATTERN_PRESET_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`pattern_${key}`)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                )}
+              </Field>
+              {patternPreset === 'custom' && (
+                <Field label={t('patternCustomLabel')}>
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      value={validation.pattern ?? ''}
+                      placeholder="^[A-Z]{2}-\d{4}$"
+                      onChange={(e) => setValidation({ pattern: e.target.value })}
+                    />
+                  )}
+                </Field>
+              )}
+            </>
+          )}
+
+          {controls.includes('accept') && (
+            <>
+              <Field label={t('acceptedFileTypes')} help={t('acceptedFileTypesHelp')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    value={(validation.accept ?? []).join(', ')}
+                    placeholder="pdf, jpg, png"
+                    onChange={(e) =>
+                      setValidation({
+                        accept: e.target.value
+                          .split(',')
+                          .map((s) => s.trim().toLowerCase().replace(/^\./, ''))
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              <Field label={t('maxFileSizeMb')}>
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min="1"
+                    value={validation.maxFileMb ?? ''}
+                    placeholder="10"
+                    onChange={(e) => setValidation({ maxFileMb: numOrUndefined(e.target.value) })}
+                  />
+                )}
+              </Field>
+            </>
+          )}
+
+          {badRange && <p className="field-help">{t('validationRangeWarning')}</p>}
+        </div>
       )}
 
       {/* Name format */}

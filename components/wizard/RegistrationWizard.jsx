@@ -7,6 +7,7 @@ import { lt } from '@/lib/i18n/locales'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { extractIdentity } from '@/lib/form-engine/identity'
 import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
+import { initialWizardState, draftWinsOverLink } from './initial-state'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
 import styles from './wizard.module.css'
@@ -22,9 +23,18 @@ import styles from './wizard.module.css'
  * ({ single?, family? } definitions that override per-type forms), userId,
  * profile ({ full_name, email } of the signed-in registrant, used to prefill
  * single-mode registrations — in family mode person #1 may not be the
- * account holder, so no prefill there).
+ * account holder, so no prefill there), preselectedTypeKey (from a ?type=
+ * deep link: opens straight on that type's form, skipping mode + type).
  */
-export function RegistrationWizard({ event, participantTypes, modeForms = {}, userId, profile = null, contentLocale }) {
+export function RegistrationWizard({
+  event,
+  participantTypes,
+  preselectedTypeKey = null,
+  modeForms = {},
+  userId,
+  profile = null,
+  contentLocale,
+}) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
   const tMyRegs = useTranslations('myRegs')
@@ -35,14 +45,21 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
   const locale = contentLocale ?? routeLocale
   const storageKey = `mosaic-draft-${event.slug}`
 
-  const [step, setStep] = useState('mode') // mode | single-type | counts | person | review | done
-  const [mode, setMode] = useState(null) // 'single' | 'family'
-  const [singleTypeKey, setSingleTypeKey] = useState(null)
-  const [counts, setCounts] = useState(() =>
-    Object.fromEntries(participantTypes.map((pt) => [pt.key, 0]))
+  // A ?type= link answers the mode and type questions up front. Computed in
+  // the initializers rather than an effect so the mode step never flashes.
+  const initial = useMemo(
+    () => initialWizardState({ participantTypes, preselectedTypeKey, profile, modeForms }),
+    // Opening state only — recomputing on every prop change would stomp edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   )
-  const [people, setPeople] = useState([])
-  const [personIndex, setPersonIndex] = useState(0)
+
+  const [step, setStep] = useState(initial.step) // mode | single-type | counts | person | review | done
+  const [mode, setMode] = useState(initial.mode) // 'single' | 'family'
+  const [singleTypeKey, setSingleTypeKey] = useState(initial.singleTypeKey)
+  const [counts, setCounts] = useState(initial.counts)
+  const [people, setPeople] = useState(initial.people)
+  const [personIndex, setPersonIndex] = useState(initial.personIndex)
   const [errors, setErrors] = useState({})
   const [submitState, setSubmitState] = useState('idle') // idle | submitting | error
   const [result, setResult] = useState(null)
@@ -81,6 +98,12 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
         draft.people.every((p) => p && validTypes.has(p.participantTypeKey)) &&
         Object.keys(draft.counts ?? {}).every((k) => validTypes.has(k))
       if (!usable) {
+        localStorage.removeItem(storageKey)
+        return
+      }
+      // A draft for a different type is stale relative to the link the reader
+      // just followed; the link wins and the draft goes.
+      if (!draftWinsOverLink(draft, preselectedTypeKey)) {
         localStorage.removeItem(storageKey)
         return
       }
@@ -422,9 +445,13 @@ export function RegistrationWizard({ event, participantTypes, modeForms = {}, us
           uploadContext={{ eventId: event.id, userId }}
         />
         <div className={styles.nav}>
-          <Button variant="ghost" onClick={prevStep}>
-            {tCommon('back')}
-          </Button>
+          {/* A ?type= link skipped mode + type selection, so on the first
+              person there is no earlier step to return to. */}
+          {!(preselectedTypeKey && personIndex === 0) && (
+            <Button variant="ghost" onClick={prevStep}>
+              {tCommon('back')}
+            </Button>
+          )}
           <Button onClick={nextPerson}>{tCommon('next')}</Button>
         </div>
       </div>

@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
-import { sendStatusChangeEmail } from '@/lib/email'
-import { lt } from '@/lib/i18n/locales'
+import { notifyStatusChange } from '@/lib/notify'
 import { enforceRateLimit } from '@/lib/rate-limit'
 
 /**
  * Update participant status (single or bulk) and send notification email(s).
- * Body: { participantIds: string[], status: string, locale?: string }
+ * Body: { participantIds: string[], status: string }
+ *
+ * `locale` used to come from the body — the ORGANIZER's UI language — and was
+ * used for the attendee's email. Each recipient's language is now resolved
+ * from their own registration/profile in lib/notify.js.
  */
 export async function POST(request) {
   const rateLimitRes = enforceRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'status-change' })
@@ -28,7 +31,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'bad_json' }, { status: 400 })
   }
 
-  const { participantIds, status, locale = 'en' } = body ?? {}
+  const { participantIds, status } = body ?? {}
   if (!Array.isArray(participantIds) || participantIds.length === 0 || typeof status !== 'string') {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 })
   }
@@ -48,38 +51,15 @@ export async function POST(request) {
     } else {
       results.push({ id: pid, data: rpcRes })
 
-      // Dispatch status emails asynchronously for the target participant and any waitlist-promoted candidate
-      const targetIds = [pid]
+      // The participant whose status changed, plus anyone the change promoted
+      // off the waitlist. Off the response path: the write has committed.
+      const targets = [{ participantId: pid, status }]
       if (rpcRes?.promoted_participant_id) {
-        targetIds.push(rpcRes.promoted_participant_id)
+        targets.push({ participantId: rpcRes.promoted_participant_id, status: 'confirmed' })
       }
-
-      for (const targetId of targetIds) {
-        const targetStatus = targetId === rpcRes?.promoted_participant_id ? 'confirmed' : status
-        admin
-          .from('participants')
-          .select('first_name, last_name, email, profile_email, events!inner ( name, default_locale )')
-          .eq('id', targetId)
-          .single()
-          .then(({ data: pData }) => {
-            if (!pData) return
-            const recipientEmail = pData.email || pData.profile_email
-            if (!recipientEmail) return
-
-            const eventName = lt(pData.events?.name, locale, pData.events?.default_locale) || 'Event'
-            const participantName = [pData.first_name, pData.last_name].filter(Boolean).join(' ') || recipientEmail
-
-            sendStatusChangeEmail({
-              recipientEmail,
-              participantName,
-              eventName,
-              newStatus: targetStatus,
-              siteUrl: process.env.NEXT_PUBLIC_SITE_URL || '',
-              locale,
-            }).catch((err) => console.error('Failed to send status change email async:', err))
-          })
-          .catch((err) => console.error('Failed to fetch participant for status email:', err))
-      }
+      notifyStatusChange(admin, targets, {
+        siteUrl: process.env.NEXT_PUBLIC_SITE_URL || '',
+      }).catch((err) => console.error('Failed to send status change email:', err))
     }
   }
 

@@ -225,7 +225,7 @@ export function ParticipantsTable({
       const res = await fetch('/api/participants/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus, locale }),
+        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus }),
       })
       const data = await res.json()
       if (!res.ok || data.failures > 0) {
@@ -266,7 +266,7 @@ export function ParticipantsTable({
       const res = await fetch('/api/participants/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantIds: [participantId], status, locale }),
+        body: JSON.stringify({ participantIds: [participantId], status }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -303,10 +303,20 @@ export function ParticipantsTable({
     setArchiveState('working')
     setStatusError('')
     const ids = pendingArchive.map((p) => p.id)
-    const { error } = await supabase.rpc('soft_delete_participants', {
-      p_participant_ids: ids,
-    })
-    if (error) {
+    // Via the route, not the RPC directly: archiving a confirmed participant
+    // promotes the next person off the waitlist, and only the server can email
+    // them about it. The RPC still re-checks the privilege per participant.
+    try {
+      const res = await fetch('/api/participants/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: ids }),
+      })
+      if (!res.ok) {
+        setArchiveState('error')
+        return
+      }
+    } catch {
       setArchiveState('error')
       return
     }
@@ -766,6 +776,7 @@ export function ParticipantsTable({
 
       {selected && (
         <ParticipantDetail
+          audience="admin"
           participant={{
             ...selected,
             participant_type_key: typeById.get(selected.participant_type_id)?.key,

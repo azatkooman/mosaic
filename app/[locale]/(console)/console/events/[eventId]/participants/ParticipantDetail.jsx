@@ -31,6 +31,10 @@ export function ParticipantDetail({
   onClose,
   onSaved,
   endpointBase = '/api/participants',
+  // Defaults to 'registrant' on purpose: this drawer is also rendered on the
+  // registrant's own /my/registrations page (EditParticipantButton passes
+  // nothing), where admin-only answers must not be shown.
+  audience = 'registrant',
 }) {
   const t = useTranslations()
   const locale = useLocale()
@@ -82,7 +86,7 @@ export function ParticipantDetail({
     // when the form does include a required name question, the shared answer
     // validation below still enforces it.
     const nextErrors = {}
-    const res = validateParticipantAnswers(definition, typeKey, answers)
+    const res = validateParticipantAnswers(definition, typeKey, answers, { audience })
     Object.assign(nextErrors, res.errors)
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
@@ -106,7 +110,9 @@ export function ParticipantDetail({
   }
 
   // Read-only rendering of the answers the participant actually sees.
-  const shownQuestions = visibleQuestions(definition, typeKey, participant.answers ?? {})
+  const shownQuestions = visibleQuestions(definition, typeKey, participant.answers ?? {}, {
+    audience,
+  })
 
   // On a phone the drawer is full-bleed, so the overlay is completely covered
   // and the ✕ is the only way out — Escape has to work. Locking body scroll
@@ -183,6 +189,7 @@ export function ParticipantDetail({
               <FormRenderer
                 definition={definition}
                 participantTypeKey={typeKey}
+                audience={audience}
                 locale={locale}
                 answers={answers}
                 errors={errors}

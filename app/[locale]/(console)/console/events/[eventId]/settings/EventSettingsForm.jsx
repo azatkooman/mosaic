@@ -9,9 +9,11 @@ import { stripLocales } from '@/lib/form-localization'
 import { translateTypeNames } from './translate-type-names'
 import { planTypeWrites } from './participant-type-save'
 import { toLocalInput, fromLocalInput } from '@/lib/dates'
+import { eventPageUrl } from '@/lib/url'
 import { PARTICIPANT_TYPE_PRESETS, uniqueTypeKey } from '@/lib/participant-type-presets'
 import {
   Button,
+  CheckboxRow,
   ConfettiBurst,
   Dialog,
   Field,
@@ -51,6 +53,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   const [endsAt, setEndsAt] = useState(toLocalInput(event.ends_at, event.timezone))
   const [regOpens, setRegOpens] = useState(toLocalInput(event.registration_opens_at, event.timezone))
   const [regCloses, setRegCloses] = useState(toLocalInput(event.registration_closes_at, event.timezone))
+  const [manuallyClosed, setManuallyClosed] = useState(Boolean(event.registration_manually_closed))
   const [capacity, setCapacity] = useState(event.capacity ?? '')
   const [visibility, setVisibility] = useState(event.visibility ?? 'public')
   const [contact, setContact] = useState(event.contact ?? {})
@@ -68,6 +71,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   const [slugWarnOpen, setSlugWarnOpen] = useState(false)
   const [langWarnOpen, setLangWarnOpen] = useState(false)
   const [publishError, setPublishError] = useState(null)
+  const [copiedTypeId, setCopiedTypeId] = useState(null)
 
   // Extra contacts beyond the primary one. Stored on contact.people[] — the
   // same list the Event Page tab edits — so both screens stay in sync.
@@ -97,9 +101,9 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   function snapshotOf(typeList, slugValue = slug) {
     return JSON.stringify([
       slugValue, timezone,
-      startsAt, endsAt, regOpens, regCloses, capacity, visibility, contact,
+      startsAt, endsAt, regOpens, regCloses, manuallyClosed, capacity, visibility, contact,
       langs, defaultLocale,
-      typeList.map((pt) => [pt.id, pt.key, pt.name, pt.capacity, pt.form_id]),
+      typeList.map((pt) => [pt.id, pt.key, pt.name, pt.capacity, pt.form_id, Boolean(pt.hidden)]),
     ])
   }
   function snapshot(slugValue = slug) {
@@ -262,6 +266,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
         ends_at: fromLocalInput(endsAt, timezone),
         registration_opens_at: fromLocalInput(regOpens, timezone),
         registration_closes_at: fromLocalInput(regCloses, timezone),
+        registration_manually_closed: manuallyClosed,
         capacity: capacity === '' ? null : Number(capacity),
         visibility,
         contact: purge(contact),
@@ -364,6 +369,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
             name: pt.name,
             capacity: pt.capacity ?? null,
             form_id: pt.form_id ?? null,
+            hidden: Boolean(pt.hidden),
             // Position in the list as shown, so a staged type lands where the
             // organizer sees it rather than always at the end.
             sort_order: index,
@@ -381,7 +387,10 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
 
       const { error: typeError } = await supabase
         .from('participant_types')
-        .update({ key: pt.key, name: pt.name, capacity: pt.capacity, form_id: pt.form_id })
+        .update({
+          key: pt.key, name: pt.name, capacity: pt.capacity,
+          form_id: pt.form_id, hidden: Boolean(pt.hidden),
+        })
         .eq('id', pt.id)
       if (typeError) {
         commitPartial(index)
@@ -477,6 +486,27 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   // later keystroke's write raced an earlier one.)
   function updateType(id, patch) {
     setTypes((prev) => prev.map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)))
+  }
+
+  // Private registration link for one participant type. Built from the SAVED
+  // slug — the slug input may hold an unsaved edit, and a link to a slug that
+  // does not exist yet is worse than no link.
+  function copyTypeLink(pt) {
+    const href = eventPageUrl({
+      slug: event.slug,
+      code: defaultLocale,
+      uiLocale: locale,
+      origin: window.location.origin,
+      subPath: '/register',
+      params: { type: pt.key },
+    })
+    navigator.clipboard?.writeText(href).then(
+      () => {
+        setCopiedTypeId(pt.id)
+        setTimeout(() => setCopiedTypeId(null), 2000)
+      },
+      () => {}
+    )
   }
 
   async function removeType(id) {
@@ -624,6 +654,16 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
           <Field label={t('regCloses')}>
             {({ id }) => (
               <PreferenceDateInput id={id} type="datetime-local" value={regCloses} onChange={setRegCloses} />
+            )}
+          </Field>
+          <Field help={t('closeRegistrationNowHelp')}>
+            {({ id }) => (
+              <CheckboxRow
+                id={id}
+                checked={manuallyClosed}
+                onCheckedChange={(c) => setManuallyClosed(!!c)}
+                label={t('closeRegistrationNow')}
+              />
             )}
           </Field>
           <Field label={t('capacity')} help={t('capacityHelp')}>
@@ -791,6 +831,19 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
                   </NativeSelect>
                 )}
               </Field>
+              <CheckboxRow
+                checked={Boolean(pt.hidden)}
+                onCheckedChange={(c) => updateType(pt.id, { hidden: !!c })}
+                label={t('typeHidden')}
+              />
+              {/* Only a saved type has a link worth copying, and the slug comes
+                  from the event row rather than the (possibly edited) input,
+                  so the copied URL always resolves. */}
+              {!pt.isNew && (
+                <Button variant="ghost" size="sm" onClick={() => copyTypeLink(pt)}>
+                  {copiedTypeId === pt.id ? t('linkCopied') : t('copyLink')}
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => removeType(pt.id)}>
                 {t('remove')}
               </Button>

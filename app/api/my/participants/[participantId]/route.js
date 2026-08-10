@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { preserveAdminAnswers } from '@/lib/form-engine/visibility'
 import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { extractIdentity } from '@/lib/form-engine/identity'
 
@@ -38,7 +39,7 @@ export async function PATCH(request, { params }) {
   // version is a published version of the event's form, also readable.
   const { data: participant, error: loadError } = await supabase
     .from('participants')
-    .select('id, event_id, participant_type_id, form_version_id, participant_types ( key ), form_versions ( definition ), registrations!inner ( registered_by )')
+    .select('id, event_id, participant_type_id, form_version_id, answers, participant_types ( key ), form_versions ( definition ), registrations!inner ( registered_by )')
     .eq('id', participantId)
     .maybeSingle()
   if (loadError || !participant) {
@@ -79,6 +80,17 @@ export async function PATCH(request, { params }) {
     }
   }
 
+  // update_own_participant replaces `answers` wholesale, and the registrant
+  // audience above pruned every admin-only question out of `cleaned` — so
+  // without this, a registrant editing their own details would erase the
+  // organizer's private fields on their row.
+  const answersToWrite = preserveAdminAnswers(
+    definition,
+    typeKey,
+    participant.answers ?? {},
+    cleaned
+  )
+
   // Identity comes from the form's name/email questions when present, exactly
   // like /api/register — otherwise editing the name question would leave the
   // stored first_name/last_name columns stale.
@@ -95,7 +107,7 @@ export async function PATCH(request, { params }) {
     p_first_name: identity.firstName || asString(body?.firstName),
     p_last_name: identity.lastName || asString(body?.lastName),
     p_email: identity.email || asString(body?.email) || null,
-    p_answers: cleaned,
+    p_answers: answersToWrite,
     p_registered_by: user.id,
   })
   if (error) {
