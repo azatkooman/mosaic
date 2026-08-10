@@ -656,16 +656,18 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
               <PreferenceDateInput id={id} type="datetime-local" value={regCloses} onChange={setRegCloses} />
             )}
           </Field>
-          <Field help={t('closeRegistrationNowHelp')}>
-            {({ id }) => (
-              <CheckboxRow
-                id={id}
-                checked={manuallyClosed}
-                onCheckedChange={(c) => setManuallyClosed(!!c)}
-                label={t('closeRegistrationNow')}
-              />
-            )}
-          </Field>
+          {/* Spans both columns: it is a switch that overrides the two dates
+              above it, not a labelled value. In a single grid cell it had no
+              label, so its box lined up with the NEIGHBOUR'S label instead of
+              the neighbour's input and read as misaligned. */}
+          <div className={`field ${styles.spanBoth}`}>
+            <CheckboxRow
+              checked={manuallyClosed}
+              onCheckedChange={(c) => setManuallyClosed(!!c)}
+              label={t('closeRegistrationNow')}
+            />
+            <p className="field-help">{t('closeRegistrationNowHelp')}</p>
+          </div>
           <Field label={t('capacity')} help={t('capacityHelp')}>
             {({ id }) => (
               <Input id={id} type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />

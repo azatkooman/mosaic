@@ -17,6 +17,13 @@
   gap: var(--s-4);
 }
 
+/* A full-width row inside .grid2, for controls that carry their own label
+   (a checkbox) and so would otherwise sit a label's height above their
+   neighbours. */
+.spanBoth {
+  grid-column: 1 / -1;
+}
+
 .contactsSubhead {
   margin: var(--s-5) 0 var(--s-2);
   font-size: var(--text-sm);
