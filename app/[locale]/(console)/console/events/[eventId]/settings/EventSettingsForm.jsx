@@ -833,22 +833,30 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
                   </NativeSelect>
                 )}
               </Field>
-              <CheckboxRow
-                checked={Boolean(pt.hidden)}
-                onCheckedChange={(c) => updateType(pt.id, { hidden: !!c })}
-                label={t('typeHidden')}
-              />
-              {/* Only a saved type has a link worth copying, and the slug comes
-                  from the event row rather than the (possibly edited) input,
-                  so the copied URL always resolves. */}
-              {!pt.isNew && (
-                <Button variant="ghost" size="sm" onClick={() => copyTypeLink(pt)}>
-                  {copiedTypeId === pt.id ? t('linkCopied') : t('copyLink')}
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => removeType(pt.id)}>
-                {t('remove')}
-              </Button>
+              {/* The toggle and the row's actions share a full-width line below
+                  the labelled fields. Inline, the checkbox sat in an `auto`
+                  track that sized to its long label and dwarfed the inputs,
+                  and the two buttons overflowed the 4-column grid anyway. */}
+              <div className={styles.typeRowFooter}>
+                <CheckboxRow
+                  checked={Boolean(pt.hidden)}
+                  onCheckedChange={(c) => updateType(pt.id, { hidden: !!c })}
+                  label={t('typeHidden')}
+                />
+                <div className={styles.typeRowActions}>
+                  {/* Only a saved type has a link worth copying, and the slug
+                      comes from the event row rather than the (possibly
+                      edited) input, so the copied URL always resolves. */}
+                  {!pt.isNew && (
+                    <Button variant="ghost" size="sm" onClick={() => copyTypeLink(pt)}>
+                      {copiedTypeId === pt.id ? t('linkCopied') : t('copyLink')}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => removeType(pt.id)}>
+                    {t('remove')}
+                  </Button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
