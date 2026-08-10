@@ -77,8 +77,19 @@ export default async function MyRegistrationsPage({ params }) {
             // the event is live and registration hasn't closed (the RPC
             // re-checks this server-side).
             const editable = reg.events && eventPhase(reg.events) === 'registrationOpen'
+            // Past the point the registrant can act on it: the event has
+            // finished, or it was archived — which RLS renders as no event row
+            // at all (events_select_public requires `published`), so a missing
+            // `reg.events` IS the archived case rather than an error.
+            // Cancelling is withdrawn here and, authoritatively, in the RPC
+            // (migration 0046): after the event, attendance is a record of what
+            // happened, and correcting it is the organizer's call.
+            const past = !reg.events || eventPhase(reg.events) === 'ended'
             return (
-            <li key={reg.id} className={`card card-pad ${styles.regCard}`}>
+            <li
+              key={reg.id}
+              className={`card card-pad ${styles.regCard} ${past ? styles.regCardPast : ''}`}
+            >
               <div className={styles.regHead}>
                 {/* reg.events is null when the event was unpublished/archived:
                     RLS hides it from the registrant while the registration
@@ -133,7 +144,7 @@ export default async function MyRegistrationsPage({ params }) {
                           definition={p.form_versions?.definition ?? { questions: [] }}
                         />
                       )}
-                      {p.status !== 'cancelled' && (
+                      {p.status !== 'cancelled' && !past && (
                         <CancelParticipantButton
                           participantId={p.id}
                           label={t('myRegs.cancelParticipant')}

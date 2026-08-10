@@ -5,6 +5,7 @@ import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from '@/components/shell/LocaleSwitcher'
 import { SignOutButton } from '@/components/shell/SignOutButton'
 import { NavLink } from '@/components/shell/NavLink'
+import { ProfileLink } from '@/components/shell/ProfileLink'
 import { ThemeToggle } from '@/components/shell/ThemeToggle'
 import { MobileNav } from '@/components/shell/MobileNav'
 import styles from './admin-shell.module.css'
@@ -57,9 +58,7 @@ export default async function AdminLayout({ children, params }) {
           {/* Desktop-only cluster; folded into the menu on phones. */}
           <div className={styles.desktopActions}>
             <LocaleSwitcher label={t('common.language')} />
-            <Link href="/my/profile" className="btn btn-ghost btn-sm">
-              {t('nav.profile')}
-            </Link>
+            <ProfileLink className="btn btn-ghost btn-sm">{t('nav.profile')}</ProfileLink>
             <SignOutButton label={t('common.signOut')} />
           </div>
           <MobileNav label={t('common.menu')}>
@@ -70,7 +69,7 @@ export default async function AdminLayout({ children, params }) {
             <NavLink href="/admin/events">{t('console.adminArchivedEvents')}</NavLink>
           <NavLink href="/admin/translations">{t('console.adminTranslations')}</NavLink>
             <Link href="/console">{t('console.title')} ↗</Link>
-            <Link href="/my/profile">{t('nav.profile')}</Link>
+            <ProfileLink>{t('nav.profile')}</ProfileLink>
             <LocaleSwitcher label={t('common.language')} />
             <SignOutButton label={t('common.signOut')} />
           </MobileNav>

@@ -87,8 +87,10 @@ export function ProfileForm({ userId, initialProfile }) {
     applyDateFormatClient({ dateFormat, timeFormat })
     setSaved(true)
     if (preferredLocale !== uiLocale) {
-      // Switch the UI to the newly preferred language.
-      router.replace(pathname, { locale: preferredLocale })
+      // Switch the UI to the newly preferred language. `pathname` carries no
+      // query string, so re-attach the live one or saving a language change
+      // would drop `?next=` and take the Back button with it.
+      router.replace(`${pathname}${window.location.search}`, { locale: preferredLocale })
     } else {
       router.refresh()
     }
