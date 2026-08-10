@@ -150,6 +150,29 @@
   transform: translateY(-2px);
 }
 
+/* A registration nothing can be done to any more: the event has finished, or
+   it was archived out from under the registrant. Sunk onto the recessed
+   surface so a live registration is the thing that stands out in a list that
+   only grows — every past event stays here forever, so on a long-standing
+   account the finished ones are the majority.
+
+   --surface-sunken rather than a literal grey: it is already the token for
+   "behind the page", so it lands darker than --surface in both themes
+   (#f1efe9 on white, #14161b on #1f232a) and follows any later retheming. A
+   literal grey would have to be picked twice and kept in step by hand. */
+.regCardPast {
+  background: var(--surface-sunken);
+  border-color: var(--line-strong);
+}
+/* The four-colour brand strip reads as "this is live". A finished event gets
+   a flat rule instead — the shape stays, the signal goes. */
+.regCardPast::before {
+  background: var(--line-strong);
+}
+.regCardPast .regHead strong {
+  color: var(--ink-soft);
+}
+
 .regHead {
   display: flex;
   justify-content: space-between;
