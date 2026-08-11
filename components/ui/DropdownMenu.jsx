@@ -72,6 +72,38 @@ DropdownMenu.CheckboxItem = function DropdownMenuCheckboxItem({
   )
 }
 
+/**
+ * Single-choice equivalent of CheckboxItem, for filters that genuinely take
+ * one value. It deliberately does NOT hold the menu open: picking the one
+ * answer is the end of the interaction, and closing confirms it — whereas a
+ * checklist is not finished until the user says so.
+ *
+ * Same indicator gutter as CheckboxItem so a row of these filters lines up
+ * whichever kind each one is.
+ */
+DropdownMenu.RadioGroup = RadixDropdownMenu.RadioGroup
+
+DropdownMenu.RadioItem = function DropdownMenuRadioItem({ value, children, ...rest }) {
+  return (
+    <RadixDropdownMenu.RadioItem className="menu-item" value={value} {...rest}>
+      <span aria-hidden="true" style={{ inlineSize: 14, display: 'inline-flex', flexShrink: 0 }}>
+        <RadixDropdownMenu.ItemIndicator>
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M2 6.5L4.5 9L10 3.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </RadixDropdownMenu.ItemIndicator>
+      </span>
+      {children}
+    </RadixDropdownMenu.RadioItem>
+  )
+}
+
 /** One entry. `tone="danger"` colours it for a destructive action. */
 DropdownMenu.Item = function DropdownMenuItem({ tone, onSelect, children, ...rest }) {
   return (

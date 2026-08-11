@@ -734,6 +734,7 @@
     "ariaValue": "Value",
     "tapRegNoForAnswers": "Tap a registration number to see every answer.",
     "byCheckin": "By check-in",
+    "filterAny": "Any",
     "checkedIn": "Checked in",
     "notCheckedIn": "Not checked in",
     "bucketAll": "All participants",

@@ -16,8 +16,9 @@ export const maxDuration = 60
 
 /**
  * Participant export: /api/export?eventId=…&format=xlsx|csv&locale=…&status=…&typeId=…
- * `status` takes a comma-separated list ('waitlisted,cancelled'), matching the
- * console's status checklist; a single value is the older form and still works.
+ * `status` and `typeId` each take a comma-separated list ('waitlisted,cancelled'),
+ * matching the console's checklists; a single value is the older form and still
+ * works.
  *
  * Uses the service-role key to page through all rows, so it FIRST verifies
  * the caller can view the event (RLS does not apply to service role).
