@@ -7,7 +7,7 @@ import { Button, Dialog } from '@/components/ui'
 /**
  * Permanent deletion of a whole event, from the admin console only.
  *
- * The counterpart to DeleteEventButton, which archives. This one erases: the
+ * The counterpart to ArchiveEventButton, which archives. This one erases: the
  * event, its forms and versions, its participant types, and every registration
  * on it. purge_event (migration 0036) re-checks both the admin gate and the
  * eligibility rule — an event must be archived, or over — so `eligible` here

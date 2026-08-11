@@ -698,7 +698,7 @@ export function ParticipantsTable({
         </Button>
       </div>
 
-      {/* Archive confirmation. Mirrors DeleteEventButton: a red action, a
+      {/* Archive confirmation. Mirrors ArchiveEventButton: a red action, a
           plain statement of what survives, and no way to trigger it by
           accident. */}
       <Dialog
