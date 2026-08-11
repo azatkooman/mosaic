@@ -187,6 +187,7 @@ export function ProfileForm({ userId, initialProfile }) {
       </p>
       <div>
         <CheckboxRow
+          size="sm"
           checked={warnUnsaved}
           onCheckedChange={(c) => setWarnUnsaved(!!c)}
           label={t('warnUnsaved')}
