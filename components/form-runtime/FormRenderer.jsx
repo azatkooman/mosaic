@@ -22,9 +22,12 @@ export function FormRenderer({
   onChange,
   preview = false,
   uploadContext,
+  // 'registrant' by default, so the builder preview and the wizard both show
+  // exactly what an attendee sees; only the organizer drawer opts into 'admin'.
+  audience = 'registrant',
 }) {
   const t = useTranslations('validation')
-  const questions = visibleQuestions(definition, participantTypeKey, answers)
+  const questions = visibleQuestions(definition, participantTypeKey, answers, { audience })
 
   return (
     <div className={styles.form}>

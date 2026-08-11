@@ -225,7 +225,7 @@ export function ParticipantsTable({
       const res = await fetch('/api/participants/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus, locale }),
+        body: JSON.stringify({ participantIds: Array.from(selectedIds), status: bulkStatus }),
       })
       const data = await res.json()
       if (!res.ok || data.failures > 0) {
@@ -266,7 +266,7 @@ export function ParticipantsTable({
       const res = await fetch('/api/participants/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantIds: [participantId], status, locale }),
+        body: JSON.stringify({ participantIds: [participantId], status }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -303,10 +303,20 @@ export function ParticipantsTable({
     setArchiveState('working')
     setStatusError('')
     const ids = pendingArchive.map((p) => p.id)
-    const { error } = await supabase.rpc('soft_delete_participants', {
-      p_participant_ids: ids,
-    })
-    if (error) {
+    // Via the route, not the RPC directly: archiving a confirmed participant
+    // promotes the next person off the waitlist, and only the server can email
+    // them about it. The RPC still re-checks the privilege per participant.
+    try {
+      const res = await fetch('/api/participants/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds: ids }),
+      })
+      if (!res.ok) {
+        setArchiveState('error')
+        return
+      }
+    } catch {
       setArchiveState('error')
       return
     }
@@ -360,15 +370,25 @@ export function ParticipantsTable({
       {/* Plain buttons on the shared tab styles rather than the Radix Tabs
           primitive: the panel below is one table fed different data, so there
           is no second panel for a Radix trigger's aria-controls to point at. */}
-      {/* Event-level actions live above the tab strip: scanning belongs to
-          the event, not to whichever view happens to be open. */}
-      {canChangeStatus && (
-        <div className={styles.pageActions}>
+      {/* Actions live above the tab strip, away from the filters. Scanning
+          belongs to the event rather than to whichever view is open, and the
+          exports moved up here because seven controls could not share one
+          line — the CSV button kept wrapping alone. The toolbar below is now
+          purely for narrowing the list; these still follow whatever it
+          selects. */}
+      <div className={styles.pageActions}>
+        <a className="btn btn-secondary btn-sm" href={exportUrl('xlsx')}>
+          {t('console.exportExcel')}
+        </a>
+        <a className="btn btn-secondary btn-sm" href={exportUrl('csv')}>
+          {t('console.exportCsv')}
+        </a>
+        {canChangeStatus && (
           <Link className="btn btn-secondary btn-sm" href={`/console/events/${eventId}/checkin`}>
             {t('checkin.scanTickets')}
           </Link>
-        </div>
-      )}
+        )}
+      </div>
       {hasGroupForms && (
         <div className="tabs-list" role="tablist" aria-label={t('console.participants')}>
           {['all', ...PARTICIPANT_BUCKETS].map((key) => (
@@ -444,13 +464,6 @@ export function ParticipantsTable({
           />
         )}
 
-        <span className={styles.spacer} />
-        <a className="btn btn-secondary btn-sm" href={exportUrl('xlsx')}>
-          {t('console.exportExcel')}
-        </a>
-        <a className="btn btn-secondary btn-sm" href={exportUrl('csv')}>
-          {t('console.exportCsv')}
-        </a>
       </div>
       {selectedIds.size > 0 && (
         <div className={styles.bulkBar}>
@@ -766,6 +779,7 @@ export function ParticipantsTable({
 
       {selected && (
         <ParticipantDetail
+          audience="admin"
           participant={{
             ...selected,
             participant_type_key: typeById.get(selected.participant_type_id)?.key,

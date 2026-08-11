@@ -7,6 +7,7 @@ import { eventPhase, EVENT_PHASE_TONES } from '@/lib/event-phase'
 import { getDateFormatPrefs } from '@/lib/date-format-server'
 import { Badge } from '@/components/ui'
 import { NewEventButton } from './NewEventButton'
+import { CloneEventButton } from '@/components/console/CloneEventButton'
 import { DeleteEventButton } from './DeleteEventButton'
 import styles from './console.module.css'
 
@@ -47,7 +48,7 @@ export default async function ConsoleHome({ params }) {
   if (seesAllEvents || activeIds.length > 0) {
     let query = supabase
       .from('events')
-      .select('id, slug, status, name, default_locale, timezone, starts_at, ends_at, registration_opens_at, registration_closes_at, created_by, first_published_at')
+      .select('id, slug, status, name, default_locale, timezone, starts_at, ends_at, registration_opens_at, registration_closes_at, registration_manually_closed, created_by, first_published_at')
       .is('deleted_at', null)
       .order('starts_at', { ascending: false })
     if (!seesAllEvents) query = query.in('id', activeIds)
@@ -110,6 +111,16 @@ export default async function ConsoleHome({ params }) {
                     </span>
                   </td>
                   <td data-cell="actions">
+                    {/* Cloning needs the same manage rights the RPC re-checks;
+                        the console only lists events you can already see. */}
+                    <CloneEventButton
+                      event={event}
+                      trigger={
+                        <button type="button" className="btn btn-ghost btn-sm">
+                          {t('console.duplicateEvent')}
+                        </button>
+                      }
+                    />
                     {(isAdmin || event.created_by === user.id) && (
                       <DeleteEventButton
                         eventId={event.id}

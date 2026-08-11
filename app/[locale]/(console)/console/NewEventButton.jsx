@@ -8,18 +8,8 @@ import { fromLocalInput } from '@/lib/dates'
 import { DEFAULT_PARTICIPANT_TYPE } from '@/lib/participant-type-presets'
 import { defaultFormQuestions } from '@/lib/form-defaults'
 import { Button, Dialog, Field, Input, NativeSelect, PreferenceDateInput } from '@/components/ui'
+import { uniqueSlug } from '@/lib/slug'
 import styles from './console.module.css'
-
-function slugify(name) {
-  const base = name
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  // Random suffix keeps slugs unique; non-latin names slugify to ''.
-  return `${base || 'event'}-${Date.now().toString(36)}`
-}
 
 function defaultDates() {
   const start = new Date(Date.now() + 30 * 86400_000)
@@ -86,7 +76,7 @@ export function NewEventButton({ label }) {
       .from('events')
       .insert({
         org_id: org.id,
-        slug: slugify(name),
+        slug: uniqueSlug(name),
         name: { en: name.trim() },
         timezone,
         starts_at: fromLocalInput(startsAt, timezone),

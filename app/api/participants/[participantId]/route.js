@@ -55,10 +55,13 @@ export async function PATCH(request, { params }) {
       ? body.answers
       : {}
 
+  // Organizer audience: admin-only questions are theirs to fill, so they must
+  // survive validation instead of being pruned as "not visible".
   const { valid, errors, cleaned } = validateParticipantAnswers(
     definition,
     typeKey,
-    answersInput
+    answersInput,
+    { audience: 'admin' }
   )
   if (!valid) {
     return NextResponse.json({ error: 'validation', details: errors }, { status: 422 })

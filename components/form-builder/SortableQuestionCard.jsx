@@ -70,6 +70,9 @@ export function SortableQuestionCard({
       >
         <span className={styles.questionMeta}>
           {typeLabel}
+          {/* Identifiable in the list, so an organizer doesn't wonder why a
+              question they can see never appears on the public form. */}
+          {q.adminOnly ? ` · ${t('adminOnlyBadge')}` : ''}
           {q.visibleIf?.rules?.length ? ' · ⑂' : ''}
           {q.participantTypes?.length ? ` · ${typeNames}` : ''}
           {q.type === 'date' && (

@@ -5,6 +5,7 @@ import { MosaicMark } from '@/components/ui'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SignOutButton } from './SignOutButton'
 import { NavLink } from './NavLink'
+import { ProfileLink } from './ProfileLink'
 import { ThemeToggle } from './ThemeToggle'
 import { MobileNav } from './MobileNav'
 import styles from './shell.module.css'
@@ -47,9 +48,7 @@ export async function SiteHeader() {
           <div className={styles.desktopActions}>
             <LocaleSwitcher label={t('common.language')} />
             {user && (
-              <Link href="/my/profile" className="btn btn-ghost btn-sm">
-                {t('nav.profile')}
-              </Link>
+              <ProfileLink className="btn btn-ghost btn-sm">{t('nav.profile')}</ProfileLink>
             )}
             {user ? (
               <SignOutButton label={t('common.signOut')} />
@@ -66,9 +65,7 @@ export async function SiteHeader() {
             {user && <NavLink href="/console">{t('nav.console')}</NavLink>}
             {isAdmin && <NavLink href="/admin">{t('nav.adminConsole')}</NavLink>}
             {user && (
-              <Link href="/my/profile" className="btn btn-ghost btn-sm">
-                {t('nav.profile')}
-              </Link>
+              <ProfileLink className="btn btn-ghost btn-sm">{t('nav.profile')}</ProfileLink>
             )}
             <LocaleSwitcher label={t('common.language')} />
             {user ? (

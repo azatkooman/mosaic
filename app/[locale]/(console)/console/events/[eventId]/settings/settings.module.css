@@ -17,6 +17,13 @@
   gap: var(--s-4);
 }
 
+/* A full-width row inside .grid2, for controls that carry their own label
+   (a checkbox) and so would otherwise sit a label's height above their
+   neighbours. */
+.spanBoth {
+  grid-column: 1 / -1;
+}
+
 .contactsSubhead {
   margin: var(--s-5) 0 var(--s-2);
   font-size: var(--text-sm);
@@ -54,12 +61,30 @@
 
 .typeRow {
   display: grid;
-  grid-template-columns: 1.4fr 0.7fr 1fr auto;
+  /* Three labelled fields; the toggle and the actions live on their own
+     full-width line below (.typeRowFooter). */
+  grid-template-columns: 1.4fr 0.7fr 1fr;
   gap: var(--s-3);
   align-items: end;
   padding: var(--s-3);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
+}
+
+.typeRowFooter {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+/* Pushed to the trailing edge, away from the toggle. */
+.typeRowActions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
 }
 
 .sectionHelp {

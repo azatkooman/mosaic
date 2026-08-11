@@ -1,14 +1,23 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { redirect } from '@/lib/i18n/navigation'
+import { Link, redirect } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import { safeNextPath } from '@/lib/url'
 import { ProfileForm } from './ProfileForm'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ProfilePage({ params }) {
+export default async function ProfilePage({ params, searchParams }) {
   const { locale } = await params
+  const { next } = (await searchParams) ?? {}
   setRequestLocale(locale)
   const t = await getTranslations()
+
+  // Where the header's Profile link was clicked from (components/shell/
+  // ProfileLink). Validated as a same-origin path — `next` is a query
+  // parameter, so a crafted link could otherwise put "//evil.com" behind our
+  // own Back button. No parameter means the user got here some other way and
+  // there is nothing to go back to, so no button is rendered.
+  const backHref = safeNextPath(next, null)
 
   const supabase = await getSupabaseServerClient()
   const {
@@ -26,6 +35,13 @@ export default async function ProfilePage({ params }) {
 
   return (
     <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+      {backHref && (
+        <div style={{ marginBottom: 'var(--s-3)' }}>
+          <Link href={backHref} className="btn btn-ghost btn-sm">
+            <span aria-hidden="true">&larr;</span> {t('common.back')}
+          </Link>
+        </div>
+      )}
       <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
         {t('profile.title')}
       </h1>

@@ -16,7 +16,7 @@
 
 /**
  * @param {Array<{id?: string, isNew?: boolean, key?: string, name?: Object,
- *   capacity?: number|null, form_id?: string|null}>} types  in display order
+ *   capacity?: number|null, form_id?: string|null, hidden?: boolean}>} types  in display order
  * @param {Array<Object>} savedTypes  the rows as last persisted
  * @returns {Array<{action: 'insert'|'update'|'skip', type: Object}>}
  *   one entry per input type, in the same order
@@ -38,6 +38,9 @@ export function planTypeWrites(types, savedTypes = []) {
       original.key !== type.key ||
       original.capacity !== type.capacity ||
       original.form_id !== type.form_id ||
+      // Compared as booleans: rows written before the column existed read back
+      // as null, which must not look like a change against `false`.
+      Boolean(original.hidden) !== Boolean(type.hidden) ||
       JSON.stringify(original.name) !== JSON.stringify(type.name)
 
     return { action: changed ? 'update' : 'skip', type }
