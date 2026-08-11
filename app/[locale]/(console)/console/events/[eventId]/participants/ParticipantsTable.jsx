@@ -353,8 +353,12 @@ export function ParticipantsTable({
     if (statusFilter.length) params.set('status', statusFilter.join(','))
     if (typeFilter.length) params.set('typeId', typeFilter.join(','))
     if (search.trim()) params.set('q', search.trim())
+    // An emptied multiselect checklist is `[]`, which is neither '' nor null
+    // but still means "no filter" — it must not travel in the export URL.
     const cleanAnswers = Object.fromEntries(
-      Object.entries(answerFilters).filter(([, v]) => v !== '' && v != null)
+      Object.entries(answerFilters).filter(
+        ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)
+      )
     )
     if (Object.keys(cleanAnswers).length) params.set('answers', JSON.stringify(cleanAnswers))
     if (sort.column) {
@@ -466,7 +470,9 @@ export function ParticipantsTable({
               add: t('console.filterByAnswer'),
               clear: t('console.clearFilters'),
               any: t('console.filterAny'),
+              hasAll: t('console.filterHasAll'),
               yes: t('common.yes'),
+              no: t('common.no'),
             }}
           />
         )}
@@ -931,7 +937,11 @@ function FilterMenu({ label, anyLabel, value, options, onChange }) {
 
 function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
   const [activeQ, setActiveQ] = useState('')
-  const active = Object.entries(filters).filter(([, v]) => v !== '' && v != null)
+  // An emptied multiselect checklist is `[]` — present but filtering nothing,
+  // so it must not count toward "Clear (n)" either.
+  const active = Object.entries(filters).filter(
+    ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)
+  )
   const question = questions.find((q) => q.id === activeQ)
 
   return (
@@ -946,7 +956,7 @@ function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
         onChange={setActiveQ}
       />
 
-      {question && ['select', 'radio', 'multiselect'].includes(question.type) && (
+      {question && ['select', 'radio'].includes(question.type) && (
         <FilterMenu
           label={labels.any}
           anyLabel={labels.any}
@@ -958,15 +968,33 @@ function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
           onChange={(v) => onChange({ ...filters, [question.id]: v })}
         />
       )}
+      {/* Multiple choice (many) is the one answer type a respondent can give
+          several values to, so its filter takes several as well. AND semantics
+          (see applyParticipantFilters), which is why the trigger says "includes
+          all" rather than borrowing the "Any" label its siblings use. */}
+      {question && question.type === 'multiselect' && (
+        <ChecklistMenu
+          label={labels.hasAll}
+          values={Array.isArray(filters[question.id]) ? filters[question.id] : []}
+          options={(question.options ?? []).map((o) => ({
+            value: o.value,
+            label: lt(o.label, locale),
+          }))}
+          onChange={(next) => onChange({ ...filters, [question.id]: next })}
+        />
+      )}
       {question && question.type === 'checkbox' && (
         <FilterMenu
           label={labels.any}
           anyLabel={labels.any}
           value={filters[question.id] ?? ''}
-          // The filter matches a ticked box only — `contains(answers, true)`
-          // has no "unticked" counterpart, since an unanswered checkbox is
-          // absent from the JSON rather than false.
-          options={[{ value: 'true', label: labels.yes }]}
+          // "No" cannot be `contains(answers, false)`: an unticked box is
+          // pruned from `answers` entirely rather than stored as false, so the
+          // query side inverts the ticked test instead.
+          options={[
+            { value: 'true', label: labels.yes },
+            { value: 'false', label: labels.no },
+          ]}
           onChange={(v) => onChange({ ...filters, [question.id]: v })}
         />
       )}

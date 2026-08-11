@@ -735,6 +735,7 @@
     "tapRegNoForAnswers": "Нажмите номер регистрации, чтобы увидеть все ответы.",
     "byCheckin": "По прибытию",
     "filterAny": "Любой",
+    "filterHasAll": "Включает все",
     "checkedIn": "Прибытие отмечено",
     "notCheckedIn": "Прибытие не отмечено",
     "bucketAll": "Все участники",
