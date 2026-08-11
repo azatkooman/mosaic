@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { eventQuestionBuckets } from '@/lib/event-questions'
+import { eventQuestionBuckets, questionFormTitles } from '@/lib/event-questions'
 import { ParticipantsTable } from './ParticipantsTable'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +27,7 @@ export default async function ParticipantsPage({ params }) {
     supabase
       .from('form_versions')
       .select(
-        'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id, registration_mode )'
+        'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id, registration_mode, title )'
       )
       .eq('forms.event_id', eventId),
     // UX gate for the Edit button (update_participant re-checks authoritatively).
@@ -46,14 +46,19 @@ export default async function ParticipantsPage({ params }) {
     definitionByVersion[v.id] = v.definition ?? { questions: [] }
   }
   // Individual and group registrations are listed separately, each with the
-  // columns of its own forms, so the two tables share no answer column.
+  // columns of its own forms; the All tab merges the two into one union.
   const buckets = eventQuestionBuckets(versions ?? [])
+  // Only the merged list can show two columns with the same label, when two of
+  // the event's forms each ask their own "Email" under different question ids.
+  // A plain object because this crosses the server/client boundary.
+  const formTitles = Object.fromEntries(questionFormTitles(versions ?? []))
 
   return (
     <ParticipantsTable
       eventId={eventId}
       participantTypes={types ?? []}
       buckets={buckets}
+      formTitles={formTitles}
       definitionByVersion={definitionByVersion}
       canEdit={Boolean(canEdit)}
       canChangeStatus={Boolean(canChangeStatus)}

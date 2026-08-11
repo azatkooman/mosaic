@@ -8,8 +8,9 @@ import { formatEventDate, formatDateValue } from '@/lib/dates'
 import { normalizeDateFormat, normalizeTimeFormat } from '@/lib/date-format'
 import { getTranslations } from 'next-intl/server'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { eventQuestionBuckets } from '@/lib/event-questions'
+import { eventQuestionBuckets, questionFormTitles, questionHeaders } from '@/lib/event-questions'
 import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
+import { BUCKET_LABEL_KEY, sheetBucketsFor, sheetName } from '@/lib/export-sheets'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -22,9 +23,12 @@ export const maxDuration = 60
  *
  * Uses the service-role key to page through all rows, so it FIRST verifies
  * the caller can view the event (RLS does not apply to service role).
- * One download per participants tab (`bucket`: individual or group). Columns =
- * fixed fields + the questions the current version of that bucket's forms asks,
- * with labels in the requester's locale; rows are restricted to that bucket too.
+ * One download per participants tab (`bucket`: all, individual or group).
+ * Columns = fixed fields + the questions the current version of that bucket's
+ * forms asks, with labels in the requester's locale; rows are restricted to
+ * that bucket too. An xlsx from the All tab is the "everything" download and
+ * carries three sheets — All (the union), Individual, Group — so no per-form
+ * column is lost to the merge.
  */
 export async function GET(request) {
   const rateLimitRes = enforceRateLimit(request, { limit: 10, windowMs: 60000, keyPrefix: 'export' })
@@ -38,9 +42,9 @@ export async function GET(request) {
   const typeId = url.searchParams.get('typeId')
   const search = url.searchParams.get('q') ?? ''
   // Which participants list this download is for. 'all' is the merged view
-  // (shared columns + registration kind, no per-form answer columns); anything
-  // else but 'group' means the individual list, so an older link without the
-  // param still works.
+  // (the union of both lists' questions, plus registration kind); anything else
+  // but 'group' means the individual list, so an older link without the param
+  // still works.
   const bucketParam = url.searchParams.get('bucket')
   const bucket = ['group', 'all'].includes(bucketParam) ? bucketParam : 'individual'
   const sort = { column: url.searchParams.get('sort'), dir: url.searchParams.get('dir') }
@@ -74,7 +78,7 @@ export async function GET(request) {
         .from('form_versions')
         // FK hint required: forms↔form_versions has two relationships.
         .select(
-          'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id, registration_mode )'
+          'id, definition, forms!form_versions_form_id_fkey!inner ( event_id, current_version_id, registration_mode, title )'
         )
         .eq('forms.event_id', eventId),
       // Requester's display prefs come from their profile row (the DB is the
@@ -91,69 +95,85 @@ export async function GET(request) {
   // Same column set the console list builds for this tab, so the download
   // matches the view — including being restricted to that tab's own rows.
   const allBuckets = eventQuestionBuckets(versions ?? [])
-  const { questions, versionIds } =
-    bucket === 'all'
-      ? {
-          questions: [],
-          versionIds: [...allBuckets.individual.versionIds, ...allBuckets.group.versionIds],
-        }
-      : allBuckets[bucket]
+  const formTitles = questionFormTitles(versions ?? [])
   const groupVersions = new Set(allBuckets.group.versionIds)
+
+  const sheetBuckets = sheetBucketsFor(bucket, format, allBuckets)
 
   // Column headers and cell literals follow the requester's locale. The
   // wizard namespace is no longer needed here: the first/last/email headers
   // it supplied went away with the fixed name columns.
   const tc = await getTranslations({ locale, namespace: 'console' })
   const tCommon = await getTranslations({ locale, namespace: 'common' })
-  // Column order mirrors the console list: Reg. # · answers · Type · Status ·
-  // profile. 'Registered at' has no column in the list but is kept here — a
-  // spreadsheet has room for it and organizers rely on it.
-  const header = [
-    tc('regNo'),
-    ...(bucket === 'all' ? [tc('registrationKind')] : []),
-    ...questions.map((q) => lt(q.label, locale, event?.default_locale) || q.id),
-    tc('byType'), tc('byStatus'), tc('checkedIn'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
-  ]
 
-  // Page through all participants with the service client.
-  const rows = []
-  const PAGE = 1000
-  for (let from = 0; ; from += PAGE) {
-    let q = admin
-      .from('participants')
-      .select(
-        'status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email, checked_in_at'
+  /**
+   * One sheet's worth of data. Column order mirrors the console list:
+   * Reg. # · kind · answers · Type · Status · profile. 'Registered at' has no
+   * column in the list but is kept here — a spreadsheet has room for it and
+   * organizers rely on it.
+   *
+   * Filters and sort are applied per sheet, against that sheet's own questions,
+   * so a download always matches the view it came from. applyParticipantFilters
+   * ignores answer filters naming a question the bucket does not have, which is
+   * what makes filtering on the All tab safe to carry into the narrower sheets.
+   */
+  async function buildSheet(b) {
+    const { questions, versionIds } = allBuckets[b]
+    const showKind = b === 'all'
+    const header = [
+      tc('regNo'),
+      ...(showKind ? [tc('registrationKind')] : []),
+      ...questionHeaders(questions, formTitles, (q) => lt(q.label, locale, event?.default_locale)),
+      tc('byType'), tc('byStatus'), tc('checkedIn'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
+    ]
+
+    // Page through all participants with the service client.
+    const rows = []
+    const PAGE = 1000
+    for (let from = 0; ; from += PAGE) {
+      let q = admin
+        .from('participants')
+        .select(
+          'status, answers, created_at, participant_type_id, form_version_id, reg_seq, member_index, profile_name, profile_email, checked_in_at'
+        )
+        .eq('event_id', eventId)
+        .range(from, from + PAGE - 1)
+      q = applyParticipantFilters(
+        q,
+        { status, typeId, search, answerFilters, formVersionIds: versionIds },
+        questions
       )
-      .eq('event_id', eventId)
-      .range(from, from + PAGE - 1)
-    // Same filters + sort as the console table, so the file matches the view.
-    q = applyParticipantFilters(
-      q,
-      { status, typeId, search, answerFilters, formVersionIds: versionIds },
-      questions
-    )
-    q = applyParticipantSort(q, sort, questions)
-    const { data, error } = await q
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    for (const p of data ?? []) {
-      rows.push([
-        formatRegNo(p),
-        ...(bucket === 'all'
-          ? [tc(groupVersions.has(p.form_version_id) ? 'kindGroup' : 'kindIndividual')]
-          : []),
-        // tCommon reaches plainAnswer for the localized yes/no on checkboxes.
-        ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
-        typeName.get(p.participant_type_id) ?? '',
-        p.status,
-        p.checked_in_at
-          ? formatEventDate(p.checked_in_at, event?.timezone ?? 'UTC', locale, dateFmt)
-          : '',
-        p.profile_name ?? '',
-        p.profile_email ?? '',
-        formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
-      ])
+      q = applyParticipantSort(q, sort, questions)
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
+      for (const p of data ?? []) {
+        rows.push([
+          formatRegNo(p),
+          ...(showKind
+            ? [tc(groupVersions.has(p.form_version_id) ? 'kindGroup' : 'kindIndividual')]
+            : []),
+          // tCommon reaches plainAnswer for the localized yes/no on checkboxes.
+          ...questions.map((question) => plainAnswer(p.answers?.[question.id], question, locale, dateFmt, tCommon)),
+          typeName.get(p.participant_type_id) ?? '',
+          p.status,
+          p.checked_in_at
+            ? formatEventDate(p.checked_in_at, event?.timezone ?? 'UTC', locale, dateFmt)
+            : '',
+          p.profile_name ?? '',
+          p.profile_email ?? '',
+          formatEventDate(p.created_at, event?.timezone ?? 'UTC', locale, dateFmt),
+        ])
+      }
+      if (!data || data.length < PAGE) break
     }
-    if (!data || data.length < PAGE) break
+    return { name: sheetName(tc(BUCKET_LABEL_KEY[b])), header, rows }
+  }
+
+  let sheets
+  try {
+    sheets = await Promise.all(sheetBuckets.map(buildSheet))
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 
   // Filename date follows the pref too, with filesystem-safe separators.
@@ -161,15 +181,16 @@ export async function GET(request) {
     dateFmt.dateFormat === 'auto'
       ? new Date().toISOString().slice(0, 10)
       : formatSampleDateSafe(dateFmt.dateFormat)
-  // The bucket is part of the name so the two downloads never collide in a
+  // The bucket is part of the name so the downloads never collide in a
   // Downloads folder, and so it is obvious which list a file holds.
   const filename = `${event?.slug ?? 'participants'}-${bucket}-${fileDate}`
 
   if (format === 'csv') {
+    const { header, rows } = sheets[0]
     const csv = [header, ...rows]
       .map((r) => r.map(csvCell).join(','))
       .join('\r\n')
-    return new NextResponse('﻿' + csv, {
+    return new NextResponse('\ufeff' + csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}.csv"`,
@@ -178,19 +199,19 @@ export async function GET(request) {
   }
 
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet(
-    tc(bucket === 'group' ? 'bucketGroup' : 'bucketIndividual')
-  )
-  sheet.addRow(header)
-  sheet.getRow(1).font = { bold: true }
-  for (const r of rows) sheet.addRow(r)
-  sheet.columns.forEach((col) => {
-    let max = 10
-    col.eachCell({ includeEmpty: false }, (cell) => {
-      max = Math.min(60, Math.max(max, String(cell.value ?? '').length + 2))
+  for (const { name, header, rows } of sheets) {
+    const sheet = workbook.addWorksheet(name)
+    sheet.addRow(header)
+    sheet.getRow(1).font = { bold: true }
+    for (const r of rows) sheet.addRow(r)
+    sheet.columns.forEach((col) => {
+      let max = 10
+      col.eachCell({ includeEmpty: false }, (cell) => {
+        max = Math.min(60, Math.max(max, String(cell.value ?? '').length + 2))
+      })
+      col.width = max
     })
-    col.width = max
-  })
+  }
   const buffer = await workbook.xlsx.writeBuffer()
 
   return new NextResponse(buffer, {
