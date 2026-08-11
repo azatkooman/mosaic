@@ -9,7 +9,12 @@ import { lt } from '@/lib/i18n/locales'
 import { PARTICIPANT_BUCKETS } from '@/lib/event-questions'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue, formatEventDate } from '@/lib/dates'
-import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
+import {
+  applyParticipantFilters,
+  applyParticipantSort,
+  formatRegNo,
+  PARTICIPANT_STATUSES,
+} from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
@@ -31,7 +36,9 @@ function participantLabel(p) {
   )
 }
 
-const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
+// Re-exported name kept for the bulk-status control and the per-row menu,
+// which still pick exactly one status; the filter above them now takes several.
+const STATUSES = PARTICIPANT_STATUSES
 const STATUS_TRANSITIONS = {
   pending: ['confirmed', 'waitlisted', 'cancelled'],
   confirmed: ['cancelled'],
@@ -66,7 +73,9 @@ export function ParticipantsTable({
     () => initialBucket ?? (buckets.group.versionIds.length > 0 ? 'all' : 'individual')
   )
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  // A list, not a single value: "waitlisted and cancelled, but not confirmed"
+  // is a real question, and a <select> cannot ask it. Empty means no filter.
+  const [statusFilter, setStatusFilter] = useState([])
   const [typeFilter, setTypeFilter] = useState('')
   const [checkinFilter, setCheckinFilter] = useState('') // '' | 'in' | 'out'
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
@@ -337,7 +346,9 @@ export function ParticipantsTable({
     // `bucket` makes the download carry the active tab's columns and rows only,
     // so each file has one clean header row instead of a merged superset.
     const params = new URLSearchParams({ eventId, format, locale, bucket })
-    if (statusFilter) params.set('status', statusFilter)
+    // Comma-separated, and a single status still produces `status=confirmed` —
+    // the exact URL this used to build, so any saved link keeps working.
+    if (statusFilter.length) params.set('status', statusFilter.join(','))
     if (typeFilter) params.set('typeId', typeFilter)
     if (search.trim()) params.set('q', search.trim())
     const cleanAnswers = Object.fromEntries(
@@ -420,17 +431,36 @@ export function ParticipantsTable({
           onChange={(e) => { setSearch(e.target.value); setPage(0) }}
           style={{ maxInlineSize: '16rem' }}
         />
-        <NativeSelect
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          style={{ width: 'auto' }}
-          aria-label={t('console.byStatus')}
+        <DropdownMenu
+          trigger={
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label={t('console.byStatus')}
+            >
+              {t('console.byStatus')}
+              {statusFilter.length > 0 && ` (${statusFilter.length})`}
+            </Button>
+          }
         >
-          <option value="">{t('console.byStatus')}</option>
           {STATUSES.map((s) => (
-            <option key={s} value={s}>{t(`status.${s}`)}</option>
+            <DropdownMenu.CheckboxItem
+              key={s}
+              checked={statusFilter.includes(s)}
+              onCheckedChange={(on) => {
+                // Rebuilt from STATUSES rather than appended to, so the list
+                // keeps its canonical order however the boxes are ticked —
+                // which is what makes the export URL stable and comparable.
+                setStatusFilter(
+                  STATUSES.filter((x) => (x === s ? on : statusFilter.includes(x)))
+                )
+                setPage(0)
+              }}
+            >
+              {t(`status.${s}`)}
+            </DropdownMenu.CheckboxItem>
           ))}
-        </NativeSelect>
+        </DropdownMenu>
         <NativeSelect
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(0) }}
