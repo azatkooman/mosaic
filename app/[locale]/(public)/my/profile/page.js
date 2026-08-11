@@ -56,7 +56,7 @@ export default async function ProfilePage({ params, searchParams }) {
           theme: profile?.theme ?? 'system',
           date_format: profile?.date_format ?? 'auto',
           time_format: profile?.time_format ?? 'auto',
-          // Null (no row, or migration 0047 unapplied) means on: the warning
+          // Null (no row, or migration 0048 unapplied) means on: the warning
           // is the safe default and only an explicit false takes it away.
           warn_unsaved_changes: profile?.warn_unsaved_changes !== false,
         }}

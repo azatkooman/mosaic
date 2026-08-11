@@ -18,7 +18,7 @@ import { createContext, useContext } from 'react'
  * a console that has already queried the user, and only for someone signed in.
  *
  * Defaults to true, which is also what a null reads as: no provider, no row, or
- * an unapplied migration 0047 all leave the warning on. The preference can only
+ * an unapplied migration 0048 all leave the warning on. The preference can only
  * ever take the guard away, never introduce it by surprise.
  */
 const UnsavedWarningContext = createContext(true)
