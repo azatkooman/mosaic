@@ -18,29 +18,28 @@ vi.mock('@/components/providers/DateFormatProvider', () => ({
 const { ParticipantsTable } = await import('./ParticipantsTable')
 
 /**
- * Individual and group registrations are listed separately and must not share
- * an answer column, so the headers of one must never include the other's
- * questions. Asserted on the real component so the bucket → columns wiring is
- * exercised, not just lib/event-questions.
+ * The two single-mode lists must not share an answer column, so the headers of
+ * one must never include the other's questions; the All list is their union and
+ * must include both. Asserted on the real component so the bucket → columns
+ * wiring is exercised, not just lib/event-questions.
  */
+const INDIVIDUAL = [
+  { id: 'q_solo_diet', type: 'text', label: { en: 'Dietary needs' } },
+  { id: 'q_solo_shirt', type: 'select', label: { en: 'Shirt size' }, options: [] },
+]
+const GROUP = [
+  { id: 'q_grp_lead', type: 'text', label: { en: 'Group leader' } },
+  { id: 'q_grp_rooms', type: 'number', label: { en: 'Rooms needed' } },
+]
 const BUCKETS = {
-  individual: {
-    questions: [
-      { id: 'q_solo_diet', type: 'text', label: { en: 'Dietary needs' } },
-      { id: 'q_solo_shirt', type: 'select', label: { en: 'Shirt size' }, options: [] },
-    ],
-    versionIds: ['s2'],
-  },
-  group: {
-    questions: [
-      { id: 'q_grp_lead', type: 'text', label: { en: 'Group leader' } },
-      { id: 'q_grp_rooms', type: 'number', label: { en: 'Rooms needed' } },
-    ],
-    versionIds: ['f1', 'f3'],
-  },
+  individual: { questions: INDIVIDUAL, versionIds: ['s2'] },
+  group: { questions: GROUP, versionIds: ['f1', 'f3'] },
+  // Shaped exactly as eventQuestionBuckets builds it, so the fixture cannot
+  // drift into testing a table the producer never renders.
+  all: { questions: [...INDIVIDUAL, ...GROUP], versionIds: ['s2', 'f1', 'f3'] },
 }
 
-function render(buckets, initialBucket) {
+function render(buckets, initialBucket, formTitles) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
       <QueryClientProvider client={new QueryClient()}>
@@ -49,6 +48,7 @@ function render(buckets, initialBucket) {
           participantTypes={[]}
           buckets={buckets}
           definitionByVersion={{}}
+          formTitles={formTitles}
           initialBucket={initialBucket}
         />
       </QueryClientProvider>
@@ -77,12 +77,34 @@ describe('participants buckets', () => {
     expect(cols).not.toContain('Rooms needed')
   })
 
-  it('defaults to the merged All view: kind column, no answer columns', () => {
+  it('defaults to the merged All view: kind column plus BOTH lists’ columns', () => {
+    // The All tab used to render no answer columns at all, on the theory that
+    // they were per-form. They are shared far more often than not — a group
+    // form is cloned from the single form and keeps its question ids.
     const html = render(BUCKETS)
     const cols = headers(html)
     expect(cols).toContain('Registration')
-    expect(cols).not.toContain('Dietary needs')
-    expect(cols).not.toContain('Group leader')
+    expect(cols).toContain('Dietary needs')
+    expect(cols).toContain('Shirt size')
+    expect(cols).toContain('Group leader')
+    expect(cols).toContain('Rooms needed')
+  })
+
+  it('qualifies a label the two forms both use, so the columns are tellable apart', () => {
+    // tech-conference-2026: the Default and Single response forms each define
+    // their own "Email" under a different question id.
+    const dup = [
+      { id: 'q_a', type: 'email', label: { en: 'Email' } },
+      { id: 'q_b', type: 'email', label: { en: 'Email' } },
+    ]
+    const html = render(
+      { ...BUCKETS, all: { questions: dup, versionIds: ['s2', 'f1'] } },
+      'all',
+      { q_a: 'Default form', q_b: 'Single response form' }
+    )
+    const cols = headers(html)
+    expect(cols).toContain('Email (Default form)')
+    expect(cols).toContain('Email (Single response form)')
   })
 
   it('offers all three tabs when the event runs a group form', () => {

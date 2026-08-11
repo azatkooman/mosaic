@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { Link } from '@/lib/i18n/navigation'
 import { lt } from '@/lib/i18n/locales'
-import { PARTICIPANT_BUCKETS } from '@/lib/event-questions'
+import { PARTICIPANT_BUCKETS, questionHeaders } from '@/lib/event-questions'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue, formatEventDate } from '@/lib/dates'
 import {
@@ -55,6 +55,7 @@ export function ParticipantsTable({
   eventId,
   participantTypes,
   buckets,
+  formTitles = {},
   definitionByVersion = {},
   canEdit = false,
   canChangeStatus = false,
@@ -103,17 +104,13 @@ export function ParticipantsTable({
   )
   // Individual and group registrations are separate lists, each carrying the
   // questions of its own forms (lib/event-questions). Switching tabs therefore
-  // swaps the whole answer-column set instead of showing one merged table where
-  // half the cells are empty because the other mode's form never asked them.
-  // The All tab shows both lists merged on the columns they share — no answer
-  // columns (they are per-form), plus a Registration kind column instead.
-  const active =
-    bucket === 'all'
-      ? {
-          questions: [],
-          versionIds: [...buckets.individual.versionIds, ...buckets.group.versionIds],
-        }
-      : buckets[bucket] ?? buckets.individual
+  // swaps the whole answer-column set. The All tab merges the two — a real
+  // union of their questions, deduplicated by id, plus a Registration kind
+  // column. It used to carry no answer columns at all, on the theory that they
+  // were per-form and could not be shared; in practice a group form is cloned
+  // from the single form and keeps its question ids, so the merged list is
+  // mostly populated rather than mostly empty.
+  const active = buckets[bucket] ?? buckets.individual
   const questions = active.questions
   // Only worth a tab strip when the event actually runs both kinds of form.
   const hasGroupForms = buckets.group.versionIds.length > 0
@@ -125,6 +122,14 @@ export function ParticipantsTable({
   // bucket, so the download always matches the view. Wide forms scroll
   // horizontally; each cell clips to one line.
   const shownQuestions = questions
+
+  // Headers, with a form name appended only where two questions resolve to the
+  // same label — which the merged list makes possible, since two forms on one
+  // event commonly ask their own "Email" under different ids.
+  const headers = useMemo(
+    () => questionHeaders(shownQuestions, formTitles, (q) => lt(q.label, locale)),
+    [shownQuestions, formTitles, locale]
+  )
 
   // Only filterable question kinds get a filter control.
   const filterableQuestions = questions.filter((q) =>
@@ -558,8 +563,8 @@ export function ParticipantsTable({
               </th>
               <SortHeader label={t('console.regNo')} column="reg_no" sort={sort} onSort={toggleSort} />
               {bucket === 'all' && <th>{t('console.registrationKind')}</th>}
-              {shownQuestions.map((q) => (
-                <SortHeader key={q.id} label={lt(q.label, locale)} column={`q:${q.id}`} sort={sort} onSort={toggleSort} />
+              {shownQuestions.map((q, i) => (
+                <SortHeader key={q.id} label={headers[i]} column={`q:${q.id}`} sort={sort} onSort={toggleSort} />
               ))}
               <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
