@@ -807,6 +807,8 @@
     "dateFormatHelp": "Comment les dates s'affichent dans Mosaic.",
     "timeFormat": "Format de l'heure",
     "timeFormatHelp": "Horloge de 12 ou 24 heures.",
+    "warnUnsaved": "M'avertir avant de quitter un travail non enregistré",
+    "warnUnsavedHelp": "Lors de la modification des paramètres, de la page ou des formulaires d'un événement, demander confirmation avant de quitter avec des modifications non enregistrées ou non publiées.",
     "dateFormat_auto": "Automatique",
     "timeFormat_auto": "Automatique",
     "formatPromptIntro": "Comment les dates et heures doivent-elles s'afficher ? Modifiable à tout moment dans votre profil.",

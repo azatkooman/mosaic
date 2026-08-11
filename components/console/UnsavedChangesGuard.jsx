@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button, Dialog } from '@/components/ui'
+import { useUnsavedWarningEnabled } from '@/components/providers/UnsavedWarningProvider'
 
 /**
  * Warn before navigating away from an editor with unsaved work.
@@ -34,7 +35,9 @@ import { Button, Dialog } from '@/components/ui'
  *
  * `enabled` is separate from `when` so the two questions stay distinct: `when`
  * is "is there work to lose", `enabled` is "does this organizer want to be
- * asked". It defaults to true and is the seam a profile preference plugs into.
+ * asked". The latter comes from `profiles.warn_unsaved_changes` via context, so
+ * no editor has to thread it down; the prop is an explicit override for tests
+ * and for any caller that must force the answer.
  *
  * `title`/`body`/`leaveLabel` and the optional `action` exist because the form
  * builder is asking a different question. It autosaves its draft, so nothing is
@@ -45,7 +48,7 @@ import { Button, Dialog } from '@/components/ui'
  */
 export function UnsavedChangesGuard({
   when,
-  enabled = true,
+  enabled,
   title,
   body,
   leaveLabel,
@@ -53,9 +56,10 @@ export function UnsavedChangesGuard({
 }) {
   const t = useTranslations('console')
   const router = useRouter()
+  const preferred = useUnsavedWarningEnabled()
   const [target, setTarget] = useState(null)
   const [running, setRunning] = useState(false)
-  const armed = Boolean(when) && enabled
+  const armed = Boolean(when) && (enabled ?? preferred)
 
   // The click listener is registered once per armed/disarmed transition, but
   // reads `armed` through a ref so a keystroke that flips `dirty` mid-session

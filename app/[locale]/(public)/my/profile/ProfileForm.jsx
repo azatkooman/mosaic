@@ -9,7 +9,7 @@ import { THEMES, applyThemeClient } from '@/lib/theme'
 import { useThemeState } from '@/lib/use-theme-state'
 import { DATE_FORMATS, TIME_FORMATS, applyDateFormatClient } from '@/lib/date-format'
 import { formatEventDate, formatSampleDate, formatSampleTime } from '@/lib/dates'
-import { Button, Field, Input, NativeSelect } from '@/components/ui'
+import { Button, CheckboxRow, Field, Input, NativeSelect } from '@/components/ui'
 
 export function ProfileForm({ userId, initialProfile }) {
   const t = useTranslations('profile')
@@ -24,6 +24,7 @@ export function ProfileForm({ userId, initialProfile }) {
   const [theme, setTheme] = useState(initialProfile.theme ?? 'system')
   const [dateFormat, setDateFormat] = useState(initialProfile.date_format ?? 'auto')
   const [timeFormat, setTimeFormat] = useState(initialProfile.time_format ?? 'auto')
+  const [warnUnsaved, setWarnUnsaved] = useState(initialProfile.warn_unsaved_changes !== false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
@@ -76,6 +77,7 @@ export function ProfileForm({ userId, initialProfile }) {
         theme,
         date_format: dateFormat,
         time_format: timeFormat,
+        warn_unsaved_changes: warnUnsaved,
       })
       .eq('id', userId)
     setSaving(false)
@@ -183,6 +185,14 @@ export function ProfileForm({ userId, initialProfile }) {
       <p style={{ color: 'var(--ink-soft)', fontSize: 'var(--text-sm)', margin: 0 }} aria-live="polite">
         {formatEventDate('2026-12-31T14:30:00Z', 'UTC', uiLocale, { dateFormat, timeFormat })}
       </p>
+      <div>
+        <CheckboxRow
+          checked={warnUnsaved}
+          onCheckedChange={(c) => setWarnUnsaved(!!c)}
+          label={t('warnUnsaved')}
+        />
+        <p className="field-help">{t('warnUnsavedHelp')}</p>
+      </div>
       {error && <p className="alert alert-error">{error}</p>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
         <Button type="submit" disabled={saving}>

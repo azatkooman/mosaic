@@ -807,6 +807,8 @@
     "dateFormatHelp": "How dates appear across Mosaic.",
     "timeFormat": "Time format",
     "timeFormatHelp": "12-hour or 24-hour clock.",
+    "warnUnsaved": "Warn me before leaving unsaved work",
+    "warnUnsavedHelp": "When editing an event's settings, page or forms, ask for confirmation before navigating away with changes that haven't been saved or published.",
     "dateFormat_auto": "Automatic",
     "timeFormat_auto": "Automatic",
     "formatPromptIntro": "How should dates and times look? You can change this anytime in your profile.",
