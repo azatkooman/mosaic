@@ -10,6 +10,7 @@ import { ProfileLink } from '@/components/shell/ProfileLink'
 import { ThemeToggle } from '@/components/shell/ThemeToggle'
 import { MobileNav } from '@/components/shell/MobileNav'
 import { NamePrompt } from '@/components/shell/NamePrompt'
+import { UnsavedWarningProvider } from '@/components/providers/UnsavedWarningProvider'
 import { QueryProvider } from './QueryProvider'
 import styles from './console.module.css'
 
@@ -30,10 +31,12 @@ export default async function ConsoleLayout({ children, params }) {
 
   // Everyone signed in can use the console (anyone can create events);
   // the Admin tab is a UX gate only — RLS is the real enforcement.
-  const { data: globalRoles } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
+  // The unsaved-work preference is read here, once, for the three editors
+  // below it (see UnsavedWarningProvider).
+  const [{ data: globalRoles }, { data: profile }] = await Promise.all([
+    supabase.from('user_roles').select('role').eq('user_id', user.id),
+    supabase.from('profiles').select('warn_unsaved_changes').eq('id', user.id).maybeSingle(),
+  ])
   const isAdmin = (globalRoles ?? []).some(
     (r) => r.role === 'admin' || r.role === 'super_admin'
   )
@@ -69,7 +72,11 @@ export default async function ConsoleLayout({ children, params }) {
             </MobileNav>
           </div>
         </header>
-        <main className={styles.main}>{children}</main>
+        <main className={styles.main}>
+          <UnsavedWarningProvider value={profile?.warn_unsaved_changes}>
+            {children}
+          </UnsavedWarningProvider>
+        </main>
         <NamePrompt />
       </div>
     </QueryProvider>

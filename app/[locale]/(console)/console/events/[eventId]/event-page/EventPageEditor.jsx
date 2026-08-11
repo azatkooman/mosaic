@@ -26,6 +26,7 @@ import {
   NativeSelect,
   Textarea,
 } from '@/components/ui'
+import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
 import { eventPageUrl } from '@/lib/url'
 import {
   EventPageView,
@@ -2518,6 +2519,7 @@ export function EventPageEditor({ initialEvent }) {
     // for this tab only (see console.module.css): the live preview sits beside
     // the customize panel and is unusable squeezed into the narrow column.
     <div className={styles.wrap} data-wide-tab>
+      <UnsavedChangesGuard when={dirty} />
       {/* ---- toolbar ---- */}
       <section className={`card card-pad ${styles.toolbar}`}>
         <div className={styles.linkRow}>

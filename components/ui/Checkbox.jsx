@@ -15,9 +15,9 @@ const boxStyle = {
   marginTop: 2,
 }
 
-function CheckIcon() {
+function CheckIcon({ size = 12 }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden="true">
       <path
         d="M2 6.5L4.5 9L10 3.5"
         stroke="currentColor"
@@ -29,7 +29,8 @@ function CheckIcon() {
   )
 }
 
-export function Checkbox({ checked, onCheckedChange, id, ...props }) {
+export function Checkbox({ checked, onCheckedChange, id, size = 'md', ...props }) {
+  const small = size === 'sm'
   return (
     <RadixCheckbox.Root
       id={id}
@@ -37,6 +38,7 @@ export function Checkbox({ checked, onCheckedChange, id, ...props }) {
       onCheckedChange={onCheckedChange}
       style={{
         ...boxStyle,
+        ...(small ? { width: 16, height: 16, borderRadius: 4, marginTop: 1 } : null),
         background: checked ? 'var(--pine)' : 'var(--surface)',
         borderColor: checked ? 'var(--pine)' : 'var(--line-strong)',
         color: '#fff',
@@ -46,17 +48,26 @@ export function Checkbox({ checked, onCheckedChange, id, ...props }) {
       {...props}
     >
       <RadixCheckbox.Indicator>
-        <CheckIcon />
+        <CheckIcon size={small ? 10 : 12} />
       </RadixCheckbox.Indicator>
     </RadixCheckbox.Root>
   )
 }
 
-/** A checkbox with its label in a bordered, clickable row. */
-export function CheckboxRow({ checked, onCheckedChange, label, id }) {
+/**
+ * A checkbox with its label in a bordered, clickable row.
+ *
+ * `size="sm"` is for a single preference living among labelled fields, where
+ * the default row outweighs the settings around it.
+ */
+export function CheckboxRow({ checked, onCheckedChange, label, id, size = 'md' }) {
   return (
-    <label className="choice-row" data-checked={checked || undefined} htmlFor={id}>
-      <Checkbox id={id} checked={checked} onCheckedChange={onCheckedChange} />
+    <label
+      className={`choice-row${size === 'sm' ? ' choice-row-sm' : ''}`}
+      data-checked={checked || undefined}
+      htmlFor={id}
+    >
+      <Checkbox id={id} checked={checked} onCheckedChange={onCheckedChange} size={size} />
       <span>{label}</span>
     </label>
   )

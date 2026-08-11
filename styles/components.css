@@ -210,6 +210,15 @@
   background: var(--pine-tint);
 }
 
+/* Compact variant for a lone preference sitting among labelled fields, where
+   the full-size row reads as more important than the settings around it: the
+   label drops to the --text-sm every .field-label already uses. */
+.choice-row-sm {
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--text-sm);
+}
+
 .choice-group {
   display: flex;
   flex-direction: column;

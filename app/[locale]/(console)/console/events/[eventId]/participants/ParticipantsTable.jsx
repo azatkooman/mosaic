@@ -9,7 +9,12 @@ import { lt } from '@/lib/i18n/locales'
 import { PARTICIPANT_BUCKETS } from '@/lib/event-questions'
 import { formatStructuredAnswer } from '@/lib/form-engine/format'
 import { formatDateValue, formatEventDate } from '@/lib/dates'
-import { applyParticipantFilters, applyParticipantSort, formatRegNo } from '@/lib/participants-query'
+import {
+  applyParticipantFilters,
+  applyParticipantSort,
+  formatRegNo,
+  PARTICIPANT_STATUSES,
+} from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
@@ -31,7 +36,9 @@ function participantLabel(p) {
   )
 }
 
-const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled']
+// Re-exported name kept for the bulk-status control and the per-row menu,
+// which still pick exactly one status; the filter above them now takes several.
+const STATUSES = PARTICIPANT_STATUSES
 const STATUS_TRANSITIONS = {
   pending: ['confirmed', 'waitlisted', 'cancelled'],
   confirmed: ['cancelled'],
@@ -66,8 +73,12 @@ export function ParticipantsTable({
     () => initialBucket ?? (buckets.group.versionIds.length > 0 ? 'all' : 'individual')
   )
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
+  // A list, not a single value: "waitlisted and cancelled, but not confirmed"
+  // is a real question, and a <select> cannot ask it. Empty means no filter.
+  const [statusFilter, setStatusFilter] = useState([])
+  // Also a list — "staff and students but not children" is the same question
+  // the status checklist answers, asked about types.
+  const [typeFilter, setTypeFilter] = useState([])
   const [checkinFilter, setCheckinFilter] = useState('') // '' | 'in' | 'out'
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
   const [sort, setSort] = useState({ column: null, dir: 'desc' }) // null = created_at desc
@@ -337,11 +348,17 @@ export function ParticipantsTable({
     // `bucket` makes the download carry the active tab's columns and rows only,
     // so each file has one clean header row instead of a merged superset.
     const params = new URLSearchParams({ eventId, format, locale, bucket })
-    if (statusFilter) params.set('status', statusFilter)
-    if (typeFilter) params.set('typeId', typeFilter)
+    // Comma-separated, and a single status still produces `status=confirmed` —
+    // the exact URL this used to build, so any saved link keeps working.
+    if (statusFilter.length) params.set('status', statusFilter.join(','))
+    if (typeFilter.length) params.set('typeId', typeFilter.join(','))
     if (search.trim()) params.set('q', search.trim())
+    // An emptied multiselect checklist is `[]`, which is neither '' nor null
+    // but still means "no filter" — it must not travel in the export URL.
     const cleanAnswers = Object.fromEntries(
-      Object.entries(answerFilters).filter(([, v]) => v !== '' && v != null)
+      Object.entries(answerFilters).filter(
+        ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)
+      )
     )
     if (Object.keys(cleanAnswers).length) params.set('answers', JSON.stringify(cleanAnswers))
     if (sort.column) {
@@ -420,39 +437,28 @@ export function ParticipantsTable({
           onChange={(e) => { setSearch(e.target.value); setPage(0) }}
           style={{ maxInlineSize: '16rem' }}
         />
-        <NativeSelect
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
-          style={{ width: 'auto' }}
-          aria-label={t('console.byStatus')}
-        >
-          <option value="">{t('console.byStatus')}</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{t(`status.${s}`)}</option>
-          ))}
-        </NativeSelect>
-        <NativeSelect
-          value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value); setPage(0) }}
-          style={{ width: 'auto' }}
-          aria-label={t('console.byType')}
-        >
-          <option value="">{t('console.byType')}</option>
-          {participantTypes.map((pt) => (
-            <option key={pt.id} value={pt.id}>{lt(pt.name, locale)}</option>
-          ))}
-        </NativeSelect>
-
-        <NativeSelect
+        <ChecklistMenu
+          label={t('console.byStatus')}
+          values={statusFilter}
+          options={STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))}
+          onChange={(next) => { setStatusFilter(next); setPage(0) }}
+        />
+        <ChecklistMenu
+          label={t('console.byType')}
+          values={typeFilter}
+          options={participantTypes.map((pt) => ({ value: pt.id, label: lt(pt.name, locale) }))}
+          onChange={(next) => { setTypeFilter(next); setPage(0) }}
+        />
+        <FilterMenu
+          label={t('console.byCheckin')}
+          anyLabel={t('console.filterAny')}
           value={checkinFilter}
-          onChange={(e) => { setCheckinFilter(e.target.value); setPage(0) }}
-          style={{ width: 'auto' }}
-          aria-label={t('console.byCheckin')}
-        >
-          <option value="">{t('console.byCheckin')}</option>
-          <option value="in">{t('console.checkedIn')}</option>
-          <option value="out">{t('console.notCheckedIn')}</option>
-        </NativeSelect>
+          options={[
+            { value: 'in', label: t('console.checkedIn') },
+            { value: 'out', label: t('console.notCheckedIn') },
+          ]}
+          onChange={(next) => { setCheckinFilter(next); setPage(0) }}
+        />
 
         {filterableQuestions.length > 0 && (
           <AnswerFilterPicker
@@ -460,7 +466,14 @@ export function ParticipantsTable({
             locale={locale}
             filters={answerFilters}
             onChange={(next) => { setAnswerFilters(next); setPage(0) }}
-            labels={{ add: t('console.filterByAnswer'), clear: t('console.clearFilters') }}
+            labels={{
+              add: t('console.filterByAnswer'),
+              clear: t('console.clearFilters'),
+              any: t('console.filterAny'),
+              hasAll: t('console.filterHasAll'),
+              yes: t('common.yes'),
+              no: t('common.no'),
+            }}
           />
         )}
 
@@ -850,46 +863,140 @@ function formatAnswer(value, question, locale, dateFmt) {
   return String(value)
 }
 
+/**
+ * A filter that takes several values at once, drawn as a dropdown of ticks.
+ *
+ * The whole filter row uses this shape rather than native <select>s: a select
+ * cannot express "waitlisted AND cancelled", and on Safari it renders as a
+ * platform control that sits oddly beside everything else in the toolbar.
+ *
+ * `onChange` receives the next list rebuilt from `options` rather than the old
+ * list appended to, so the selection always carries the canonical order —
+ * which is what makes the export URL stable enough to compare and share.
+ */
+function ChecklistMenu({ label, values, options, onChange }) {
+  return (
+    <DropdownMenu
+      trigger={
+        <Button variant="secondary" size="sm" aria-label={label}>
+          {label}
+          {values.length > 0 && ` (${values.length})`}
+        </Button>
+      }
+    >
+      {options.map((o) => (
+        <DropdownMenu.CheckboxItem
+          key={o.value}
+          checked={values.includes(o.value)}
+          onCheckedChange={(on) =>
+            onChange(
+              options
+                .filter((x) => (x.value === o.value ? on : values.includes(x.value)))
+                .map((x) => x.value)
+            )
+          }
+        >
+          {o.label}
+        </DropdownMenu.CheckboxItem>
+      ))}
+    </DropdownMenu>
+  )
+}
+
+/**
+ * The one-of-many counterpart, for filters where several answers would be
+ * meaningless — checked-in is a yes/no, and an answer can only equal one
+ * option at a time. Same trigger and same menu so the row reads as one set of
+ * controls; only the indicator behaves differently, and picking closes the
+ * menu because the choice is complete.
+ *
+ * The trigger shows the chosen value once set, which is what the <select> it
+ * replaced did — the neutral label is only useful while nothing is chosen.
+ */
+function FilterMenu({ label, anyLabel, value, options, onChange }) {
+  const current = options.find((o) => o.value === value)
+  return (
+    <DropdownMenu
+      trigger={
+        <Button variant="secondary" size="sm" aria-label={label}>
+          {current ? current.label : label}
+        </Button>
+      }
+    >
+      <DropdownMenu.RadioGroup value={value ?? ''} onValueChange={onChange}>
+        <DropdownMenu.RadioItem value="">{anyLabel}</DropdownMenu.RadioItem>
+        {options.map((o) => (
+          <DropdownMenu.RadioItem key={o.value} value={o.value}>
+            {o.label}
+          </DropdownMenu.RadioItem>
+        ))}
+      </DropdownMenu.RadioGroup>
+    </DropdownMenu>
+  )
+}
+
 function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
   const [activeQ, setActiveQ] = useState('')
-  const active = Object.entries(filters).filter(([, v]) => v !== '' && v != null)
+  // An emptied multiselect checklist is `[]` — present but filtering nothing,
+  // so it must not count toward "Clear (n)" either.
+  const active = Object.entries(filters).filter(
+    ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)
+  )
   const question = questions.find((q) => q.id === activeQ)
 
   return (
     <div className={styles.answerFilters}>
-      <NativeSelect
+      {/* Which question to filter on, and then its value: both are one-of-many,
+          so they take the single-choice menu rather than the checklist. */}
+      <FilterMenu
+        label={`${labels.add}…`}
+        anyLabel={labels.any}
         value={activeQ}
-        onChange={(e) => setActiveQ(e.target.value)}
-        style={{ width: 'auto' }}
-        aria-label={labels.add}
-      >
-        <option value="">{labels.add}…</option>
-        {questions.map((q) => (
-          <option key={q.id} value={q.id}>{lt(q.label, locale)}</option>
-        ))}
-      </NativeSelect>
+        options={questions.map((q) => ({ value: q.id, label: lt(q.label, locale) }))}
+        onChange={setActiveQ}
+      />
 
-      {question && ['select', 'radio', 'multiselect'].includes(question.type) && (
-        <NativeSelect
+      {question && ['select', 'radio'].includes(question.type) && (
+        <FilterMenu
+          label={labels.any}
+          anyLabel={labels.any}
           value={filters[question.id] ?? ''}
-          onChange={(e) => onChange({ ...filters, [question.id]: e.target.value })}
-          style={{ width: 'auto' }}
-        >
-          <option value="" />
-          {(question.options ?? []).map((o) => (
-            <option key={o.value} value={o.value}>{lt(o.label, locale)}</option>
-          ))}
-        </NativeSelect>
+          options={(question.options ?? []).map((o) => ({
+            value: o.value,
+            label: lt(o.label, locale),
+          }))}
+          onChange={(v) => onChange({ ...filters, [question.id]: v })}
+        />
+      )}
+      {/* Multiple choice (many) is the one answer type a respondent can give
+          several values to, so its filter takes several as well. AND semantics
+          (see applyParticipantFilters), which is why the trigger says "includes
+          all" rather than borrowing the "Any" label its siblings use. */}
+      {question && question.type === 'multiselect' && (
+        <ChecklistMenu
+          label={labels.hasAll}
+          values={Array.isArray(filters[question.id]) ? filters[question.id] : []}
+          options={(question.options ?? []).map((o) => ({
+            value: o.value,
+            label: lt(o.label, locale),
+          }))}
+          onChange={(next) => onChange({ ...filters, [question.id]: next })}
+        />
       )}
       {question && question.type === 'checkbox' && (
-        <NativeSelect
+        <FilterMenu
+          label={labels.any}
+          anyLabel={labels.any}
           value={filters[question.id] ?? ''}
-          onChange={(e) => onChange({ ...filters, [question.id]: e.target.value })}
-          style={{ width: 'auto' }}
-        >
-          <option value="" />
-          <option value="true">✓</option>
-        </NativeSelect>
+          // "No" cannot be `contains(answers, false)`: an unticked box is
+          // pruned from `answers` entirely rather than stored as false, so the
+          // query side inverts the ticked test instead.
+          options={[
+            { value: 'true', label: labels.yes },
+            { value: 'false', label: labels.no },
+          ]}
+          onChange={(v) => onChange({ ...filters, [question.id]: v })}
+        />
       )}
       {question && ['text', 'email', 'phone'].includes(question.type) && (
         <Input
