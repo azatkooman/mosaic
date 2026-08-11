@@ -21,6 +21,7 @@ import {
   PreferenceDateInput,
   NativeSelect,
 } from '@/components/ui'
+import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
 import styles from './settings.module.css'
 
 function newContactId() {
@@ -528,6 +529,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
 
   return (
     <div className={styles.wrap}>
+      <UnsavedChangesGuard when={dirty} />
       <section className="card card-pad">
         <h2 style={{ marginBottom: 'var(--s-2)' }}>{t('languages')}</h2>
         <p className={styles.sectionHelp}>{t('languagesHelp')}</p>

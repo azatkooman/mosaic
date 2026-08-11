@@ -20,6 +20,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, lt } from '@/lib/i18n/locales'
 import { hasStaleTranslations } from '@/lib/form-localization'
 import { Button, NativeSelect, ConfettiBurst, LanguagePicker } from '@/components/ui'
+import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
@@ -49,6 +50,16 @@ export function FormBuilder({
   const store = useBuilderStore()
   const { definition, selectedId, dirty } = store
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | published
+  // Edits made in this session that are not live yet. The autosave writes them
+  // to the DRAFT version within ~1.2s, so nothing is ever lost here — but the
+  // registration form the public fills in is `forms.current_version_id`, and
+  // that does not move until Publish. Leaving with this true means the work is
+  // safe and simply has no effect, which is its own kind of surprise.
+  //
+  // Scoped to the session on purpose. The page opens a draft via
+  // create_draft_version on every visit, so "a draft exists" is true the
+  // moment you arrive and would warn on a page nobody edited.
+  const [unpublished, setUnpublished] = useState(false)
   const [publishBurst, setPublishBurst] = useState(null)
   const [previewing, setPreviewing] = useState(false)
   const [previewAnswers, setPreviewAnswers] = useState({})
@@ -164,6 +175,12 @@ export function FormBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editLocale, defaultLocale, supportedLocales])
 
+  // Any edit at all leaves something unpublished, and stays that way through
+  // the autosave that follows — only Publish clears it.
+  useEffect(() => {
+    if (dirty) setUnpublished(true)
+  }, [dirty])
+
   // Debounced autosave of the draft version.
   useEffect(() => {
     if (!dirty) return
@@ -199,7 +216,7 @@ export function FormBuilder({
     )
     if (realQuestions.length === 0) {
       setSaveState('publishEmpty')
-      return
+      return false
     }
     // Flush pending edits and REQUIRE the flush to succeed — publishing
     // after a failed flush would publish the stale server-side definition.
@@ -209,7 +226,7 @@ export function FormBuilder({
       .eq('id', versionId)
     if (flushError) {
       setSaveState('saveFailed')
-      return
+      return false
     }
     // Clearing dirty also cancels any pending autosave timer (the autosave
     // effect re-runs and its cleanup clears the timeout), so a late
@@ -218,11 +235,15 @@ export function FormBuilder({
     const { error } = await supabase.rpc('publish_form_version', { p_version_id: versionId })
     if (error) {
       setSaveState('publishFailed')
-      return
+      return false
     }
     setSaveState('published')
+    setUnpublished(false)
     setPublishBurst(Date.now())
     router.refresh()
+    // Returned so the leave-guard can tell a real publish from a refused one
+    // and only then continue the navigation it interrupted.
+    return true
   }
 
   const selected = definition.questions.find((q) => q.id === selectedId)
@@ -230,6 +251,16 @@ export function FormBuilder({
   if (previewing) {
     return (
       <div className={styles.preview}>
+        {/* Preview is the same page with the same unpublished state, and it is
+            a likelier place to wander off from than the editor — so the guard
+            has to be mounted on this branch too, not only the one below. */}
+        <UnsavedChangesGuard
+          when={unpublished}
+          title={t('unpublishedTitle')}
+          body={t('unpublishedBody')}
+          leaveLabel={t('unpublishedLeave')}
+          action={{ label: t('publish'), busyLabel: t('publishing'), run: publish }}
+        />
         <div className={styles.previewHead}>
           <Button variant="ghost" size="sm" onClick={() => setPreviewing(false)}>
             ← {t('backToEditor')}
@@ -270,6 +301,18 @@ export function FormBuilder({
 
   return (
     <div className={styles.builder}>
+      {/* Unlike the other two editors this one autosaves, so the question on
+          the way out is not "save?" but "publish?" — the edits are safe in the
+          draft either way, and the thing that would surprise an organizer is
+          finding the live form unchanged. Hence a third button rather than
+          reworded copy: publishing IS what they meant to do. */}
+      <UnsavedChangesGuard
+        when={unpublished}
+        title={t('unpublishedTitle')}
+        body={t('unpublishedBody')}
+        leaveLabel={t('unpublishedLeave')}
+        action={{ label: t('publish'), busyLabel: t('publishing'), run: publish }}
+      />
       {/* Palette */}
       <aside className={styles.palette} aria-label={t('addQuestion')}>
         {/* The version rides here rather than in the canvas header: that row has
