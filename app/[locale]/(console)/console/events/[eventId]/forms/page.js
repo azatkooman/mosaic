@@ -22,7 +22,24 @@ export default async function FormsPage({ params }) {
 
   return (
     <div style={{ maxInlineSize: '40rem', display: 'grid', gap: 'var(--s-4)' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Heading row rather than a button alone on a line of its own: the
+          console's other list pages pair their primary action with a title
+          (.pageHead), and here there was nothing on the left at all, so the
+          button floated in an empty row above the list. The space now carries
+          the one thing this page never said — what a form IS, and which one a
+          given person ends up filling in. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--s-4)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <p className="field-help" style={{ margin: 0, flex: 1, minInlineSize: '16rem' }}>
+          {t('formsIntro')}
+        </p>
         <NewFormButton
           eventId={eventId}
           existingForms={(forms ?? []).map((f) => ({

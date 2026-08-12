@@ -790,7 +790,8 @@
     "inviteQueued": "Invitación enviada. Tendrá acceso la primera vez que inicie sesión con ese correo.",
     "inviteGranted": "Añadido al equipo.",
     "invitePending": "invitado",
-    "roleRevoked": "{name} ya no tiene un rol global. Su cuenta, sus propios eventos y cualquier evento al que se le haya invitado no se ven afectados: simplemente ha salido de esta lista."
+    "roleRevoked": "{name} ya no tiene un rol global. Su cuenta, sus propios eventos y cualquier evento al que se le haya invitado no se ven afectados: simplemente ha salido de esta lista.",
+    "formsIntro": "Un formulario es el conjunto de preguntas que alguien responde al inscribirse. Se usa el formulario predeterminado salvo que un modo de inscripción o un tipo de participante tenga el suyo."
   },
   "questionTypes": {
     "text": "Texto corto",
