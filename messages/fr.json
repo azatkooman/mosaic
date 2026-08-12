@@ -771,7 +771,12 @@
     "duplicateEventHelp": "Copie les formulaires, les questions et les types de participants, mais aucune inscription. La copie démarre en brouillon : vérifiez les dates avant de publier.",
     "duplicateEventSlugTaken": "Ce nom est déjà utilisé. Essayez-en un autre.",
     "duplicating": "Duplication…",
-    "duplicateError": "Impossible de dupliquer cet événement."
+    "duplicateError": "Impossible de dupliquer cet événement.",
+    "registeredBetween": "Inscrit",
+    "filterFrom": "Du",
+    "filterTo": "Au",
+    "activeFilters": "Filtres",
+    "removeFilter": "Retirer le filtre"
   },
   "questionTypes": {
     "text": "Texte court",
@@ -914,5 +919,23 @@
     "typeLabel": "Type de participant",
     "regNo": "N° d'inscription",
     "openScanner": "Ouvrir le scanner"
+  },
+  "filterOps": {
+    "after": "après",
+    "anyOf": "est l’un de",
+    "before": "avant",
+    "between": "entre",
+    "contains": "contient",
+    "empty": "est vide",
+    "eq": "est",
+    "gt": "supérieur à",
+    "hasAll": "inclut tous",
+    "hasNone": "n’inclut aucun de",
+    "is": "est",
+    "isNot": "n’est pas",
+    "lt": "inférieur à",
+    "neq": "n’est pas",
+    "notEmpty": "n’est pas vide",
+    "on": "le"
   }
 }

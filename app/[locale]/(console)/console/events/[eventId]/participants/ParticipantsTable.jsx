@@ -15,6 +15,12 @@ import {
   formatRegNo,
   PARTICIPANT_STATUSES,
   STATUS_TRANSITIONS,
+  FILTER_OPS_BY_TYPE,
+  OPS_WITHOUT_VALUE,
+  OPS_WITH_LIST,
+  OPS_WITH_RANGE,
+  defaultOpFor,
+  normalizeAnswerFilter,
 } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
@@ -75,6 +81,9 @@ export function ParticipantsTable({
   // the status checklist answers, asked about types.
   const [typeFilter, setTypeFilter] = useState([])
   const [checkinFilter, setCheckinFilter] = useState('') // '' | 'in' | 'out'
+  // When they registered, as two ISO dates. Inclusive at both ends.
+  const [registeredFrom, setRegisteredFrom] = useState('')
+  const [registeredTo, setRegisteredTo] = useState('')
   const [answerFilters, setAnswerFilters] = useState({}) // questionId → value
   const [sort, setSort] = useState({ column: null, dir: 'desc' }) // null = created_at desc
   const [page, setPage] = useState(0)
@@ -125,10 +134,11 @@ export function ParticipantsTable({
     [shownQuestions, formTitles, locale]
   )
 
-  // Only filterable question kinds get a filter control.
-  const filterableQuestions = questions.filter((q) =>
-    ['select', 'radio', 'multiselect', 'checkbox', 'text', 'email', 'phone'].includes(q.type)
-  )
+  // Every question kind is filterable now. Date and number were excluded
+  // before — an event with four date questions could not be filtered by any of
+  // them — and file/address had no filter at all even though "who has not
+  // uploaded their passport scan" is the question most often asked of them.
+  const filterableQuestions = questions.filter((q) => q.type !== 'section')
 
   // Answer filters and `q:<id>` sorts name questions that exist in one bucket
   // only, so they must be dropped on the way across — a stale filter would
@@ -142,7 +152,7 @@ export function ParticipantsTable({
     setPage(0)
   }
 
-  const filters = { bucket, search, statusFilter, typeFilter, answerFilters, checkinFilter, sort, page }
+  const filters = { bucket, search, statusFilter, typeFilter, answerFilters, checkinFilter, registeredFrom, registeredTo, sort, page }
   const { data, isLoading, error } = useQuery({
     queryKey: ['participants', eventId, filters],
     queryFn: async () => {
@@ -155,13 +165,13 @@ export function ParticipantsTable({
         .eq('event_id', eventId)
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
-      if (checkinFilter === 'in') q = q.not('checked_in_at', 'is', null)
-      if (checkinFilter === 'out') q = q.is('checked_in_at', null)
-
       // Same filter + sort logic the export uses, so the download matches.
       q = applyParticipantFilters(
         q,
         {
+          checkin: checkinFilter,
+          registeredFrom,
+          registeredTo,
           status: statusFilter,
           typeId: typeFilter,
           search,
@@ -352,6 +362,9 @@ export function ParticipantsTable({
     if (statusFilter.length) params.set('status', statusFilter.join(','))
     if (typeFilter.length) params.set('typeId', typeFilter.join(','))
     if (search.trim()) params.set('q', search.trim())
+    if (checkinFilter) params.set('checkin', checkinFilter)
+    if (registeredFrom) params.set('registeredFrom', registeredFrom)
+    if (registeredTo) params.set('registeredTo', registeredTo)
     // An emptied multiselect checklist is `[]`, which is neither '' nor null
     // but still means "no filter" — it must not travel in the export URL.
     const cleanAnswers = Object.fromEntries(
@@ -459,17 +472,42 @@ export function ParticipantsTable({
           onChange={(next) => { setCheckinFilter(next); setPage(0) }}
         />
 
+        {/* When they registered — the one thing about a participant that no
+            form question records, and so was unfilterable however the event
+            was built. */}
+        <span className={styles.dateRange}>
+          <span className={styles.dateRangeLabel}>{t('console.registeredBetween')}</span>
+          <Input
+            type="date"
+            aria-label={t('console.filterFrom')}
+            value={registeredFrom}
+            onChange={(e) => { setRegisteredFrom(e.target.value); setPage(0) }}
+            style={{ maxInlineSize: '9.5rem' }}
+          />
+          <Input
+            type="date"
+            aria-label={t('console.filterTo')}
+            value={registeredTo}
+            onChange={(e) => { setRegisteredTo(e.target.value); setPage(0) }}
+            style={{ maxInlineSize: '9.5rem' }}
+          />
+        </span>
+
         {filterableQuestions.length > 0 && (
           <AnswerFilterPicker
             questions={filterableQuestions}
             locale={locale}
             filters={answerFilters}
             onChange={(next) => { setAnswerFilters(next); setPage(0) }}
+            t={t}
             labels={{
               add: t('console.filterByAnswer'),
               clear: t('console.clearFilters'),
               any: t('console.filterAny'),
               hasAll: t('console.filterHasAll'),
+              from: t('console.filterFrom'),
+              to: t('console.filterTo'),
+              removeFilter: t('console.removeFilter'),
               yes: t('common.yes'),
               no: t('common.no'),
             }}
@@ -949,19 +987,132 @@ function FilterMenu({ label, anyLabel, value, options, onChange }) {
   )
 }
 
-function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
-  const [activeQ, setActiveQ] = useState('')
-  // An emptied multiselect checklist is `[]` — present but filtering nothing,
-  // so it must not count toward "Clear (n)" either.
-  const active = Object.entries(filters).filter(
-    ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)
+/**
+ * The value an operator needs, if any: nothing for a presence test, a list for
+ * the choice operators, two bounds for a range, one value otherwise.
+ */
+function FilterValueControl({ question, op, value, onChange, locale, labels }) {
+  if (OPS_WITHOUT_VALUE.has(op)) return null
+
+  const options = (question.options ?? []).map((o) => ({
+    value: o.value,
+    label: lt(o.label, locale),
+  }))
+  if (OPS_WITH_LIST.has(op)) {
+    return (
+      <ChecklistMenu
+        label={labels.any}
+        values={Array.isArray(value) ? value : []}
+        options={options}
+        onChange={onChange}
+      />
+    )
+  }
+
+  // date and number get their native controls; everything else is a text box.
+  const inputType = question.type === 'date' ? 'date' : question.type === 'number' ? 'number' : 'text'
+  if (OPS_WITH_RANGE.has(op)) {
+    const range = value && typeof value === 'object' ? value : { from: '', to: '' }
+    return (
+      <>
+        <Input
+          type={inputType}
+          aria-label={labels.from}
+          value={range.from ?? ''}
+          onChange={(e) => onChange({ ...range, from: e.target.value })}
+          style={{ maxInlineSize: '9rem' }}
+        />
+        <Input
+          type={inputType}
+          aria-label={labels.to}
+          value={range.to ?? ''}
+          onChange={(e) => onChange({ ...range, to: e.target.value })}
+          style={{ maxInlineSize: '9rem' }}
+        />
+      </>
+    )
+  }
+
+  if (['select', 'radio'].includes(question.type)) {
+    return (
+      <FilterMenu
+        label={labels.any}
+        anyLabel={labels.any}
+        value={typeof value === 'string' ? value : ''}
+        options={options}
+        onChange={onChange}
+      />
+    )
+  }
+  if (question.type === 'checkbox') {
+    return (
+      <FilterMenu
+        label={labels.any}
+        anyLabel={labels.any}
+        value={typeof value === 'string' ? value : ''}
+        options={[
+          { value: 'true', label: labels.yes },
+          { value: 'false', label: labels.no },
+        ]}
+        onChange={onChange}
+      />
+    )
+  }
+  return (
+    <Input
+      type={inputType}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ maxInlineSize: '10rem' }}
+    />
   )
+}
+
+/** One active filter, in words, for the chip that lets you see and drop it. */
+function describeFilter(question, filter, locale, t) {
+  const label = lt(question.label, locale) || question.id
+  const op = t(`filterOps.${filter.op}`)
+  const optionLabel = (v) =>
+    lt((question.options ?? []).find((o) => o.value === v)?.label, locale) || v
+  if (OPS_WITHOUT_VALUE.has(filter.op)) return `${label} ${op}`
+  if (OPS_WITH_LIST.has(filter.op)) return `${label} ${op} ${filter.value.map(optionLabel).join(', ')}`
+  if (OPS_WITH_RANGE.has(filter.op)) {
+    return `${label} ${op} ${filter.value.from ?? '…'} – ${filter.value.to ?? '…'}`
+  }
+  if (['select', 'radio'].includes(question.type)) return `${label} ${op} ${optionLabel(filter.value)}`
+  return `${label} ${op} ${filter.value}`
+}
+
+function AnswerFilterPicker({ questions, locale, filters, onChange, labels, t }) {
+  const [activeQ, setActiveQ] = useState('')
   const question = questions.find((q) => q.id === activeQ)
+  const ops = FILTER_OPS_BY_TYPE[question?.type] ?? FILTER_OPS_BY_TYPE.text
+
+  const raw = filters[activeQ]
+  const isShaped = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.op
+  const op = isShaped ? raw.op : defaultOpFor(question?.type)
+  const value = isShaped ? raw.value : raw
+
+  // Chips are what make a stacked filter set legible: the picker shows one
+  // question at a time, so before this the only sign that three others were
+  // narrowing the table was the number beside "Clear".
+  const chips = Object.entries(filters)
+    .map(([qid, v]) => {
+      const q = questions.find((x) => x.id === qid)
+      const f = q && normalizeAnswerFilter(q, v)
+      return f ? { qid, text: describeFilter(q, f, locale, t) } : null
+    })
+    .filter(Boolean)
+
+  const setOp = (nextOp) => {
+    // The value rarely survives a change of operator — a list is meaningless to
+    // "is empty", a range to "contains" — so it is reset rather than coerced.
+    onChange({ ...filters, [activeQ]: { op: nextOp, value: OPS_WITH_RANGE.has(nextOp) ? { from: '', to: '' } : OPS_WITH_LIST.has(nextOp) ? [] : '' } })
+  }
+  const setValue = (v) => onChange({ ...filters, [activeQ]: { op, value: v } })
 
   return (
     <div className={styles.answerFilters}>
-      {/* Which question to filter on, and then its value: both are one-of-many,
-          so they take the single-choice menu rather than the checklist. */}
       <FilterMenu
         label={`${labels.add}…`}
         anyLabel={labels.any}
@@ -970,59 +1121,47 @@ function AnswerFilterPicker({ questions, locale, filters, onChange, labels }) {
         onChange={setActiveQ}
       />
 
-      {question && ['select', 'radio'].includes(question.type) && (
-        <FilterMenu
-          label={labels.any}
-          anyLabel={labels.any}
-          value={filters[question.id] ?? ''}
-          options={(question.options ?? []).map((o) => ({
-            value: o.value,
-            label: lt(o.label, locale),
-          }))}
-          onChange={(v) => onChange({ ...filters, [question.id]: v })}
-        />
-      )}
-      {/* Multiple choice (many) is the one answer type a respondent can give
-          several values to, so its filter takes several as well. AND semantics
-          (see applyParticipantFilters), which is why the trigger says "includes
-          all" rather than borrowing the "Any" label its siblings use. */}
-      {question && question.type === 'multiselect' && (
-        <ChecklistMenu
-          label={labels.hasAll}
-          values={Array.isArray(filters[question.id]) ? filters[question.id] : []}
-          options={(question.options ?? []).map((o) => ({
-            value: o.value,
-            label: lt(o.label, locale),
-          }))}
-          onChange={(next) => onChange({ ...filters, [question.id]: next })}
-        />
-      )}
-      {question && question.type === 'checkbox' && (
-        <FilterMenu
-          label={labels.any}
-          anyLabel={labels.any}
-          value={filters[question.id] ?? ''}
-          // "No" cannot be `contains(answers, false)`: an unticked box is
-          // pruned from `answers` entirely rather than stored as false, so the
-          // query side inverts the ticked test instead.
-          options={[
-            { value: 'true', label: labels.yes },
-            { value: 'false', label: labels.no },
-          ]}
-          onChange={(v) => onChange({ ...filters, [question.id]: v })}
-        />
-      )}
-      {question && ['text', 'email', 'phone'].includes(question.type) && (
-        <Input
-          value={filters[question.id] ?? ''}
-          onChange={(e) => onChange({ ...filters, [question.id]: e.target.value })}
-          style={{ maxInlineSize: '10rem' }}
-        />
+      {question && (
+        <>
+          <FilterMenu
+            label={t(`filterOps.${op}`)}
+            anyLabel={t(`filterOps.${op}`)}
+            value={op}
+            options={ops.map((o) => ({ value: o, label: t(`filterOps.${o}`) }))}
+            onChange={setOp}
+          />
+          <FilterValueControl
+            question={question}
+            op={op}
+            value={value}
+            onChange={setValue}
+            locale={locale}
+            labels={labels}
+          />
+        </>
       )}
 
-      {active.length > 0 && (
+      {chips.map((c) => (
+        <button
+          key={c.qid}
+          type="button"
+          className={styles.filterChip}
+          aria-label={`${labels.removeFilter}: ${c.text}`}
+          title={labels.removeFilter}
+          onClick={() => {
+            const next = { ...filters }
+            delete next[c.qid]
+            onChange(next)
+            if (activeQ === c.qid) setActiveQ('')
+          }}
+        >
+          {c.text} ×
+        </button>
+      ))}
+
+      {chips.length > 0 && (
         <button className="btn btn-ghost btn-sm" onClick={() => { onChange({}); setActiveQ('') }}>
-          {labels.clear} ({active.length})
+          {labels.clear} ({chips.length})
         </button>
       )}
     </div>
