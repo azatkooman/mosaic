@@ -762,6 +762,7 @@
     "closeRegistrationNow": "Fermer les inscriptions maintenant",
     "closeRegistrationNowHelp": "Arrête immédiatement les nouvelles inscriptions, quelles que soient les dates. Décochez pour rouvrir.",
     "typeHidden": "Masquer du formulaire d’inscription",
+    "typeHiddenHelp": "Un type masqué n’apparaît pas sur le formulaire public, mais son lien n’est pas secret : quiconque le possède, ou le devine, peut tout de même s’inscrire avec ce type.",
     "adminOnly": "Organisateurs uniquement",
     "adminOnlyBadge": "organisateurs uniquement",
     "adminOnlyHelp": "Masqué du formulaire d’inscription. Seuls les organisateurs peuvent le voir et le remplir depuis la fiche du participant.",

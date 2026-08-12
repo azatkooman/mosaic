@@ -41,7 +41,19 @@ export async function generateMetadata({ params }) {
 
 export default async function EventPage({ params, searchParams }) {
   const { slug, locale } = await params
-  const { lang } = (await searchParams) ?? {}
+  const { lang, type: typeParam } = (await searchParams) ?? {}
+  // A hidden type's private link now lands here rather than on the bare form,
+  // so the invited person sees what the event is before committing — and gets
+  // the proper "registration closed" messaging this page already renders. The
+  // param only rides through to the Register button; nothing on this page
+  // reveals which type it names, and the register page validates it against
+  // real types (resolvePreselectedType), so a stale or invented value simply
+  // degrades to the ordinary form.
+  //
+  // Matched against the key charset from 0001 rather than forwarded verbatim:
+  // no reason to reflect an arbitrary string into a link we build.
+  const linkedType =
+    typeof typeParam === 'string' && /^[a-z0-9_]+$/.test(typeParam) ? typeParam : undefined
   setRequestLocale(locale)
 
   const event = await getEvent(slug)
@@ -76,6 +88,7 @@ export default async function EventPage({ params, searchParams }) {
         code: contentLocale,
         uiLocale: locale,
         subPath: '/register',
+        params: { type: linkedType },
       })}
     />
   )
