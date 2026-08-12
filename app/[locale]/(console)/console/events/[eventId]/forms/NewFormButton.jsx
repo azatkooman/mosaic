@@ -41,9 +41,31 @@ export function NewFormButton({ eventId, existingForms }) {
     setState('creating')
     setError(null)
 
+    // Appearance rides along with the questions — the control says "Copy from",
+    // not "copy the questions from", and a copy that came back in default
+    // styling would be a surprise every time. Read before the insert so the new
+    // form is *created* looking right, rather than created plain and restyled a
+    // moment later by a second write that can fail on its own.
+    let appearance = null
+    if (copyFromId) {
+      const { data: sourceForm } = await supabase
+        .from('forms')
+        .select('appearance')
+        .eq('id', copyFromId)
+        .maybeSingle()
+      appearance = sourceForm?.appearance ?? null
+    }
+
     const { data: form, error: insertError } = await supabase
       .from('forms')
-      .insert({ event_id: eventId, title: MODE_TITLES[mode], registration_mode: mode })
+      .insert({
+        event_id: eventId,
+        title: MODE_TITLES[mode],
+        registration_mode: mode,
+        // Omitted when starting blank: `{}` is the column default and means
+        // "inherit the event page theme", which is what a new form should do.
+        ...(appearance ? { appearance } : {}),
+      })
       .select('id')
       .single()
     if (insertError || !form) {
@@ -129,7 +151,7 @@ export function NewFormButton({ eventId, existingForms }) {
         </Field>
 
         {existingForms.length > 0 && (
-          <Field label={t('copyQuestionsFrom')} help={t('copyQuestionsHelp')}>
+          <Field label={t('copyFrom')} help={t('copyFromHelp')}>
             {({ id }) => (
               <NativeSelect id={id} value={copyFromId} onChange={(e) => setCopyFromId(e.target.value)}>
                 <option value="">{t('startBlank')}</option>
