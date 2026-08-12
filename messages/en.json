@@ -289,7 +289,7 @@
     "create": "Create event",
     "creating": "Creating…",
     "createError": "Something went wrong creating the event. Please try again.",
-    "createNoAccess": "Your account does not have permission to create events. Ask an administrator to grant you organizer access.",
+    "createNoAccess": "Could not create the event. Please try again, or sign out and back in.",
     "createDateError": "The end date must be after the start date.",
     "location": "Location",
     "contactInfo": "Contact information",
