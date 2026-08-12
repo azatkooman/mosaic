@@ -18,7 +18,8 @@ export const TITLE_SIZES = {
 
 // Font options offered in the customize panel. `label: null` means the label
 // comes from a translation ("Site font"); named fonts show their own name.
-// Each family references a CSS variable loaded via next/font in the layout.
+// Each family references a CSS variable declared in styles/fonts.css, where
+// the self-hosted @font-face rules live.
 export const FONT_CHOICES = [
   { key: 'default', label: null, family: null },
   { key: 'inter', label: 'Inter', family: 'var(--font-inter), system-ui, sans-serif' },
