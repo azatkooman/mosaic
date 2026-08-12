@@ -271,6 +271,7 @@
     "anyOf": "any condition matches",
     "publishForm": "Publish form",
     "previewForm": "Preview",
+    "previewFormHint": "See the form as an attendee will. Nothing you type in it is saved.",
     "backToEditor": "Back to editor",
     "previewAs": "Preview as",
     "previewHint": "This is a preview — answers are not saved.",

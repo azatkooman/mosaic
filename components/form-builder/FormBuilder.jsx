@@ -382,17 +382,25 @@ export function FormBuilder({
           >
             ↪
           </Button>
+          {/* Labelled, and secondary rather than ghost. It used to be a ghost
+              button whose entire content was ◱ — a glyph that means nothing to
+              anyone, sat between the undo and redo arrows where it read as a
+              third editing tool, and could only be identified by hovering for
+              the tooltip. Preview is not a tool, it is the other half of the
+              builder: everything Publish will show an attendee, before it does.
+              So it now says so, and stands beside Publish as the pair they are.
+              The row wraps (see .canvasHead), so the extra width costs a
+              wrapped line at worst, never an overflow. */}
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            aria-label={t('previewForm')}
-            title={t('previewForm')}
+            title={t('previewFormHint')}
             onClick={() => {
               setPreviewAnswers({})
               setPreviewing(true)
             }}
           >
-            <span aria-hidden="true">◱</span>
+            {t('previewForm')}
           </Button>
           <span style={{ position: 'relative', display: 'inline-flex' }}>
             <Button size="sm" onClick={publish}>
