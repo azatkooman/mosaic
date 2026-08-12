@@ -338,7 +338,14 @@ export function FormBuilder({
       {/* Canvas */}
       <section className={styles.canvas}>
         <div className={styles.canvasHead}>
-          <span style={{ flex: 1 }} />
+          {/* Two groups, not one right-tucked run of six controls. What you
+              edit WITH sits left, in the space that was previously held empty
+              by a flex spacer; what you DO sits right. The old row fitted five
+              controls and wrapped the sixth, so Publish — the primary action —
+              landed alone on a line of its own while the space it needed sat
+              unused at the far left. Grouped, the pair wraps together or not at
+              all, and can never be split from each other. */}
+          <div className={styles.headTools}>
           <LanguagePicker
             className={styles.langPicker}
             options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
@@ -382,32 +389,38 @@ export function FormBuilder({
           >
             ↪
           </Button>
+          </div>
+
           {/* Labelled, and secondary rather than ghost. It used to be a ghost
               button whose entire content was ◱ — a glyph that means nothing to
               anyone, sat between the undo and redo arrows where it read as a
               third editing tool, and could only be identified by hovering for
               the tooltip. Preview is not a tool, it is the other half of the
               builder: everything Publish will show an attendee, before it does.
-              So it now says so, and stands beside Publish as the pair they are.
-              The row wraps (see .canvasHead), so the extra width costs a
-              wrapped line at worst, never an overflow. */}
-          <Button
-            variant="secondary"
-            size="sm"
-            title={t('previewFormHint')}
-            onClick={() => {
-              setPreviewAnswers({})
-              setPreviewing(true)
-            }}
-          >
-            {t('previewForm')}
-          </Button>
-          <span style={{ position: 'relative', display: 'inline-flex' }}>
-            <Button size="sm" onClick={publish}>
-              {t('publishForm')}
+              So it says so, and stands beside Publish as the pair they are. */}
+          <div className={styles.headActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              title={t('previewFormHint')}
+              onClick={() => {
+                setPreviewAnswers({})
+                setPreviewing(true)
+              }}
+            >
+              {t('previewForm')}
             </Button>
-            <ConfettiBurst burst={publishBurst} />
-          </span>
+            {/* "Publish", not "Publish form": inside a form builder the noun is
+                already given, and it is what this file's own unsaved-changes
+                dialog has always called it. The shorter label is also what lets
+                all six controls share the column without wrapping. */}
+            <span style={{ position: 'relative', display: 'inline-flex' }}>
+              <Button size="sm" onClick={publish}>
+                {t('publish')}
+              </Button>
+              <ConfettiBurst burst={publishBurst} />
+            </span>
+          </div>
         </div>
 
         {/* Its own line under the actions rather than inside them: a failed save
