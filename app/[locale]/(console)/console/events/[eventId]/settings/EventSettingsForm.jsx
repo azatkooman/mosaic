@@ -787,7 +787,14 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
       </section>
 
       <section className="card card-pad">
-        <h2 style={{ marginBottom: 'var(--s-4)' }}>{t('participantTypes')}</h2>
+        <h2 style={{ marginBottom: 'var(--s-2)' }}>{t('participantTypes')}</h2>
+        {/* Stated once here rather than under each type's Capacity field: it is
+            the same sentence for every row, and in that column — the narrowest
+            of the three, with .typeRow aligning its fields to the bottom — it
+            was tall enough to push Name and Form out of line. */}
+        <p className="field-help" style={{ marginBottom: 'var(--s-4)' }}>
+          {t('typeCapacityHelp')}
+        </p>
         <div className={styles.typeList}>
           {types.map((pt) => (
             <div key={pt.id} className={styles.typeRow}>
@@ -806,7 +813,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
                   />
                 )}
               </Field>
-              <Field label={t('capacity')} help={t('typeCapacityHelp')}>
+              <Field label={t('capacity')}>
                 {({ id }) => (
                   <Input
                     id={id}
