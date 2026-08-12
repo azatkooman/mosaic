@@ -790,8 +790,7 @@
     "inviteQueued": "Invited. They will get access the first time they sign in with that address.",
     "inviteGranted": "Added to the team.",
     "invitePending": "invited",
-    "roleRevoked": "{name} no longer has a global role. Their account, their own events and any event they were invited to are unaffected — they have simply left this list.",
-    "formsIntro": "A form is the set of questions someone answers when they register. The Default form is used unless a registration mode or participant type has one of its own."
+    "roleRevoked": "{name} no longer has a global role. Their account, their own events and any event they were invited to are unaffected — they have simply left this list."
   },
   "questionTypes": {
     "text": "Short text",
