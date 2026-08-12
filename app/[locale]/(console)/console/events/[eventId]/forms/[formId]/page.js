@@ -25,7 +25,13 @@ export default async function FormBuilderPage({ params }) {
       .select('key, name')
       .eq('event_id', eventId)
       .order('sort_order'),
-    supabase.from('events').select('default_locale, supported_locales, page_content').eq('id', eventId).single(),
+    // `name` for the Forms page tab, which renders the registrant's
+    // "Register for {event}" title.
+    supabase
+      .from('events')
+      .select('name, default_locale, supported_locales, page_content')
+      .eq('id', eventId)
+      .single(),
   ])
   if (!version) notFound()
 
@@ -35,6 +41,7 @@ export default async function FormBuilderPage({ params }) {
       versionNumber={version.version}
       initialDefinition={version.definition ?? { questions: [] }}
       participantTypes={types ?? []}
+      eventName={event?.name ?? {}}
       defaultLocale={event?.default_locale ?? 'en'}
       supportedLocales={eventLocales(event)}
       localeNames={Object.fromEntries(
