@@ -33,7 +33,7 @@
   --warn: #9a6b0f;
   --warn-tint: #f8efd8;
 
-  /* Type — families injected by next/font as --font-display / --font-body */
+  /* Type — families declared in fonts.css as --font-display / --font-body */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
