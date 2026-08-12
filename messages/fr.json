@@ -778,7 +778,15 @@
     "filterFrom": "Du",
     "filterTo": "Au",
     "activeFilters": "Filtres",
-    "removeFilter": "Retirer le filtre"
+    "removeFilter": "Retirer le filtre",
+    "teamIntro": "Toutes les personnes pouvant travailler sur cet événement. Invitez par e-mail : un compte n’est pas encore nécessaire.",
+    "inviteEmail": "E-mail",
+    "invite": "Inviter",
+    "inviting": "Invitation…",
+    "inviteError": "Impossible d’envoyer cette invitation. Veuillez réessayer.",
+    "inviteQueued": "Invitation envoyée. L’accès sera accordé à la première connexion avec cette adresse.",
+    "inviteGranted": "Ajouté à l’équipe.",
+    "invitePending": "invité"
   },
   "questionTypes": {
     "text": "Texte court",

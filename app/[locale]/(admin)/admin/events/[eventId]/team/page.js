@@ -1,18 +1,16 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui'
-import { PRIVILEGES } from '@/components/roles/roleUtils'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Read-only team: who has access to this event, under which role, and what
- * that role actually permits.
+ * Read-only team: who has access to this event and under which role.
  *
- * The privilege columns are spelled out rather than just naming the role,
- * because a role is editable and organizer-defined — "Full" on one event is
- * not necessarily "Full" on another, and an admin reviewing an archived event
- * needs what the grant meant, not what it was called.
+ * The privileges each grant conferred used to be spelled out column by column,
+ * because a role was editable and organizer-defined — "Full" on one event was
+ * not necessarily "Full" on another. Since 0053 there are three fixed roles
+ * with fixed meanings, so the name is the whole story.
  */
 export default async function AdminEventTeam({ params }) {
   const { locale, eventId } = await params
@@ -62,9 +60,6 @@ export default async function AdminEventTeam({ params }) {
           {members.map((m) => {
             const profile = profileById.get(m.user_id)
             const role = roleById.get(m.role_id)
-            const granted = role
-              ? PRIVILEGES.filter((p) => role[p.key]).map((p) => t(`console.${p.label}`))
-              : []
             return (
               <tr key={m.user_id}>
                 <td data-cell="title">
@@ -76,7 +71,7 @@ export default async function AdminEventTeam({ params }) {
                   <Badge tone={m.status === 'active' ? 'confirmed' : 'pending'}>{m.status}</Badge>
                 </td>
                 <td data-label={t('console.adminPrivileges')}>
-                  {granted.length ? granted.join(', ') : '—'}
+                  {role?.name ?? '—'}
                 </td>
               </tr>
             )

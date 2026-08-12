@@ -47,8 +47,6 @@ export default async function AdminLayout({ children, params }) {
         <nav className={styles.topnav} aria-label="Admin">
           <Link href="/">{t('console.navHome')} ↗</Link>
           <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
-          <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
-          <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
           <NavLink href="/admin/events">{t('console.adminArchivedEvents')}</NavLink>
           <NavLink href="/admin/translations">{t('console.adminTranslations')}</NavLink>
           <Link href="/console">{t('console.title')} ↗</Link>
@@ -64,8 +62,6 @@ export default async function AdminLayout({ children, params }) {
           <MobileNav label={t('common.menu')}>
             <Link href="/">{t('console.navHome')} ↗</Link>
             <NavLink href="/admin/users">{t('console.adminUsers')}</NavLink>
-            <NavLink href="/admin/roles">{t('console.roles')}</NavLink>
-            <NavLink href="/admin/requests">{t('console.accessRequests')}</NavLink>
             <NavLink href="/admin/events">{t('console.adminArchivedEvents')}</NavLink>
           <NavLink href="/admin/translations">{t('console.adminTranslations')}</NavLink>
             <Link href="/console">{t('console.title')} ↗</Link>
