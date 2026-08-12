@@ -79,7 +79,19 @@ export function UsersAdmin({ users, currentUserId, isSuperAdmin }) {
 
   async function changeGlobalRole(user, role) {
     if (role === 'none') {
-      run(supabase.rpc('revoke_global_role', { p_user_id: user.id }))
+      setError(null)
+      const { error } = await supabase.rpc('revoke_global_role', { p_user_id: user.id })
+      if (error) {
+        setError(error.message)
+        return
+      }
+      // This list holds only people who have a global role, so the row is
+      // about to disappear. Without a word that reads like the account was
+      // deleted — it was not: they keep their profile, their own events, and
+      // every event they were invited to, and can still create new ones. They
+      // simply stop being an admin or a global organizer.
+      setNotice(t('roleRevoked', { name: user.full_name || user.email }))
+      router.refresh()
       return
     }
     setError(null)

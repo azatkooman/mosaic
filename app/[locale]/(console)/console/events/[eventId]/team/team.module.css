@@ -2,16 +2,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
-  /* Wide enough for the role matrix to breathe; narrower blocks (invite form,
-     member/request tables) cap themselves below. */
+  /* The role matrix this was widened for went with 0053; the member table is
+     now the widest thing here. */
   max-inline-size: 56rem;
 }
 
 .addRow {
   display: flex;
+  /* flex-end, so the button's baseline meets the inputs' rather than their
+     labels'. Each Field is label-over-control, so any other alignment leaves
+     the button floating against the label row. */
   align-items: flex-end;
   gap: var(--s-3);
   max-inline-size: 40rem;
+  flex-wrap: wrap;
 }
 
 .addRow > :first-child {

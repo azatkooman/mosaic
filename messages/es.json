@@ -786,7 +786,8 @@
     "inviteError": "No se pudo enviar la invitación. Inténtalo de nuevo.",
     "inviteQueued": "Invitación enviada. Tendrá acceso la primera vez que inicie sesión con ese correo.",
     "inviteGranted": "Añadido al equipo.",
-    "invitePending": "invitado"
+    "invitePending": "invitado",
+    "roleRevoked": "{name} ya no tiene un rol global. Su cuenta, sus propios eventos y cualquier evento al que se le haya invitado no se ven afectados: simplemente ha salido de esta lista."
   },
   "questionTypes": {
     "text": "Texto corto",
