@@ -778,7 +778,15 @@
     "filterFrom": "From",
     "filterTo": "To",
     "activeFilters": "Filters",
-    "removeFilter": "Remove filter"
+    "removeFilter": "Remove filter",
+    "teamIntro": "Everyone who can work on this event. Invite someone by email — they do not need an account yet.",
+    "inviteEmail": "Email",
+    "invite": "Invite",
+    "inviting": "Inviting…",
+    "inviteError": "Could not send that invitation. Please try again.",
+    "inviteQueued": "Invited. They will get access the first time they sign in with that address.",
+    "inviteGranted": "Added to the team.",
+    "invitePending": "invited"
   },
   "questionTypes": {
     "text": "Short text",

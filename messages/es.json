@@ -778,7 +778,15 @@
     "filterFrom": "Desde",
     "filterTo": "Hasta",
     "activeFilters": "Filtros",
-    "removeFilter": "Quitar filtro"
+    "removeFilter": "Quitar filtro",
+    "teamIntro": "Todas las personas que pueden trabajar en este evento. Invita por correo: todavía no necesitan una cuenta.",
+    "inviteEmail": "Correo",
+    "invite": "Invitar",
+    "inviting": "Invitando…",
+    "inviteError": "No se pudo enviar la invitación. Inténtalo de nuevo.",
+    "inviteQueued": "Invitación enviada. Tendrá acceso la primera vez que inicie sesión con ese correo.",
+    "inviteGranted": "Añadido al equipo.",
+    "invitePending": "invitado"
   },
   "questionTypes": {
     "text": "Texto corto",
