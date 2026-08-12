@@ -544,7 +544,7 @@ export function ParticipantsTable({
       )}
 
       {shownQuestions.length > 0 && (
-        <p className={styles.stackHint}>{t('console.tapRegNoForAnswers')}</p>
+        <p className={styles.stackHint}>{t('console.openForAnswers')}</p>
       )}
 
       <div className="table-wrap table-cards">
@@ -569,15 +569,15 @@ export function ParticipantsTable({
               <SortHeader label={t('console.byType')} column="type" sort={sort} onSort={toggleSort} />
               <SortHeader label={t('console.byStatus')} column="status" sort={sort} onSort={toggleSort} />
               <th>{t('console.checkedIn')}</th>
-              <SortHeader label={t('console.profileName')} column="profile_name" sort={sort} onSort={toggleSort} />
-              <SortHeader label={t('console.profileEmail')} column="profile_email" sort={sort} onSort={toggleSort} />
-              {/* Actions holds only the status control now that Reg. # is the
-                  view link — so the column disappears entirely for roles that
-                  cannot change status, rather than sitting empty. Archiving
-                  lives in the bulk bar's More-actions menu, deliberately not
-                  here: a per-row delete beside a per-row status control read as
-                  two ways to do the same thing. */}
-              {canChangeStatus && <th>{t('common.actions')}</th>}
+              <SortHeader label={t('console.registeredBy')} column="profile_name" sort={sort} onSort={toggleSort} />
+              <SortHeader label={t('console.registeredByEmail')} column="profile_email" sort={sort} onSort={toggleSort} />
+              {/* Actions carries the row's own open control plus, for roles
+                  that have it, the status select — so unlike before it is never
+                  empty and always renders. Archiving stays in the bulk bar's
+                  More-actions menu, deliberately not here: a per-row delete
+                  beside a per-row status control read as two ways to do the
+                  same thing. */}
+              <th>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -665,11 +665,26 @@ export function ParticipantsTable({
                       '—'
                     )}
                   </td>
-                  <Cell label={t('console.profileName')} value={p.profile_name} />
-                  <Cell label={t('console.profileEmail')} value={p.profile_email} />
-                  {canChangeStatus && (
-                    <td data-cell="actions">
-                      <div className={styles.rowActions}>
+                  <Cell label={t('console.registeredBy')} value={p.profile_name} />
+                  <Cell label={t('console.registeredByEmail')} value={p.profile_email} />
+                  <td data-cell="actions">
+                    <div className={styles.rowActions}>
+                      {/* The row's explicit open control. The Reg. # is still a
+                          link, but it was the ONLY way in and nobody reads a
+                          number as "edit this person" — and there is no name
+                          column to attach it to instead, names being ordinary
+                          form questions an organizer can remove. Labelled for
+                          what it will actually do: the drawer opens read-only
+                          for roles that cannot edit. */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelected(p)}
+                        aria-label={`${canEdit ? t('common.edit') : t('console.viewDetail')}: ${participantLabel(p)}`}
+                      >
+                        {canEdit ? t('common.edit') : t('console.viewDetail')}
+                      </Button>
+                      {canChangeStatus && (
                         <NativeSelect
                           value={p.status}
                           aria-label={t('console.changeStatus')}
@@ -681,9 +696,9 @@ export function ParticipantsTable({
                             <option key={s} value={s}>{t(`status.${s}`)}</option>
                           ))}
                         </NativeSelect>
-                      </div>
-                    </td>
-                  )}
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}

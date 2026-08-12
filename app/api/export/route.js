@@ -124,7 +124,7 @@ export async function GET(request) {
       tc('regNo'),
       ...(showKind ? [tc('registrationKind')] : []),
       ...questionHeaders(questions, formTitles, (q) => lt(q.label, locale, event?.default_locale)),
-      tc('byType'), tc('byStatus'), tc('checkedIn'), tc('profileName'), tc('profileEmail'), tc('registeredAt'),
+      tc('byType'), tc('byStatus'), tc('checkedIn'), tc('registeredBy'), tc('registeredByEmail'), tc('registeredAt'),
     ]
 
     // Page through all participants with the service client.
