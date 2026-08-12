@@ -34,9 +34,11 @@
 -- ---------------------------------------------------------------------------
 -- 1. The three roles
 -- ---------------------------------------------------------------------------
+-- The old check allowed only view/scholarship/checkin/update/full, so it has to
+-- go before the new rows can be inserted; the NEW check cannot be added until
+-- the old rows are gone, or it is validated against them and fails. So: drop
+-- here, re-add at the end of step 3.
 alter table event_roles drop constraint if exists event_roles_preset_key_check;
-alter table event_roles add constraint event_roles_preset_key_check
-  check (preset_key in ('owner', 'co_organizer', 'viewer'));
 
 -- Insert before the remap, delete the old ones after it, so no membership is
 -- ever pointing at a row that does not exist.
@@ -80,6 +82,10 @@ delete from event_organizers where status = 'requested';
 -- ---------------------------------------------------------------------------
 delete from event_roles
 where preset_key not in ('owner', 'co_organizer', 'viewer') or event_id is not null;
+
+-- Now that only the three survive, the rule they satisfy can be enforced.
+alter table event_roles add constraint event_roles_preset_key_check
+  check (preset_key in ('owner', 'co_organizer', 'viewer'));
 
 -- Roles are the product's, not an event's, from here on.
 alter table event_roles add constraint event_roles_global_only check (event_id is null);
