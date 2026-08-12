@@ -14,6 +14,7 @@ import {
   applyParticipantSort,
   formatRegNo,
   PARTICIPANT_STATUSES,
+  STATUS_TRANSITIONS,
 } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
 import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
@@ -39,13 +40,6 @@ function participantLabel(p) {
 // Re-exported name kept for the bulk-status control and the per-row menu,
 // which still pick exactly one status; the filter above them now takes several.
 const STATUSES = PARTICIPANT_STATUSES
-const STATUS_TRANSITIONS = {
-  pending: ['confirmed', 'waitlisted', 'cancelled'],
-  confirmed: ['cancelled'],
-  waitlisted: ['confirmed', 'cancelled'],
-  cancelled: ['confirmed', 'waitlisted'],
-}
-
 /**
  * Filters compile straight to PostgREST operators on the JSONB answers
  * column (GIN-indexed), so filtering happens in the database, not the

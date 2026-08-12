@@ -806,7 +806,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
                   />
                 )}
               </Field>
-              <Field label={t('capacity')}>
+              <Field label={t('capacity')} help={t('typeCapacityHelp')}>
                 {({ id }) => (
                   <Input
                     id={id}
