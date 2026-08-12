@@ -248,6 +248,65 @@
   }
 }
 
+/* --- "Forms page" tab --- */
+.tabsHead {
+  margin-bottom: var(--s-5);
+}
+
+.pageTab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.pageTabBar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+/* The hint grows; the type picker must not shrink to make room for it. Without
+   both of these "Preview as" broke across two lines beside a full-height
+   select. `.select-native` is width:100%, which inside the label's own flex box
+   is a percentage against an indefinite size — it resolves by squeezing the
+   label's text to min-content rather than by sizing the select. Giving the
+   select its own width takes the circularity out, and flex-shrink keeps the
+   whole control off the hint's growth. */
+.pageTabBar > label {
+  flex-shrink: 0;
+}
+
+.pageTabBar > label select {
+  width: auto;
+}
+
+.pageTabHint {
+  flex: 1;
+  min-width: 12rem;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+/* Dashed, like the event page editor's preview frame: it says "a rendering of
+   another page" rather than "a panel of this one", which matters here because
+   everything inside it is a faithful copy of a screen that lives elsewhere. */
+.pageFrame {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* The chrome inside the frame is a picture of the register screen, not a
+   working copy of it — so it keeps the arrow cursor rather than promising a
+   click that goes nowhere. Appearance is otherwise untouched: these are the
+   same Button components the wizard renders. */
+.inert {
+  cursor: default;
+}
+
 /* --- Inspector --- */
 .inspector {
   position: sticky;

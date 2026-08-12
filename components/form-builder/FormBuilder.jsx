@@ -19,9 +19,19 @@ import {
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, lt } from '@/lib/i18n/locales'
 import { hasStaleTranslations } from '@/lib/form-localization'
-import { Button, NativeSelect, ConfettiBurst, LanguagePicker } from '@/components/ui'
+import {
+  Button,
+  NativeSelect,
+  ConfettiBurst,
+  LanguagePicker,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui'
 import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
+import { RegisterPreview } from './RegisterPreview'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
 import { QuestionInspector } from './QuestionInspector'
@@ -37,6 +47,7 @@ export function FormBuilder({
   versionNumber,
   initialDefinition,
   participantTypes,
+  eventName,
   defaultLocale,
   supportedLocales,
   localeNames,
@@ -300,12 +311,16 @@ export function FormBuilder({
   }
 
   return (
-    <div className={styles.builder}>
+    <>
       {/* Unlike the other two editors this one autosaves, so the question on
           the way out is not "save?" but "publish?" — the edits are safe in the
           draft either way, and the thing that would surprise an organizer is
           finding the live form unchanged. Hence a third button rather than
-          reworded copy: publishing IS what they meant to do. */}
+          reworded copy: publishing IS what they meant to do.
+
+          Outside the tabs, not inside one: the draft is just as unpublished
+          from the Forms page tab, and a guard mounted on only one of them would
+          let the organizer leave unwarned from the other. */}
       <UnsavedChangesGuard
         when={unpublished}
         title={t('unpublishedTitle')}
@@ -313,189 +328,248 @@ export function FormBuilder({
         leaveLabel={t('unpublishedLeave')}
         action={{ label: t('publish'), busyLabel: t('publishing'), run: publish }}
       />
-      {/* Palette */}
-      <aside className={styles.palette} aria-label={t('addQuestion')}>
-        {/* The version rides here rather than in the canvas header: that row has
-            to fit six controls beside a 20rem inspector in a 448px column, and
-            a passive fact was crowding out the actions. */}
-        <div className={styles.paletteHead}>
-          <h2 className="eyebrow">{t('addQuestion')}</h2>
-          <span className={styles.version}>v{versionNumber}</span>
-        </div>
-        <div className={styles.paletteGrid}>
-          {QUESTION_TYPES.map((type) => (
-            <button
-              key={type}
-              className={styles.paletteItem}
-              onClick={() => store.addQuestion(type)}
-            >
-              {tq(type)}
-            </button>
-          ))}
-        </div>
-      </aside>
+      {/* Questions is what "Edit form" means and stays the landing tab; Forms
+          page is the same form seen from the registrant's side. */}
+      <Tabs defaultValue="questions">
+        <TabsList className={`tabs-list ${styles.tabsHead}`}>
+          <TabsTrigger value="questions">{t('tabQuestions')}</TabsTrigger>
+          <TabsTrigger value="formsPage">{t('tabFormsPage')}</TabsTrigger>
+        </TabsList>
 
-      {/* Canvas */}
-      <section className={styles.canvas}>
-        <div className={styles.canvasHead}>
-          {/* Two groups, not one right-tucked run of six controls. What you
-              edit WITH sits left, in the space that was previously held empty
-              by a flex spacer; what you DO sits right. The old row fitted five
-              controls and wrapped the sixth, so Publish — the primary action —
-              landed alone on a line of its own while the space it needed sat
-              unused at the far left. Grouped, the pair wraps together or not at
-              all, and can never be split from each other. */}
-          <div className={styles.headTools}>
-          <LanguagePicker
-            className={styles.langPicker}
-            options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
-            value={editLocale}
-            onChange={setEditLocale}
-            ariaLabel={t('ariaEditLanguage')}
-            /* Switching languages is now the only route to the safe pass, so
-               say so somewhere the organizer will actually look. */
-            title={t('ariaLanguageHint')}
-          />
-          {translateTargets.length > 0 && (
-            // The one manual translate action, and it is the destructive one:
-            // catching up edited fields happens by switching language, which
-            // costs nothing when nothing changed. Labelled short because the
-            // row has to hold six controls in a 448px column — the tooltip
-            // carries what it does and points at the cheaper alternative.
-            <Button
-              variant="ghost"
-              size="sm"
-              title={t('translateAllTooltip')}
-              onClick={runTranslateAction}
-            >
-              {t('translateAllShort')}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={store.undo}
-            aria-label={t('ariaUndo')}
-            title={t('ariaUndo')}
-          >
-            ↩
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={store.redo}
-            aria-label={t('ariaRedo')}
-            title={t('ariaRedo')}
-          >
-            ↪
-          </Button>
-          </div>
+        <TabsContent value="questions">
+        <div className={styles.builder}>
+          {/* Palette */}
+          <aside className={styles.palette} aria-label={t('addQuestion')}>
+            {/* The version rides here rather than in the canvas header: that row has
+                to fit six controls beside a 20rem inspector in a 448px column, and
+                a passive fact was crowding out the actions. */}
+            <div className={styles.paletteHead}>
+              <h2 className="eyebrow">{t('addQuestion')}</h2>
+              <span className={styles.version}>v{versionNumber}</span>
+            </div>
+            <div className={styles.paletteGrid}>
+              {QUESTION_TYPES.map((type) => (
+                <button
+                  key={type}
+                  className={styles.paletteItem}
+                  onClick={() => store.addQuestion(type)}
+                >
+                  {tq(type)}
+                </button>
+              ))}
+            </div>
+          </aside>
 
-          {/* Labelled, and secondary rather than ghost. It used to be a ghost
-              button whose entire content was ◱ — a glyph that means nothing to
-              anyone, sat between the undo and redo arrows where it read as a
-              third editing tool, and could only be identified by hovering for
-              the tooltip. Preview is not a tool, it is the other half of the
-              builder: everything Publish will show an attendee, before it does.
-              So it says so, and stands beside Publish as the pair they are. */}
-          <div className={styles.headActions}>
-            <Button
-              variant="secondary"
-              size="sm"
-              title={t('previewFormHint')}
-              onClick={() => {
-                setPreviewAnswers({})
-                setPreviewing(true)
+          {/* Canvas */}
+          <section className={styles.canvas}>
+            <div className={styles.canvasHead}>
+              {/* Two groups, not one right-tucked run of six controls. What you
+                  edit WITH sits left, in the space that was previously held empty
+                  by a flex spacer; what you DO sits right. The old row fitted five
+                  controls and wrapped the sixth, so Publish — the primary action —
+                  landed alone on a line of its own while the space it needed sat
+                  unused at the far left. Grouped, the pair wraps together or not at
+                  all, and can never be split from each other. */}
+              <div className={styles.headTools}>
+              <LanguagePicker
+                className={styles.langPicker}
+                options={supportedLocales.map((l) => ({ value: l, label: localeNames[l] ?? l }))}
+                value={editLocale}
+                onChange={setEditLocale}
+                ariaLabel={t('ariaEditLanguage')}
+                /* Switching languages is now the only route to the safe pass, so
+                   say so somewhere the organizer will actually look. */
+                title={t('ariaLanguageHint')}
+              />
+              {translateTargets.length > 0 && (
+                // The one manual translate action, and it is the destructive one:
+                // catching up edited fields happens by switching language, which
+                // costs nothing when nothing changed. Labelled short because the
+                // row has to hold six controls in a 448px column — the tooltip
+                // carries what it does and points at the cheaper alternative.
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title={t('translateAllTooltip')}
+                  onClick={runTranslateAction}
+                >
+                  {t('translateAllShort')}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={store.undo}
+                aria-label={t('ariaUndo')}
+                title={t('ariaUndo')}
+              >
+                ↩
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={store.redo}
+                aria-label={t('ariaRedo')}
+                title={t('ariaRedo')}
+              >
+                ↪
+              </Button>
+              </div>
+
+              {/* Labelled, and secondary rather than ghost. It used to be a ghost
+                  button whose entire content was ◱ — a glyph that means nothing to
+                  anyone, sat between the undo and redo arrows where it read as a
+                  third editing tool, and could only be identified by hovering for
+                  the tooltip. Preview is not a tool, it is the other half of the
+                  builder: everything Publish will show an attendee, before it does.
+                  So it says so, and stands beside Publish as the pair they are. */}
+              <div className={styles.headActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title={t('previewFormHint')}
+                  onClick={() => {
+                    setPreviewAnswers({})
+                    setPreviewing(true)
+                  }}
+                >
+                  {t('previewForm')}
+                </Button>
+                {/* "Publish", not "Publish form": inside a form builder the noun is
+                    already given, and it is what this file's own unsaved-changes
+                    dialog has always called it. The shorter label is also what lets
+                    all six controls share the column without wrapping. */}
+                <span style={{ position: 'relative', display: 'inline-flex' }}>
+                  <Button size="sm" onClick={publish}>
+                    {t('publish')}
+                  </Button>
+                  <ConfettiBurst burst={publishBurst} />
+                </span>
+              </div>
+            </div>
+
+            {/* Its own line under the actions rather than inside them: a failed save
+                is the worst thing that can happen in a builder, so it stays next to
+                Publish where it gets noticed instead of in the far-left column — and
+                it can never push Publish sideways from here. Absent when idle. */}
+            {saveState !== 'idle' && (
+              <p aria-live="polite" className={styles.saveStateRow}>
+                {saveState === 'saving' && t('draftSaving')}
+                {saveState === 'saved' && t('draftSaved')}
+                {saveState === 'published' && (
+                  <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+                    {t('formPublished')}
+                  </strong>
+                )}
+                {saveState === 'saveFailed' && (
+                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+                )}
+                {saveState === 'publishFailed' && (
+                  <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
+                )}
+                {saveState === 'publishEmpty' && (
+                  <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
+                )}
+              </p>
+            )}
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (over && active.id !== over.id) store.moveQuestion(active.id, over.id)
               }}
             >
-              {t('previewForm')}
-            </Button>
-            {/* "Publish", not "Publish form": inside a form builder the noun is
-                already given, and it is what this file's own unsaved-changes
-                dialog has always called it. The shorter label is also what lets
-                all six controls share the column without wrapping. */}
-            <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <Button size="sm" onClick={publish}>
-                {t('publish')}
-              </Button>
-              <ConfettiBurst burst={publishBurst} />
-            </span>
-          </div>
+              <SortableContext
+                items={definition.questions.map((q) => q.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <ul className={styles.questionList}>
+                  {definition.questions.map((q) => (
+                    <SortableQuestionCard
+                      key={q.id}
+                      question={q}
+                      locale={editLocale}
+                      defaultLocale={defaultLocale}
+                      typeLabel={tq(q.type)}
+                      participantTypes={participantTypes}
+                      selected={q.id === selectedId}
+                      onSelect={() => store.select(q.id)}
+                      onRemove={() => store.removeQuestion(q.id)}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </section>
+
+          {/* Inspector */}
+          <aside className={styles.inspector}>
+            {selected ? (
+              <QuestionInspector
+                key={selected.id}
+                question={selected}
+                allQuestions={definition.questions}
+                participantTypes={participantTypes}
+                defaultLocale={defaultLocale}
+                supportedLocales={supportedLocales}
+                localeNames={localeNames}
+                editLocale={editLocale}
+                onChange={(patch) => store.updateQuestion(selected.id, patch)}
+              />
+            ) : (
+              <p className={styles.inspectorEmpty}>{t('inspectorEmpty')}</p>
+            )}
+          </aside>
         </div>
+        </TabsContent>
 
-        {/* Its own line under the actions rather than inside them: a failed save
-            is the worst thing that can happen in a builder, so it stays next to
-            Publish where it gets noticed instead of in the far-left column — and
-            it can never push Publish sideways from here. Absent when idle. */}
-        {saveState !== 'idle' && (
-          <p aria-live="polite" className={styles.saveStateRow}>
-            {saveState === 'saving' && t('draftSaving')}
-            {saveState === 'saved' && t('draftSaved')}
-            {saveState === 'published' && (
-              <strong className="publish-flash" style={{ color: 'var(--success)' }}>
-                {t('formPublished')}
-              </strong>
-            )}
-            {saveState === 'saveFailed' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
-            )}
-            {saveState === 'publishFailed' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
-            )}
-            {saveState === 'publishEmpty' && (
-              <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
-            )}
-          </p>
-        )}
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={({ active, over }) => {
-            if (over && active.id !== over.id) store.moveQuestion(active.id, over.id)
-          }}
-        >
-          <SortableContext
-            items={definition.questions.map((q) => q.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <ul className={styles.questionList}>
-              {definition.questions.map((q) => (
-                <SortableQuestionCard
-                  key={q.id}
-                  question={q}
-                  locale={editLocale}
-                  defaultLocale={defaultLocale}
-                  typeLabel={tq(q.type)}
-                  participantTypes={participantTypes}
-                  selected={q.id === selectedId}
-                  onSelect={() => store.select(q.id)}
-                  onRemove={() => store.removeQuestion(q.id)}
-                />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      </section>
-
-      {/* Inspector */}
-      <aside className={styles.inspector}>
-        {selected ? (
-          <QuestionInspector
-            key={selected.id}
-            question={selected}
-            allQuestions={definition.questions}
-            participantTypes={participantTypes}
-            defaultLocale={defaultLocale}
-            supportedLocales={supportedLocales}
-            localeNames={localeNames}
-            editLocale={editLocale}
-            onChange={(patch) => store.updateQuestion(selected.id, patch)}
-          />
-        ) : (
-          <p className={styles.inspectorEmpty}>{t('inspectorEmpty')}</p>
-        )}
-      </aside>
-    </div>
+        <TabsContent value="formsPage">
+          <div className={styles.pageTab}>
+            {/* Builder chrome, deliberately OUTSIDE the frame: everything
+                inside it is a picture of the register screen, so a control that
+                belongs to the console cannot sit among them. */}
+            <div className={styles.pageTabBar}>
+              {participantTypes.length > 1 && (
+                <label className={styles.previewTypePick}>
+                  <span>{t('previewAs')}</span>
+                  <NativeSelect
+                    value={previewTypeKey}
+                    onChange={(e) => setPreviewTypeKey(e.target.value)}
+                  >
+                    {participantTypes.map((pt) => (
+                      <option key={pt.key} value={pt.key}>
+                        {lt(pt.name, locale, defaultLocale) || pt.key}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </label>
+              )}
+              <p className={styles.pageTabHint}>{t('formsPageHint')}</p>
+            </div>
+            <div className={styles.pageFrame}>
+              <RegisterPreview
+                definition={definition}
+                eventName={eventName}
+                participantTypes={participantTypes}
+                participantTypeKey={previewTypeKey}
+                /* The language the form is being previewed in follows the
+                   builder's own language control on the Questions tab — the
+                   picker inside the frame belongs to the registrant's screen
+                   and does nothing. */
+                locale={editLocale}
+                defaultLocale={defaultLocale}
+                supportedLocales={supportedLocales}
+                localeNames={localeNames}
+                answers={previewAnswers}
+                onAnswerChange={(questionId, value) =>
+                  setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
+                }
+              />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </>
   )
 }
