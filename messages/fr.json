@@ -790,8 +790,7 @@
     "inviteQueued": "Invitation envoyée. L’accès sera accordé à la première connexion avec cette adresse.",
     "inviteGranted": "Ajouté à l’équipe.",
     "invitePending": "invité",
-    "roleRevoked": "{name} n’a plus de rôle global. Son compte, ses propres événements et tout événement auquel il a été invité ne changent pas — il a simplement quitté cette liste.",
-    "formsIntro": "Un formulaire est l’ensemble des questions auxquelles une personne répond en s’inscrivant. Le formulaire par défaut est utilisé sauf si un mode d’inscription ou un type de participant possède le sien."
+    "roleRevoked": "{name} n’a plus de rôle global. Son compte, ses propres événements et tout événement auquel il a été invité ne changent pas — il a simplement quitté cette liste."
   },
   "questionTypes": {
     "text": "Texte court",
