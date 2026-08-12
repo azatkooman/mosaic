@@ -762,6 +762,7 @@
     "closeRegistrationNow": "Close registration now",
     "closeRegistrationNowHelp": "Stops new registrations immediately, whatever the dates say. Uncheck to reopen.",
     "typeHidden": "Hide from the registration form",
+    "typeHiddenHelp": "A hidden type is left off the public form, but its link is not a secret — anyone holding it, or guessing it, can still register as that type.",
     "adminOnly": "Organizers only",
     "adminOnlyBadge": "organizers only",
     "adminOnlyHelp": "Hidden from the registration form. Only organizers can see and fill this in, from the participant's detail panel.",

@@ -762,6 +762,7 @@
     "closeRegistrationNow": "Cerrar las inscripciones ahora",
     "closeRegistrationNowHelp": "Detiene las nuevas inscripciones de inmediato, sin importar las fechas. Desmárcalo para reabrir.",
     "typeHidden": "Ocultar del formulario de inscripción",
+    "typeHiddenHelp": "Un tipo oculto no aparece en el formulario público, pero su enlace no es secreto: cualquiera que lo tenga, o lo adivine, puede inscribirse con ese tipo.",
     "adminOnly": "Solo organizadores",
     "adminOnlyBadge": "solo organizadores",
     "adminOnlyHelp": "Oculto en el formulario de inscripción. Solo los organizadores pueden verlo y rellenarlo desde el panel del participante.",

@@ -489,16 +489,21 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
     setTypes((prev) => prev.map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)))
   }
 
-  // Private registration link for one participant type. Built from the SAVED
+  // Direct registration link for one participant type. Built from the SAVED
   // slug — the slug input may hold an unsaved edit, and a link to a slug that
   // does not exist yet is worse than no link.
+  //
+  // Points at the EVENT PAGE, not straight at the form: whoever is handed this
+  // has had no other introduction to the event, and the page is the only place
+  // that says what it is, when and where — and the only one that explains
+  // itself when registration is closed. The page carries ?type= through to its
+  // Register button, so the form still opens with the type preselected.
   function copyTypeLink(pt) {
     const href = eventPageUrl({
       slug: event.slug,
       code: defaultLocale,
       uiLocale: locale,
       origin: window.location.origin,
-      subPath: '/register',
       params: { type: pt.key },
     })
     navigator.clipboard?.writeText(href).then(
@@ -792,9 +797,21 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
             the same sentence for every row, and in that column — the narrowest
             of the three, with .typeRow aligning its fields to the bottom — it
             was tall enough to push Name and Form out of line. */}
-        <p className="field-help" style={{ marginBottom: 'var(--s-4)' }}>
+        <p className="field-help" style={{ marginBottom: 'var(--s-2)' }}>
           {t('typeCapacityHelp')}
         </p>
+        {/* Only once something is hidden, and stated plainly: hiding is a
+            DISCOVERY rule, not an authorization one. submit_registration does
+            not check it (0042) and the link is a guessable ?type=<key>, so an
+            organizer who reads "Hide" as "make private" is wrong in a way that
+            matters. Beside the capacity line rather than under each checkbox,
+            for the same reason that one moved: it is one sentence about the
+            feature, not a property of each row. */}
+        {typeList.some((pt) => pt.hidden) && (
+          <p className="field-help" style={{ marginBottom: 'var(--s-4)' }}>
+            {t('typeHiddenHelp')}
+          </p>
+        )}
         <div className={styles.typeList}>
           {types.map((pt) => (
             <div key={pt.id} className={styles.typeRow}>
