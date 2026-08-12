@@ -13,6 +13,13 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals"),
   {
+    // ESLint 9 lints **/*.js, .mjs and .cjs by default and nothing here added
+    // .jsx, so EVERY React component in the project went unlinted — eslint
+    // reported "File ignored because no matching configuration was supplied"
+    // and next lint just printed no errors. That is how a ReferenceError on
+    // `typeList` reached production with a green lint, and why two broken JSX
+    // edits before it were caught only by the one test that imports the file.
+    files: ['**/*.js', '**/*.jsx', '**/*.mjs'],
     // next/core-web-vitals leaves no-undef off, so a missing import is only a
     // ReferenceError at render time — the build and lint both stay green.
     languageOptions: {

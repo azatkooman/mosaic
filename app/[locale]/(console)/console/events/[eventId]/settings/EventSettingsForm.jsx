@@ -807,7 +807,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
             matters. Beside the capacity line rather than under each checkbox,
             for the same reason that one moved: it is one sentence about the
             feature, not a property of each row. */}
-        {typeList.some((pt) => pt.hidden) && (
+        {types.some((pt) => pt.hidden) && (
           <p className="field-help" style={{ marginBottom: 'var(--s-4)' }}>
             {t('typeHiddenHelp')}
           </p>
