@@ -289,7 +289,7 @@
     "create": "Crear evento",
     "creating": "Creando…",
     "createError": "Ocurrió un error al crear el evento. Inténtalo de nuevo.",
-    "createNoAccess": "Tu cuenta no tiene permiso para crear eventos. Pide a un administrador que te dé acceso de organizador.",
+    "createNoAccess": "No se pudo crear el evento. Inténtalo de nuevo o cierra sesión y vuelve a entrar.",
     "createDateError": "La fecha de fin debe ser posterior a la de inicio.",
     "location": "Ubicación",
     "contactInfo": "Información de contacto",

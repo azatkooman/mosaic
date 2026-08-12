@@ -87,7 +87,11 @@ export function NewEventButton({ label }) {
       .single()
 
     if (insertError || !event) {
-      // 42501 = RLS rejection: the account lacks a global organizer/admin role.
+      // 42501 used to mean "not an organizer", back when events_insert
+      // required one. It cannot mean that now — 0052 opened creation to any
+      // signed-in user and 0054 let a creator see their own new row — so the
+      // only realistic cause left is a session whose token no longer matches
+      // auth.uid(), which signing out and back in fixes.
       setError(insertError?.code === '42501' ? t('createNoAccess') : t('createError'))
       setState('idle')
       return
