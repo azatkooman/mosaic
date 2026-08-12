@@ -138,9 +138,14 @@
   gap: var(--s-2);
 }
 
+/* The three --q-* variables below are the hooks a themed registration form
+   sets on a wrapper (see lib/form-appearance.js). Every fallback is the value
+   that was here before them, so a page that sets none renders identically —
+   which is every page in the console. */
 .field-label {
   font-weight: 600;
-  font-size: var(--text-sm);
+  font-size: var(--q-label-size, var(--text-sm));
+  color: var(--q-label-color, inherit);
 }
 
 .field-label .req {
@@ -150,7 +155,7 @@
 
 .field-help {
   font-size: var(--text-xs);
-  color: var(--ink-soft);
+  color: var(--q-help-color, var(--ink-soft));
 }
 
 .field-error {

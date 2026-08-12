@@ -31,7 +31,9 @@ import {
 } from '@/components/ui'
 import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
+import { resolveFormAppearance, pruneQuestionStyles } from '@/lib/form-appearance'
 import { RegisterPreview } from './RegisterPreview'
+import { FormAppearancePanel } from './FormAppearancePanel'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
 import { QuestionInspector } from './QuestionInspector'
@@ -48,6 +50,9 @@ export function FormBuilder({
   initialDefinition,
   participantTypes,
   eventName,
+  formId,
+  initialAppearance,
+  eventTheme,
   defaultLocale,
   supportedLocales,
   localeNames,
@@ -78,6 +83,23 @@ export function FormBuilder({
   const [editLocale, setEditLocale] = useState(defaultLocale)
   const initialized = useRef(false)
 
+  // --- Appearance (the Forms page tab) ---
+  //
+  // Kept in its own state and its own column rather than in the builder store,
+  // because it is not part of the definition and must not join the undo stack
+  // or the draft/publish cycle: a colour is live the moment it saves, and the
+  // questions are not live until Publish. Two lifecycles, two homes.
+  const [appearance, setAppearance] = useState(initialAppearance ?? {})
+  const [zone, setZone] = useState(null) // null = panel closed
+  const [styledQuestionId, setStyledQuestionId] = useState(null)
+  const [appearanceState, setAppearanceState] = useState('idle') // idle|saving|saved|failed
+  const appearanceLoaded = useRef(false)
+
+  const resolved = useMemo(
+    () => resolveFormAppearance(appearance, eventTheme),
+    [appearance, eventTheme]
+  )
+
   useEffect(() => {
     if (!initialized.current) {
       store.init(initialDefinition)
@@ -103,12 +125,18 @@ export function FormBuilder({
     const targets = Array.isArray(target) ? target : [target]
     if (!targets.length) return
     const snapshot = useBuilderStore.getState().definition
+    // The intro blurb on the Forms page tab is localized text like any question
+    // label, and it lives in the appearance rather than the definition — so both
+    // travel as one document. The walker only touches objects whose keys are
+    // language codes, which is why hex colours, question ids and type names
+    // inside the appearance pass through untouched.
+    const appearanceSnapshot = appearance
     try {
       const res = await fetch('/api/translate-form', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          definition: snapshot,
+          document: { definition: snapshot, appearance: appearanceSnapshot },
           source: defaultLocale,
           targets,
           // Tell the route the event's full language set so custom-language
@@ -120,11 +148,25 @@ export function FormBuilder({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) return
 
-      const nextDefinition = data?.translatedDefinition
+      const nextDefinition = data?.translatedDocument?.definition
+      const nextAppearance = data?.translatedDocument?.appearance
       if (!nextDefinition) return
       const latestDefinition = useBuilderStore.getState().definition
       if (JSON.stringify(latestDefinition) !== JSON.stringify(snapshot)) {
         return
+      }
+      // Guarded separately: the appearance can have been edited in the panel
+      // while the request was in flight, and adopting a stale copy would undo
+      // whatever the organizer just picked.
+      if (
+        nextAppearance &&
+        JSON.stringify(nextAppearance) !== JSON.stringify(appearanceSnapshot)
+      ) {
+        setAppearance((current) =>
+          JSON.stringify(current) === JSON.stringify(appearanceSnapshot)
+            ? nextAppearance
+            : current
+        )
       }
       // Also persists translation bookkeeping on runs that translated nothing:
       // adopting provenance for content that predates tracking has to be saved,
@@ -213,6 +255,43 @@ export function FormBuilder({
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, dirty, versionId])
+
+  // Debounced autosave of the appearance, mirroring the draft autosave above.
+  // No Publish and no dirty flag: forms.appearance is not versioned, so what is
+  // written here is what a registrant gets, and the unpublished-work guard has
+  // nothing to warn about.
+  //
+  // The ref skips the mount pass. Without it every visit to a form would write
+  // its appearance straight back — harmless in content but enough to make every
+  // form look freshly edited.
+  useEffect(() => {
+    if (!appearanceLoaded.current) {
+      appearanceLoaded.current = true
+      return
+    }
+    setAppearanceState('saving')
+    const handle = setTimeout(async () => {
+      // Deleting a question strands its override, which is already harmless at
+      // render time — the resolver never looks an unknown id up — so this is
+      // housekeeping, and it runs here because saving is the only moment that
+      // sees both the appearance and the current question list.
+      const pruned = pruneQuestionStyles(
+        appearance,
+        useBuilderStore.getState().definition.questions.map((q) => q.id)
+      )
+      if (pruned !== appearance) {
+        setAppearance(pruned)
+        return
+      }
+      const { error } = await supabase
+        .from('forms')
+        .update({ appearance: pruned })
+        .eq('id', formId)
+      setAppearanceState(error ? 'failed' : 'saved')
+    }, 900)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appearance, formId])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -545,27 +624,62 @@ export function FormBuilder({
                   </NativeSelect>
                 </label>
               )}
-              <p className={styles.pageTabHint}>{t('formsPageHint')}</p>
+              <Button
+                variant={zone ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={() => setZone(zone ? null : 'theme')}
+              >
+                {t('formCustomize')}
+              </Button>
+              <p className={styles.pageTabHint}>
+                {appearanceState === 'saving' && t('draftSaving')}
+                {appearanceState === 'saved' && t('draftSaved')}
+                {appearanceState === 'failed' && (
+                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+                )}
+                {appearanceState === 'idle' && t('formsPageHint')}
+              </p>
             </div>
-            <div className={styles.pageFrame}>
-              <RegisterPreview
-                definition={definition}
-                eventName={eventName}
-                participantTypes={participantTypes}
-                participantTypeKey={previewTypeKey}
-                /* The language the form is being previewed in follows the
-                   builder's own language control on the Questions tab — the
-                   picker inside the frame belongs to the registrant's screen
-                   and does nothing. */
-                locale={editLocale}
-                defaultLocale={defaultLocale}
-                supportedLocales={supportedLocales}
-                localeNames={localeNames}
-                answers={previewAnswers}
-                onAnswerChange={(questionId, value) =>
-                  setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
-                }
-              />
+            <div className={`${styles.pageSplit} ${zone ? styles.pageSplitOpen : ''}`}>
+              <div className={styles.pageFrame}>
+                <RegisterPreview
+                  definition={definition}
+                  eventName={eventName}
+                  participantTypes={participantTypes}
+                  participantTypeKey={previewTypeKey}
+                  /* The language the form is being previewed in follows the
+                     builder's own language control on the Questions tab — the
+                     picker inside the frame belongs to the registrant's screen
+                     and does nothing. */
+                  locale={editLocale}
+                  defaultLocale={defaultLocale}
+                  supportedLocales={supportedLocales}
+                  localeNames={localeNames}
+                  answers={previewAnswers}
+                  onAnswerChange={(questionId, value) =>
+                    setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
+                  }
+                  resolved={resolved}
+                  /* Only while the panel is open, so a preview being read
+                     rather than edited carries no console controls at all. */
+                  onEditZone={zone ? setZone : undefined}
+                />
+              </div>
+              {zone && (
+                <FormAppearancePanel
+                  appearance={appearance}
+                  resolved={resolved}
+                  onChange={setAppearance}
+                  zone={zone}
+                  onZoneChange={setZone}
+                  onClose={() => setZone(null)}
+                  questions={definition.questions.filter((q) => !q.archived)}
+                  selectedQuestionId={styledQuestionId}
+                  onSelectQuestion={setStyledQuestionId}
+                  editLocale={editLocale}
+                  defaultLocale={defaultLocale}
+                />
+              )}
             </div>
           </div>
         </TabsContent>

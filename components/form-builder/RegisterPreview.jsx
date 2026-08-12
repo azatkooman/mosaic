@@ -7,6 +7,15 @@ import frMessages from '@/messages/fr.json'
 import ruMessages from '@/messages/ru.json'
 import ukMessages from '@/messages/uk.json'
 import { LOCALES, lt, localeAcronym } from '@/lib/i18n/locales'
+import {
+  appearanceVars,
+  introTextFor,
+  questionVars,
+  showsBackLink,
+  showsLanguagePicker,
+  showsProgress,
+  titleStyle,
+} from '@/lib/form-appearance'
 import { Button, LanguagePicker } from '@/components/ui'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import wizardStyles from '@/components/wizard/wizard.module.css'
@@ -65,6 +74,8 @@ export function RegisterPreview({
   localeNames,
   answers,
   onAnswerChange,
+  resolved,
+  onEditZone,
 }) {
   // Platform text only exists in the five platform locales. A custom language
   // gets its chrome at runtime from the cached machine translations in
@@ -93,6 +104,8 @@ export function RegisterPreview({
         localeNames={localeNames}
         answers={answers}
         onAnswerChange={onAnswerChange}
+        resolved={resolved}
+        onEditZone={onEditZone}
       />
     </NextIntlClientProvider>
   )
@@ -109,76 +122,134 @@ function RegisterPreviewBody({
   localeNames,
   answers,
   onAnswerChange,
+  resolved,
+  onEditZone,
 }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
+  const tConsole = useTranslations('console')
 
   const type = participantTypes.find((pt) => pt.key === participantTypeKey)
   const typeName = type ? lt(type.name, locale, defaultLocale) || type.key : ''
+  const intro = introTextFor(resolved, locale, defaultLocale)
+
+  // A pencil in the corner rather than a clickable zone. Making the zone itself
+  // the control would nest the form's own inputs inside an interactive element,
+  // which is invalid and unusable with a keyboard; a real button beside it is
+  // neither. Absent entirely when the preview is not being customized.
+  const edit = (zone, label) =>
+    onEditZone ? (
+      <button
+        type="button"
+        className={styles.zoneEdit}
+        onClick={() => onEditZone(zone)}
+        aria-label={`${tConsole('formCustomize')}: ${label}`}
+        title={label}
+      >
+        ✎
+      </button>
+    ) : null
 
   return (
-    <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+    // The theme rides here, on the same element that holds the page's own
+    // width, so `--container-narrow` is in scope for the class that reads it.
+    <div
+      className="container-narrow"
+      style={{ paddingBlock: 'var(--s-6)', ...appearanceVars(resolved) }}
+    >
       {/* The register page's own header row, rule for rule: the picker holds
           the right edge and the back link drops to its own line on a narrow
           screen rather than squeezing both onto one. */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 'var(--s-3)',
-          flexWrap: 'wrap',
-          marginBottom: 'var(--s-3)',
-        }}
-      >
-        {/* The real page renders this as an <a>; a button with nothing behind
-            it is the same thing minus the navigation. Built from the shared
-            Button either way, so the two can never diverge visually. */}
-        <Button variant="ghost" size="sm" className={styles.inert}>
-          <span aria-hidden="true">&larr;</span> {t('backToEvent')}
-        </Button>
-        {/* No `href` and no `onChange`, so choosing a language does nothing and
-            the select snaps back to the previewed one. Renders nothing at all
-            when the event is offered in a single language — which is what the
-            register page does too, and the reason this is the real component
-            rather than a drawn-on lookalike. */}
-        <LanguagePicker
-          options={supportedLocales.map((code) => ({
-            value: code,
-            // Short codes here, matching the event page an attendee just came
-            // from; the console's own pickers keep full names.
-            label: localeAcronym(code),
-          }))}
-          value={locale}
-          ariaLabel={tCommon('language')}
-        />
+      <div className={styles.zone}>
+        {edit('header', tConsole('formZone_header'))}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 'var(--s-3)',
+            flexWrap: 'wrap',
+            marginBottom: 'var(--s-3)',
+            // The row still has to hold its height with both controls hidden,
+            // or the title jumps up and the header stops being a place to click.
+            minHeight: '2rem',
+          }}
+        >
+          {/* The real page renders this as an <a>; a button with nothing behind
+              it is the same thing minus the navigation. Built from the shared
+              Button either way, so the two can never diverge visually. */}
+          {showsBackLink(resolved) ? (
+            <Button variant="ghost" size="sm" className={styles.inert}>
+              <span aria-hidden="true">&larr;</span> {t('backToEvent')}
+            </Button>
+          ) : (
+            <span />
+          )}
+          {/* No `href` and no `onChange`, so choosing a language does nothing and
+              the select snaps back to the previewed one. Renders nothing at all
+              when the event is offered in a single language — which is what the
+              register page does too, and the reason this is the real component
+              rather than a drawn-on lookalike. */}
+          {showsLanguagePicker(resolved) && (
+            <LanguagePicker
+              options={supportedLocales.map((code) => ({
+                value: code,
+                // Short codes here, matching the event page an attendee just
+                // came from; the console's own pickers keep full names.
+                label: localeAcronym(code),
+              }))}
+              value={locale}
+              ariaLabel={tCommon('language')}
+            />
+          )}
+        </div>
       </div>
 
-      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
+      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)', ...titleStyle(resolved) }}>
         {t('title', { event: lt(eventName, locale, defaultLocale) })}
       </h1>
+
+      {(intro || onEditZone) && (
+        <div className={styles.zone}>
+          {edit('intro', tConsole('formZone_intro'))}
+          {intro ? (
+            <p className={styles.introText}>{intro}</p>
+          ) : (
+            <p className={styles.introEmpty}>{tConsole('showIntro')}</p>
+          )}
+        </div>
+      )}
 
       <div className={wizardStyles.panel}>
         {/* One participant, because a preview has no counts step to have
             answered — a real registration reads "Participant 2 of 4" here. */}
-        <p className="eyebrow">
-          {t('participantOf', { index: 1, total: 1 })}
-          {typeName ? ` · ${typeName}` : ''}
-        </p>
-        <FormRenderer
-          definition={definition}
-          participantTypeKey={participantTypeKey}
-          locale={locale}
-          defaultLocale={defaultLocale}
-          answers={answers}
-          onChange={onAnswerChange}
-          preview
-        />
-        <div className={wizardStyles.nav}>
-          <Button variant="ghost" className={styles.inert}>
-            {tCommon('back')}
-          </Button>
-          <Button className={styles.inert}>{tCommon('next')}</Button>
+        {showsProgress(resolved) && (
+          <p className="eyebrow">
+            {t('participantOf', { index: 1, total: 1 })}
+            {typeName ? ` · ${typeName}` : ''}
+          </p>
+        )}
+        <div className={styles.zone}>
+          {edit('questions', tConsole('formZone_questions'))}
+          <FormRenderer
+            definition={definition}
+            participantTypeKey={participantTypeKey}
+            locale={locale}
+            defaultLocale={defaultLocale}
+            answers={answers}
+            onChange={onAnswerChange}
+            preview
+            questionVars={(q) => questionVars(resolved, q)}
+          />
+        </div>
+        <div className={styles.zone}>
+          {edit('nav', tConsole('formZone_nav'))}
+          <div className={wizardStyles.nav}>
+            <Button variant="ghost" className={styles.inert}>
+              {tCommon('back')}
+            </Button>
+            <Button className={styles.inert}>{tCommon('next')}</Button>
+          </div>
         </div>
       </div>
     </div>

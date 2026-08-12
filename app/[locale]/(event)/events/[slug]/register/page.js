@@ -9,6 +9,14 @@ import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
 import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
+import {
+  appearanceVars,
+  introTextFor,
+  resolveFormAppearance,
+  showsBackLink,
+  showsLanguagePicker,
+  titleStyle,
+} from '@/lib/form-appearance'
 
 export const dynamic = 'force-dynamic'
 
@@ -144,7 +152,7 @@ export default async function RegisterPage({ params, searchParams }) {
 
   const { data: types } = await supabase
     .from('participant_types')
-    .select('id, key, name, capacity, hidden, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id )')
+    .select('id, key, name, capacity, hidden, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id, appearance )')
     .eq('event_id', event.id)
     .order('sort_order')
   if (!types?.length) notFound()
@@ -153,7 +161,7 @@ export default async function RegisterPage({ params, searchParams }) {
   // respondent picks that registration mode.
   const { data: modeFormRows } = await supabase
     .from('forms')
-    .select('registration_mode, current_version_id')
+    .select('registration_mode, current_version_id, appearance')
     .eq('event_id', event.id)
     .not('registration_mode', 'is', null)
 
@@ -172,9 +180,16 @@ export default async function RegisterPage({ params, searchParams }) {
   const defById = new Map((versions ?? []).map((v) => [v.id, v.definition]))
 
   const modeForms = {}
+  // Appearance (0054) is per FORM, so it follows the same override order the
+  // definitions do: a mode form's look wins over the participant type's for
+  // exactly the registrations that mode form covers. Kept as its own map rather
+  // than folded into modeForms, whose values are definitions everywhere they
+  // are read.
+  const modeAppearance = {}
   for (const f of modeFormRows ?? []) {
     if (f.current_version_id && defById.has(f.current_version_id)) {
       modeForms[f.registration_mode] = defById.get(f.current_version_id)
+      modeAppearance[f.registration_mode] = f.appearance ?? {}
     }
   }
 
@@ -193,6 +208,7 @@ export default async function RegisterPage({ params, searchParams }) {
       definition: pt.forms?.current_version_id
         ? defById.get(pt.forms.current_version_id) ?? { questions: [] }
         : null,
+      appearance: pt.forms?.appearance ?? {},
     }))
 
   // Resolve the deep link against types that are actually registerable, then
@@ -227,6 +243,8 @@ export default async function RegisterPage({ params, searchParams }) {
       participantTypes={offeredTypes}
       preselectedTypeKey={preselectedTypeKey}
       modeForms={modeForms}
+      modeAppearance={modeAppearance}
+      eventTheme={event.page_content?.theme ?? {}}
       userId={user.id}
       profile={profile}
       contentLocale={contentLocale}
@@ -240,8 +258,26 @@ export default async function RegisterPage({ params, searchParams }) {
     wizardElement
   )
 
+  // The shell — title, back link, language picker — is drawn before the reader
+  // has chosen anything, so it takes the look of the form they will land on:
+  // the one their ?type= link names, otherwise the first type on offer. Once a
+  // mode or type IS chosen the wizard re-applies that form's own variables over
+  // these, which is what makes "the group form can look different" true rather
+  // than only true below the title.
+  const shellAppearance =
+    (preselectedTypeKey
+      ? offeredTypes.find((pt) => pt.key === preselectedTypeKey)?.appearance
+      : null) ??
+    offeredTypes[0]?.appearance ??
+    {}
+  const shell = resolveFormAppearance(shellAppearance, event.page_content?.theme)
+  const intro = introTextFor(shell, contentLocale, event.default_locale)
+
   return (
-    <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+    <div
+      className="container-narrow"
+      style={{ paddingBlock: 'var(--s-6)', ...appearanceVars(shell) }}
+    >
       <div
         style={{
           display: 'flex',
@@ -254,9 +290,9 @@ export default async function RegisterPage({ params, searchParams }) {
           marginBottom: 'var(--s-3)',
         }}
       >
-        {backToEvent}
+        {showsBackLink(shell) ? backToEvent : <span />}
         <LanguagePicker
-          options={localeOptions.map((code) => ({
+          options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
             value: code,
             // Short code here too, matching the event page an attendee just
             // came from; the console keeps full names.
@@ -267,14 +303,15 @@ export default async function RegisterPage({ params, searchParams }) {
               slug, code, uiLocale: locale, subPath: '/register',
               params: { type: typeParam },
             }),
-          }))}
+          })) : []}
           value={contentLocale}
           ariaLabel={tCommon('language')}
         />
       </div>
-      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
+      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)', ...titleStyle(shell) }}>
         {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
       </h1>
+      {intro && <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap' }}>{intro}</p>}
       {wizard}
     </div>
   )

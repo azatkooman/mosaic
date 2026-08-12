@@ -12,7 +12,7 @@
 
 .section h3 {
   font-size: var(--text-lg);
-  color: var(--pine-deep);
+  color: var(--q-section-color, var(--pine-deep));
 }
 
 .section p {
