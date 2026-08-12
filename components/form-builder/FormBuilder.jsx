@@ -30,7 +30,6 @@ import {
   TabsContent,
 } from '@/components/ui'
 import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
-import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { RegisterPreview } from './RegisterPreview'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
@@ -72,7 +71,6 @@ export function FormBuilder({
   // moment you arrive and would warn on a page nobody edited.
   const [unpublished, setUnpublished] = useState(false)
   const [publishBurst, setPublishBurst] = useState(null)
-  const [previewing, setPreviewing] = useState(false)
   const [previewAnswers, setPreviewAnswers] = useState({})
   const [previewTypeKey, setPreviewTypeKey] = useState(participantTypes[0]?.key ?? '')
   const [editLocale, setEditLocale] = useState(defaultLocale)
@@ -259,57 +257,6 @@ export function FormBuilder({
 
   const selected = definition.questions.find((q) => q.id === selectedId)
 
-  if (previewing) {
-    return (
-      <div className={styles.preview}>
-        {/* Preview is the same page with the same unpublished state, and it is
-            a likelier place to wander off from than the editor — so the guard
-            has to be mounted on this branch too, not only the one below. */}
-        <UnsavedChangesGuard
-          when={unpublished}
-          title={t('unpublishedTitle')}
-          body={t('unpublishedBody')}
-          leaveLabel={t('unpublishedLeave')}
-          action={{ label: t('publish'), busyLabel: t('publishing'), run: publish }}
-        />
-        <div className={styles.previewHead}>
-          <Button variant="ghost" size="sm" onClick={() => setPreviewing(false)}>
-            ← {t('backToEditor')}
-          </Button>
-          <span className={styles.previewHint}>{t('previewHint')}</span>
-          {participantTypes.length > 1 && (
-            <label className={styles.previewTypePick}>
-              <span>{t('previewAs')}</span>
-              <NativeSelect
-                value={previewTypeKey}
-                onChange={(e) => setPreviewTypeKey(e.target.value)}
-              >
-                {participantTypes.map((pt) => (
-                  <option key={pt.key} value={pt.key}>
-                    {lt(pt.name, locale, defaultLocale) || pt.key}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          )}
-        </div>
-        <div className={styles.previewForm}>
-          <FormRenderer
-            definition={definition}
-            participantTypeKey={previewTypeKey}
-            locale={editLocale}
-            defaultLocale={defaultLocale}
-            answers={previewAnswers}
-            onChange={(questionId, value) =>
-              setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
-            }
-            preview
-          />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <>
       {/* Unlike the other two editors this one autosaves, so the question on
@@ -416,29 +363,11 @@ export function FormBuilder({
               </Button>
               </div>
 
-              {/* Labelled, and secondary rather than ghost. It used to be a ghost
-                  button whose entire content was ◱ — a glyph that means nothing to
-                  anyone, sat between the undo and redo arrows where it read as a
-                  third editing tool, and could only be identified by hovering for
-                  the tooltip. Preview is not a tool, it is the other half of the
-                  builder: everything Publish will show an attendee, before it does.
-                  So it says so, and stands beside Publish as the pair they are. */}
+              {/* "Publish", not "Publish form": inside a form builder the noun
+                  is already given, and it is what this file's own
+                  unsaved-changes dialog has always called it. Preview used to
+                  stand beside it here; the Preview form tab replaced it. */}
               <div className={styles.headActions}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  title={t('previewFormHint')}
-                  onClick={() => {
-                    setPreviewAnswers({})
-                    setPreviewing(true)
-                  }}
-                >
-                  {t('previewForm')}
-                </Button>
-                {/* "Publish", not "Publish form": inside a form builder the noun is
-                    already given, and it is what this file's own unsaved-changes
-                    dialog has always called it. The shorter label is also what lets
-                    all six controls share the column without wrapping. */}
                 <span style={{ position: 'relative', display: 'inline-flex' }}>
                   <Button size="sm" onClick={publish}>
                     {t('publish')}
