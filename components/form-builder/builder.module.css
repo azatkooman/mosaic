@@ -41,19 +41,33 @@
 .canvasHead {
   display: flex;
   align-items: center;
-  /* Six controls share a ~448px column, and the standard --s-2 leaves the row
-     7px short of fitting. A slightly tighter gap buys it back; wrapping below
-     still catches any locale whose labels run longer. */
-  gap: var(--s-1);
+  /* Between the two groups; within each, .headTools/.headActions set their own
+     tighter gap. Six controls share a ~448px column and the fit is close, which
+     is why the labels either side of this are kept short. */
+  gap: var(--s-3);
   margin-bottom: var(--s-3);
   /* Wrap, or the row overflows its grid column and the sticky inspector — a
      later sibling with an opaque background — paints straight over the tail of
-     it. Publish is the last item, so it was the one that disappeared. */
+     it. Publish is the last item, so it was the one that disappeared.
+     Wrapping now happens BETWEEN the two groups rather than between individual
+     controls, so a narrow column drops the whole action pair to its own line
+     instead of stranding Publish alone below Preview. */
   flex-wrap: wrap;
-  /* Once wrapped, keep the controls tucked to the right rather than stranded
-     against the version badge. The flex:1 spacer already handles row one, so
-     this only affects the wrapped rows. */
-  justify-content: flex-end;
+}
+
+.headTools,
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+}
+
+/* What you edit with sits left, in the space a flex spacer used to hold empty;
+   what you do sits right. The auto margin keeps the actions right-aligned both
+   on the shared row and on a line of their own once the row wraps. */
+.headActions {
+  margin-inline-start: auto;
 }
 
 .version {

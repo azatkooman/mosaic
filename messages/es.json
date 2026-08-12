@@ -269,7 +269,6 @@
     "showWhen": "Mostrar esta pregunta cuando",
     "allOf": "se cumplan todas las condiciones",
     "anyOf": "se cumpla alguna condición",
-    "publishForm": "Publicar formulario",
     "previewForm": "Vista previa",
     "previewFormHint": "Mira el formulario como lo verá un asistente. Nada de lo que escribas se guarda.",
     "backToEditor": "Volver al editor",
