@@ -271,6 +271,7 @@
     "anyOf": "se cumpla alguna condición",
     "publishForm": "Publicar formulario",
     "previewForm": "Vista previa",
+    "previewFormHint": "Mira el formulario como lo verá un asistente. Nada de lo que escribas se guarda.",
     "backToEditor": "Volver al editor",
     "previewAs": "Ver como",
     "previewHint": "Esto es una vista previa: las respuestas no se guardan.",

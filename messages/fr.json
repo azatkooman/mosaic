@@ -271,6 +271,7 @@
     "anyOf": "au moins une condition est remplie",
     "publishForm": "Publier le formulaire",
     "previewForm": "Aperçu",
+    "previewFormHint": "Voyez le formulaire tel qu’un participant le verra. Rien de ce que vous y saisissez n’est enregistré.",
     "backToEditor": "Retour à l'éditeur",
     "previewAs": "Voir comme",
     "previewHint": "Ceci est un aperçu — les réponses ne sont pas enregistrées.",
