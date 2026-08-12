@@ -115,8 +115,8 @@ export default async function AdminEventParticipants({ params }) {
           type: t('console.byType'),
           status: t('console.byStatus'),
           archived: t('console.adminArchivedRow'),
-          profileName: t('console.profileName'),
-          profileEmail: t('console.profileEmail'),
+          profileName: t('console.registeredBy'),
+          profileEmail: t('console.registeredByEmail'),
           registeredAt: t('console.adminRegisteredAt'),
           answers: t('console.adminAnswers'),
           // Placeholders are substituted client-side, where the counts live.

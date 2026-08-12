@@ -39,7 +39,7 @@ const BUCKETS = {
   all: { questions: [...INDIVIDUAL, ...GROUP], versionIds: ['s2', 'f1', 'f3'] },
 }
 
-function render(buckets, initialBucket, formTitles) {
+function render(buckets, initialBucket, formTitles, perms = {}) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
       <QueryClientProvider client={new QueryClient()}>
@@ -50,6 +50,8 @@ function render(buckets, initialBucket, formTitles) {
           definitionByVersion={{}}
           formTitles={formTitles}
           initialBucket={initialBucket}
+          canEdit={perms.canEdit}
+          canChangeStatus={perms.canChangeStatus}
         />
       </QueryClientProvider>
     </NextIntlClientProvider>
@@ -136,5 +138,30 @@ describe('participants buckets', () => {
     const exports = [...html.matchAll(/href="([^"]*\/api\/export[^"]*)"/g)].map((m) => m[1])
     expect(exports).toHaveLength(2)
     for (const href of exports) expect(href).toContain('bucket=all')
+  })
+
+  it('always offers an Actions column, whatever the viewer may do', () => {
+    // It used to disappear entirely for roles that cannot change status, since
+    // the status select was all it held. It now also carries each row's own
+    // open control — Reg. # was the ONLY way into a registration, and nobody
+    // reads a number as "edit this person". There is no name column to hang it
+    // on instead: names are ordinary form questions an organizer can remove.
+    //
+    // Only the header is asserted. react-query does not run queryFn during a
+    // server render and this project has no jsdom, so the body is always
+    // "Loading…" here and no row-level control can be exercised.
+    for (const perms of [{ canEdit: true, canChangeStatus: true }, { canEdit: false, canChangeStatus: false }]) {
+      expect(headers(render(BUCKETS, 'individual', undefined, perms))).toContain('Actions')
+    }
+  })
+
+  it('names the account holder columns for what they mean', () => {
+    // "Profile Name"/"Profile Email" did not say that this is whoever performed
+    // the registration — on a group booking, the same person on every row.
+    const cols = headers(render(BUCKETS, 'individual'))
+    expect(cols).toContain('Registered by')
+    expect(cols).toContain('Registered by (email)')
+    expect(cols).not.toContain('Profile Name')
+    expect(cols).not.toContain('Profile Email')
   })
 })
