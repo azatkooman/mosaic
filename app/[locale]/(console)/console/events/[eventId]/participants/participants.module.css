@@ -285,16 +285,3 @@
   color: var(--ink);
   border-color: var(--ink-soft);
 }
-
-/* Two date inputs read as one control when they share a label. */
-.dateRange {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  flex-wrap: wrap;
-}
-
-.dateRangeLabel {
-  color: var(--ink-soft);
-  font-size: var(--text-xs);
-}

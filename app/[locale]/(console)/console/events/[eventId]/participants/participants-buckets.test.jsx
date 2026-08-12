@@ -164,4 +164,21 @@ describe('participants buckets', () => {
     expect(cols).not.toContain('Profile Name')
     expect(cols).not.toContain('Profile Email')
   })
+
+  it('offers the registration-date window as one button, not two loose inputs', () => {
+    // Two bare date inputs took three times the width of a filter button, wrapped
+    // mid-control when the toolbar ran out of room, and said nothing about what
+    // the second date bounded. Also guards the JSX itself: this file is the only
+    // thing that parses the table component, and lint does not.
+    const html = render(BUCKETS, 'individual')
+    expect(html).toContain('Registration date')
+    expect(html).not.toContain('type="date"')
+  })
+
+  it('keeps every toolbar filter present', () => {
+    const html = render(BUCKETS, 'individual')
+    for (const label of ['Search', 'By status', 'By participant type', 'By check-in', 'Registration date']) {
+      expect(html).toContain(label)
+    }
+  })
 })

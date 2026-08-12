@@ -23,7 +23,7 @@ import {
   normalizeAnswerFilter,
 } from '@/lib/participants-query'
 import { useDateFormatPrefs } from '@/components/providers/DateFormatProvider'
-import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect } from '@/components/ui'
+import { Badge, Button, Dialog, DropdownMenu, Field, Input, NativeSelect, Popover } from '@/components/ui'
 import { ParticipantDetail } from './ParticipantDetail'
 import styles from './participants.module.css'
 
@@ -474,24 +474,26 @@ export function ParticipantsTable({
 
         {/* When they registered — the one thing about a participant that no
             form question records, and so was unfilterable however the event
-            was built. */}
-        <span className={styles.dateRange}>
-          <span className={styles.dateRangeLabel}>{t('console.registeredBetween')}</span>
-          <Input
-            type="date"
-            aria-label={t('console.filterFrom')}
-            value={registeredFrom}
-            onChange={(e) => { setRegisteredFrom(e.target.value); setPage(0) }}
-            style={{ maxInlineSize: '9.5rem' }}
-          />
-          <Input
-            type="date"
-            aria-label={t('console.filterTo')}
-            value={registeredTo}
-            onChange={(e) => { setRegisteredTo(e.target.value); setPage(0) }}
-            style={{ maxInlineSize: '9.5rem' }}
-          />
-        </span>
+            was built. A button like its neighbours rather than two loose date
+            inputs: those took three times the width, wrapped mid-control when
+            the toolbar ran out of room, and gave no clue what the second date
+            was for. */}
+        <DateRangeMenu
+          label={t('console.registeredBetween')}
+          from={registeredFrom}
+          to={registeredTo}
+          onChange={(next) => {
+            setRegisteredFrom(next.from)
+            setRegisteredTo(next.to)
+            setPage(0)
+          }}
+          labels={{
+            from: t('console.filterFrom'),
+            to: t('console.filterTo'),
+            help: t('console.registeredBetweenHelp'),
+            clear: t('console.clearFilters'),
+          }}
+        />
 
         {filterableQuestions.length > 0 && (
           <AnswerFilterPicker
@@ -926,6 +928,55 @@ function formatAnswer(value, question, locale, dateFmt) {
  * list appended to, so the selection always carries the canonical order —
  * which is what makes the export URL stable enough to compare and share.
  */
+/**
+ * A from/to window behind one button.
+ *
+ * The trigger carries the chosen range, so a filter that is narrowing the table
+ * says so without being opened — the two bare inputs it replaced showed their
+ * values but never what they meant.
+ */
+function DateRangeMenu({ label, from, to, onChange, labels }) {
+  const summary = from && to ? `${from} – ${to}` : from ? `${from} –` : to ? `– ${to}` : ''
+  return (
+    <Popover
+      trigger={
+        <Button variant="secondary" size="sm" aria-label={label}>
+          {summary ? `${label}: ${summary}` : label}
+        </Button>
+      }
+    >
+      <div style={{ display: 'grid', gap: 'var(--s-2)', padding: 'var(--s-2)', minInlineSize: '13rem' }}>
+        <p className="field-help" style={{ margin: 0 }}>{labels.help}</p>
+        <Field label={labels.from}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="date"
+              value={from}
+              onChange={(e) => onChange({ from: e.target.value, to })}
+            />
+          )}
+        </Field>
+        <Field label={labels.to}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="date"
+              value={to}
+              onChange={(e) => onChange({ from, to: e.target.value })}
+            />
+          )}
+        </Field>
+        {(from || to) && (
+          <Button variant="ghost" size="sm" onClick={() => onChange({ from: '', to: '' })}>
+            {labels.clear}
+          </Button>
+        )}
+      </div>
+    </Popover>
+  )
+}
+
 function ChecklistMenu({ label, values, options, onChange }) {
   return (
     <DropdownMenu
