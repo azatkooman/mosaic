@@ -789,7 +789,8 @@
     "inviteError": "Impossible d’envoyer cette invitation. Veuillez réessayer.",
     "inviteQueued": "Invitation envoyée. L’accès sera accordé à la première connexion avec cette adresse.",
     "inviteGranted": "Ajouté à l’équipe.",
-    "invitePending": "invité"
+    "invitePending": "invité",
+    "roleRevoked": "{name} n’a plus de rôle global. Son compte, ses propres événements et tout événement auquel il a été invité ne changent pas — il a simplement quitté cette liste."
   },
   "questionTypes": {
     "text": "Texte court",
