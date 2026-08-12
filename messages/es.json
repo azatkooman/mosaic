@@ -771,7 +771,12 @@
     "duplicateEventHelp": "Copia los formularios, las preguntas y los tipos de participante, pero ninguna inscripción. La copia empieza como borrador, así que revisa las fechas antes de publicarla.",
     "duplicateEventSlugTaken": "Ese nombre ya está en uso. Prueba con otro.",
     "duplicating": "Duplicando…",
-    "duplicateError": "No se pudo duplicar este evento."
+    "duplicateError": "No se pudo duplicar este evento.",
+    "registeredBetween": "Inscrito",
+    "filterFrom": "Desde",
+    "filterTo": "Hasta",
+    "activeFilters": "Filtros",
+    "removeFilter": "Quitar filtro"
   },
   "questionTypes": {
     "text": "Texto corto",
@@ -914,5 +919,23 @@
     "typeLabel": "Tipo de participante",
     "regNo": "N.º de inscripción",
     "openScanner": "Abrir el escáner"
+  },
+  "filterOps": {
+    "after": "después de",
+    "anyOf": "es alguno de",
+    "before": "antes de",
+    "between": "entre",
+    "contains": "contiene",
+    "empty": "está vacío",
+    "eq": "es",
+    "gt": "mayor que",
+    "hasAll": "incluye todos",
+    "hasNone": "no incluye ninguno de",
+    "is": "es",
+    "isNot": "no es",
+    "lt": "menor que",
+    "neq": "no es",
+    "notEmpty": "no está vacío",
+    "on": "el"
   }
 }

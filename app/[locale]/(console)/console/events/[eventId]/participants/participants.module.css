@@ -260,3 +260,41 @@
     font-size: var(--text-xs);
   }
 }
+
+/* An active answer filter, shown so a stacked set is legible: the picker only
+   ever displays one question's controls, so without these the sole evidence
+   that three more were narrowing the table was the count beside "Clear". */
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill, 999px);
+  background: var(--surface-2, transparent);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  max-inline-size: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterChip:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+/* Two date inputs read as one control when they share a label. */
+.dateRange {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.dateRangeLabel {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}

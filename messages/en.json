@@ -771,7 +771,12 @@
     "duplicateEventHelp": "Copies the forms, questions and participant types — but no registrations. The copy starts as a draft, so check the dates before publishing.",
     "duplicateEventSlugTaken": "That name is already in use. Try a different one.",
     "duplicating": "Duplicating…",
-    "duplicateError": "Could not duplicate this event."
+    "duplicateError": "Could not duplicate this event.",
+    "registeredBetween": "Registered",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "activeFilters": "Filters",
+    "removeFilter": "Remove filter"
   },
   "questionTypes": {
     "text": "Short text",
@@ -914,5 +919,23 @@
     "typeLabel": "Participant type",
     "regNo": "Reg. #",
     "openScanner": "Open the scanner"
+  },
+  "filterOps": {
+    "after": "after",
+    "anyOf": "is any of",
+    "before": "before",
+    "between": "between",
+    "contains": "contains",
+    "empty": "is empty",
+    "eq": "is",
+    "gt": "greater than",
+    "hasAll": "includes all",
+    "hasNone": "includes none of",
+    "is": "is",
+    "isNot": "is not",
+    "lt": "less than",
+    "neq": "is not",
+    "notEmpty": "is not empty",
+    "on": "on"
   }
 }

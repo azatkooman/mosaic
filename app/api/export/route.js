@@ -41,6 +41,12 @@ export async function GET(request) {
   const status = url.searchParams.get('status')
   const typeId = url.searchParams.get('typeId')
   const search = url.searchParams.get('q') ?? ''
+  // Check-in used to have no parameter here at all, so a download from a
+  // check-in-filtered view quietly contained everyone. It travels with the
+  // rest now because applyParticipantFilters owns it.
+  const checkin = url.searchParams.get('checkin') ?? ''
+  const registeredFrom = url.searchParams.get('registeredFrom') ?? ''
+  const registeredTo = url.searchParams.get('registeredTo') ?? ''
   // Which participants list this download is for. 'all' is the merged view
   // (the union of both lists' questions, plus registration kind); anything else
   // but 'group' means the individual list, so an older link without the param
@@ -140,7 +146,10 @@ export async function GET(request) {
         .range(from, from + PAGE - 1)
       q = applyParticipantFilters(
         q,
-        { status, typeId, search, answerFilters, formVersionIds: versionIds },
+        {
+          status, typeId, search, answerFilters, checkin, registeredFrom, registeredTo,
+          formVersionIds: versionIds,
+        },
         questions
       )
       q = applyParticipantSort(q, sort, questions)
