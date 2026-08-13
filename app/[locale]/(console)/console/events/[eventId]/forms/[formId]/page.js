@@ -32,7 +32,7 @@ export default async function FormBuilderPage({ params }) {
       .select('name, default_locale, supported_locales, page_content')
       .eq('id', eventId)
       .single(),
-    // Appearance (0054) rides on the form, not the version: it is not versioned
+    // Appearance (0055) rides on the form, not the version: it is not versioned
     // data and changing it must never require publishing.
     supabase.from('forms').select('appearance').eq('id', formId).single(),
   ])

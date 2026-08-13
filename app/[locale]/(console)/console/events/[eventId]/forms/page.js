@@ -22,16 +22,6 @@ export default async function FormsPage({ params }) {
 
   return (
     <div style={{ maxInlineSize: '40rem', display: 'grid', gap: 'var(--s-4)' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <NewFormButton
-          eventId={eventId}
-          existingForms={(forms ?? []).map((f) => ({
-            id: f.id,
-            title: f.title,
-            registration_mode: f.registration_mode,
-          }))}
-        />
-      </div>
       <div className="table-wrap table-cards">
         <table className="table">
           <tbody>
@@ -78,6 +68,23 @@ export default async function FormsPage({ params }) {
             })}
           </tbody>
         </table>
+      </div>
+      {/* Under the list, on the same right edge as the Edit form buttons it
+          lines up with, rather than alone in a flex-end row above it. That row
+          held nothing else — every other console list pairs its primary action
+          with a page title, and this page has none, because the tab strip above
+          already says Forms — so the button floated with empty space either
+          side of it. Below the list it reads as "and another", and the list
+          starts immediately under the tabs. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <NewFormButton
+          eventId={eventId}
+          existingForms={(forms ?? []).map((f) => ({
+            id: f.id,
+            title: f.title,
+            registration_mode: f.registration_mode,
+          }))}
+        />
       </div>
     </div>
   )

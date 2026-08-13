@@ -85,7 +85,7 @@ export function RegistrationWizard({
   }
 
   // How that form looks, chosen by the same override order — appearance is per
-  // form (0054), so the form that supplies the questions supplies the styling.
+  // form (0055), so the form that supplies the questions supplies the styling.
   // Resolved against the event page's theme, so a form nobody customized is
   // still the event's colours rather than the platform's.
   function appearanceFor(pt, forMode = mode) {

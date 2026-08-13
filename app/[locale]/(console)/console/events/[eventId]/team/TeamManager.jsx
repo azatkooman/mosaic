@@ -97,7 +97,7 @@ export function TeamManager({
       <p className="field-help">{t('teamIntro')}</p>
 
       {canManage && (
-        <form onSubmit={invite} className={styles.inviteRow}>
+        <form onSubmit={invite} className={styles.addRow}>
           <Field label={t('inviteEmail')}>
             {({ id }) => (
               <Input

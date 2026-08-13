@@ -180,7 +180,7 @@ export default async function RegisterPage({ params, searchParams }) {
   const defById = new Map((versions ?? []).map((v) => [v.id, v.definition]))
 
   const modeForms = {}
-  // Appearance (0054) is per FORM, so it follows the same override order the
+  // Appearance (0055) is per FORM, so it follows the same override order the
   // definitions do: a mode form's look wins over the participant type's for
   // exactly the registrations that mode form covers. Kept as its own map rather
   // than folded into modeForms, whose values are definitions everywhere they
