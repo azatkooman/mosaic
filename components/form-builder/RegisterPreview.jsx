@@ -76,6 +76,7 @@ export function RegisterPreview({
   onAnswerChange,
   resolved,
   onEditZone,
+  headerImageUrl,
 }) {
   // Platform text only exists in the five platform locales. A custom language
   // gets its chrome at runtime from the cached machine translations in
@@ -106,6 +107,7 @@ export function RegisterPreview({
         onAnswerChange={onAnswerChange}
         resolved={resolved}
         onEditZone={onEditZone}
+        headerImageUrl={headerImageUrl}
       />
     </NextIntlClientProvider>
   )
@@ -124,6 +126,7 @@ function RegisterPreviewBody({
   onAnswerChange,
   resolved,
   onEditZone,
+  headerImageUrl,
 }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
@@ -150,6 +153,50 @@ function RegisterPreviewBody({
       </button>
     ) : null
 
+  const headerRow = (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 'var(--s-3)',
+        flexWrap: 'wrap',
+        marginBottom: headerImageUrl ? 0 : 'var(--s-3)',
+        // The row still has to hold its height with both controls hidden,
+        // or the title jumps up and the header stops being a place to click.
+        minHeight: '2rem',
+      }}
+    >
+      {/* The real page renders this as an <a>; a button with nothing behind
+          it is the same thing minus the navigation. Built from the shared
+          Button either way, so the two can never diverge visually. */}
+      {showsBackLink(resolved) ? (
+        <Button variant={headerImageUrl ? 'shell' : 'ghost'} size="sm" className={styles.inert}>
+          <span aria-hidden="true">&larr;</span> {t('backToEvent')}
+        </Button>
+      ) : (
+        <span />
+      )}
+      {/* No `href` and no `onChange`, so choosing a language does nothing and
+          the select snaps back to the previewed one. Renders nothing at all
+          when the event is offered in a single language — which is what the
+          register page does too, and the reason this is the real component
+          rather than a drawn-on lookalike. */}
+      {showsLanguagePicker(resolved) && (
+        <LanguagePicker
+          options={supportedLocales.map((code) => ({
+            value: code,
+            // Short codes here, matching the event page an attendee just
+            // came from; the console's own pickers keep full names.
+            label: localeAcronym(code),
+          }))}
+          value={locale}
+          ariaLabel={tCommon('language')}
+        />
+      )}
+    </div>
+  )
+
   return (
     // The theme rides here, on the same element that holds the page's own
     // width, so `--container-narrow` is in scope for the class that reads it.
@@ -162,47 +209,15 @@ function RegisterPreviewBody({
           screen rather than squeezing both onto one. */}
       <div className={styles.zone}>
         {edit('header', tConsole('formZone_header'))}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 'var(--s-3)',
-            flexWrap: 'wrap',
-            marginBottom: 'var(--s-3)',
-            // The row still has to hold its height with both controls hidden,
-            // or the title jumps up and the header stops being a place to click.
-            minHeight: '2rem',
-          }}
-        >
-          {/* The real page renders this as an <a>; a button with nothing behind
-              it is the same thing minus the navigation. Built from the shared
-              Button either way, so the two can never diverge visually. */}
-          {showsBackLink(resolved) ? (
-            <Button variant="ghost" size="sm" className={styles.inert}>
-              <span aria-hidden="true">&larr;</span> {t('backToEvent')}
-            </Button>
-          ) : (
-            <span />
-          )}
-          {/* No `href` and no `onChange`, so choosing a language does nothing and
-              the select snaps back to the previewed one. Renders nothing at all
-              when the event is offered in a single language — which is what the
-              register page does too, and the reason this is the real component
-              rather than a drawn-on lookalike. */}
-          {showsLanguagePicker(resolved) && (
-            <LanguagePicker
-              options={supportedLocales.map((code) => ({
-                value: code,
-                // Short codes here, matching the event page an attendee just
-                // came from; the console's own pickers keep full names.
-                label: localeAcronym(code),
-              }))}
-              value={locale}
-              ariaLabel={tCommon('language')}
-            />
-          )}
-        </div>
+        {headerImageUrl ? (
+          <div className={styles.headerZone}>
+            <img src={headerImageUrl} alt="" className={styles.headerBg} />
+            <div className={styles.headerOverlay} />
+            <div className={styles.headerContent}>{headerRow}</div>
+          </div>
+        ) : (
+          headerRow
+        )}
       </div>
 
       <h1 className="page-title" style={{ marginBottom: 'var(--s-5)', ...titleStyle(resolved) }}>

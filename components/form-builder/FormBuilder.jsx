@@ -576,6 +576,7 @@ export function FormBuilder({
                   eventName={eventName}
                   participantTypes={participantTypes}
                   participantTypeKey={previewTypeKey}
+                  headerImageUrl={eventMediaUrl(resolved?.header?.bg_image_path)}
                   /* The language the form is being previewed in follows the
                      builder's own language control on the Questions tab — the
                      picker inside the frame belongs to the registrant's screen
@@ -607,6 +608,8 @@ export function FormBuilder({
                   onSelectQuestion={setStyledQuestionId}
                   editLocale={editLocale}
                   defaultLocale={defaultLocale}
+                  eventId={eventId}
+                  coverImagePath={coverImagePath}
                 />
               )}
             </div>

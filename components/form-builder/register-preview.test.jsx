@@ -89,4 +89,16 @@ describe('RegisterPreview — the Forms page tab', () => {
     // page for a single-language event.
     expect(render({ supportedLocales: ['en'] })).not.toContain('lang-picker')
   })
+
+  it('renders a header background image and white shell back button when headerImageUrl is provided', () => {
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    expect(html).toContain('src="https://example.com/cover.jpg"')
+    expect(html).toContain('btn-shell')
+  })
+
+  it('uses standard ghost button style when headerImageUrl is omitted', () => {
+    const html = render()
+    expect(html).toContain('btn-ghost')
+    expect(html).not.toContain('btn-shell')
+  })
 })

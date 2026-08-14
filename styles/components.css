@@ -88,6 +88,26 @@
   background: color-mix(in srgb, var(--surface-sunken) 70%, var(--line));
 }
 
+/* Shell — high contrast white pill badge wrapper for buttons placed over imagery. */
+.btn-shell {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.btn-shell:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--ink-heavy);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+.btn-shell:active:not(:disabled) {
+  background: rgba(240, 240, 240, 0.95);
+  transform: translateY(0);
+}
+
 /* Danger — destructive actions, same elevated treatment as primary. */
 .btn-danger {
   background: linear-gradient(180deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 82%, black) 100%);

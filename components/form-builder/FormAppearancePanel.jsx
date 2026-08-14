@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { FONT_CHOICES } from '@/components/event-page/text-style'
 import { APPEARANCE_OPTIONS, LABEL_SIZES, hasOwnStyle } from '@/lib/form-appearance'
 import { setLocalizedText } from '@/lib/form-localization'
@@ -45,10 +46,14 @@ export function FormAppearancePanel({
   onSelectQuestion,
   editLocale,
   defaultLocale,
+  eventId,
+  coverImagePath,
 }) {
   const t = useTranslations('console')
   const tq = useTranslations('questionTypes')
   const tCommon = useTranslations('common')
+  const supabase = getSupabaseBrowserClient()
+  const [headerUploading, setHeaderUploading] = useState(false)
 
   // Each setter patches one branch, so an untouched branch keeps its key order
   // and an unset value stays absent rather than becoming an explicit null —
@@ -65,6 +70,38 @@ export function FormAppearancePanel({
   const header = appearance?.header ?? {}
   const intro = appearance?.intro ?? {}
   const nav = appearance?.nav ?? {}
+
+  const currentHeaderImagePath = header.bg_image_path ?? appearance?.header_image_path ?? null
+
+  async function onHeaderFile(e) {
+    const file = e.target.files?.[0]
+    if (!file || !eventId) return
+    const maxBytes = 5 * 1024 * 1024
+    if (file.size > maxBytes || !file.type.startsWith('image/')) return
+
+    setHeaderUploading(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `${eventId}/form-header-${Date.now().toString(36)}.${ext}`
+      const { error } = await supabase.storage.from('event-covers').upload(path, file)
+      if (!error) {
+        patch('header', { bg_image_path: path })
+      }
+    } finally {
+      setHeaderUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  function onInheritCover() {
+    if (coverImagePath) {
+      patch('header', { bg_image_path: coverImagePath })
+    }
+  }
+
+  function onRemoveHeader() {
+    patch('header', { bg_image_path: null })
+  }
 
   return (
     <aside className={styles.panel} aria-label={t('formCustomize')}>
@@ -177,6 +214,47 @@ export function FormAppearancePanel({
 
         {zone === 'header' && (
           <>
+            <Field label={t('headerImage')}>
+              {() => (
+                <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    id="header-img-upload"
+                    onChange={onHeaderFile}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={headerUploading}
+                    onClick={() => document.getElementById('header-img-upload')?.click()}
+                  >
+                    {headerUploading ? '…' : t('uploadHeaderImage')}
+                  </Button>
+                  {coverImagePath && currentHeaderImagePath !== coverImagePath && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={headerUploading}
+                      onClick={onInheritCover}
+                    >
+                      {t('inheritHeroImage')}
+                    </Button>
+                  )}
+                  {currentHeaderImagePath && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={headerUploading}
+                      onClick={onRemoveHeader}
+                    >
+                      {t('removeHeaderImage')}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </Field>
             <CheckboxRow
               size="sm"
               label={t('showBackToEvent')}
