@@ -88,10 +88,19 @@
   background: color-mix(in srgb, var(--surface-sunken) 70%, var(--line));
 }
 
-/* Shell — high contrast white pill badge wrapper for buttons placed over imagery. */
+/* Shell — high contrast white pill for buttons placed over imagery.
+ *
+ * The one button variant with literal colours rather than tokens, and it has to
+ * be. The pill is white in every theme because it sits on a photograph, not on
+ * the page — so its text cannot read `--ink`, which is near-white in dark mode
+ * and is also rewritten per-form by appearanceVars() when an organizer themes a
+ * dark registration page. Either would paint white text on the white pill and
+ * lose the button entirely, on the registrant's screen, over exactly the dark
+ * imagery this variant exists to survive. The two ends match readableInk()'s
+ * palette so a shell button and themed ink stay in the same family. */
 .btn-shell {
   background: rgba(255, 255, 255, 0.92);
-  color: var(--ink);
+  color: #20242b;
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(8px);
@@ -99,7 +108,7 @@
 }
 .btn-shell:hover:not(:disabled) {
   background: #ffffff;
-  color: var(--ink-heavy);
+  color: #12151a;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
   transform: translateY(-1px);
 }
@@ -601,6 +610,54 @@
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--gold-deep);
+}
+
+/* --- Registration form header band ---
+ *
+ * The image an organizer can put behind a form's header controls
+ * (forms.appearance.header.bg_image_path, 0055). Global rather than a module,
+ * and that is the point: two surfaces draw this band — the console's preview
+ * frame and the real /register page, which is a server component with no module
+ * of its own — and lib/form-appearance.js exists to stop those two disagreeing.
+ * One rule set means they cannot.
+ *
+ * Every token here is one appearanceVars() rewrites, so the band picks up the
+ * form's own radius and density rather than sitting at fixed sizes inside a
+ * themed page. */
+.form-header {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  margin-bottom: var(--s-4);
+  /* Enough band for the image to read as an image and not as a tint behind the
+     controls, which at row height is all it would be. */
+  min-block-size: 8rem;
+}
+
+.form-header-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Darkens the top, where the controls sit, and fades out below so the lower
+   half of the photo stays the organizer's. Sized to lift the back button's
+   shadow off a pale image without dimming a dark one into mud. */
+.form-header-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.06) 62%, rgba(0, 0, 0, 0) 100%);
+}
+
+/* Positioned, so it paints over the two absolute siblings above it in document
+   order — no z-index needed, and none wanted: this band is dropped into pages
+   whose stacking contexts it does not own. */
+.form-header-content {
+  position: relative;
 }
 
 /* --- Alerts --- */

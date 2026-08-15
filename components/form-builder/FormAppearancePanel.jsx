@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { eventMediaUrl } from '@/lib/storage'
 import { FONT_CHOICES } from '@/components/event-page/text-style'
 import { APPEARANCE_OPTIONS, LABEL_SIZES, hasOwnStyle } from '@/lib/form-appearance'
 import { setLocalizedText } from '@/lib/form-localization'
@@ -46,7 +47,12 @@ export function FormAppearancePanel({
   onSelectQuestion,
   editLocale,
   defaultLocale,
+  // Where uploads go — the storage policy gates writes on the {event_id}/
+  // folder, so this is what makes the upload allowed at all.
   eventId,
+  // The event's hero, offered as "use the event cover" so the two can be kept
+  // in step without uploading the same file twice. Null when there is none, and
+  // then the button is simply absent rather than present and inert.
   coverImagePath,
 }) {
   const t = useTranslations('console')
@@ -54,6 +60,8 @@ export function FormAppearancePanel({
   const tCommon = useTranslations('common')
   const supabase = getSupabaseBrowserClient()
   const [headerUploading, setHeaderUploading] = useState(false)
+  const [headerUploadError, setHeaderUploadError] = useState('')
+  const headerFileRef = useRef(null)
 
   // Each setter patches one branch, so an untouched branch keeps its key order
   // and an unset value stays absent rather than becoming an explicit null —
@@ -71,36 +79,69 @@ export function FormAppearancePanel({
   const intro = appearance?.intro ?? {}
   const nav = appearance?.nav ?? {}
 
-  const currentHeaderImagePath = header.bg_image_path ?? appearance?.header_image_path ?? null
+  const headerImagePath = header.bg_image_path ?? null
+  const headerImageUrl = eventMediaUrl(headerImagePath)
+  const inheritsCover = !!coverImagePath && headerImagePath === coverImagePath
+
+  // The four the bucket accepts for images (0002/0029). Checked here rather
+  // than left to `accept="image/*"` because the attribute is a file-dialog
+  // filter, not a guard: drag-and-drop and "All files" both walk past it, and
+  // the failure without this is a raw storage 400 in the console.
+  const HEADER_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+  const HEADER_MAX_BYTES = 5 * 1024 * 1024
 
   async function onHeaderFile(e) {
     const file = e.target.files?.[0]
-    if (!file || !eventId) return
-    const maxBytes = 5 * 1024 * 1024
-    if (file.size > maxBytes || !file.type.startsWith('image/')) return
+    e.target.value = ''
+    if (!file) return
+    setHeaderUploadError('')
+    // Without an event id there is no folder the storage policy would accept,
+    // so this would fail at the network rather than here.
+    if (!eventId) {
+      setHeaderUploadError(t('uploadFailed'))
+      return
+    }
+    if (!HEADER_IMAGE_TYPES.includes(file.type)) {
+      setHeaderUploadError(t('uploadBadType'))
+      return
+    }
+    if (file.size > HEADER_MAX_BYTES) {
+      setHeaderUploadError(t('uploadTooLarge'))
+      return
+    }
 
     setHeaderUploading(true)
     try {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      // Same {event_id}/{prefix}-{ts}.{ext} shape the event page editor uses,
+      // which is what lets storage-purge.js sweep the folder on delete.
       const path = `${eventId}/form-header-${Date.now().toString(36)}.${ext}`
       const { error } = await supabase.storage.from('event-covers').upload(path, file)
-      if (!error) {
-        patch('header', { bg_image_path: path })
+      if (error) {
+        setHeaderUploadError(error.message || t('uploadFailed'))
+        return
       }
+      patch('header', { bg_image_path: path })
     } finally {
       setHeaderUploading(false)
-      e.target.value = ''
     }
   }
 
+  // The stored PATH, not a URL: the same value the event carries, so a later
+  // change of storage host moves both together.
   function onInheritCover() {
-    if (coverImagePath) {
-      patch('header', { bg_image_path: coverImagePath })
-    }
+    setHeaderUploadError('')
+    if (coverImagePath) patch('header', { bg_image_path: coverImagePath })
   }
 
+  // Deletes the key rather than nulling it. `patch` merges, so it cannot
+  // express a removal — and a null here would not be equivalent: absent is what
+  // the resolver reads as "no image", and an explicit null would sit in the
+  // stored JSON forever as a record of a decision already undone.
   function onRemoveHeader() {
-    patch('header', { bg_image_path: null })
+    setHeaderUploadError('')
+    const { bg_image_path: _removed, ...rest } = header
+    onChange({ ...appearance, header: rest })
   }
 
   return (
@@ -214,44 +255,68 @@ export function FormAppearancePanel({
 
         {zone === 'header' && (
           <>
-            <Field label={t('headerImage')}>
-              {() => (
-                <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    id="header-img-upload"
-                    onChange={onHeaderFile}
-                  />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={headerUploading}
-                    onClick={() => document.getElementById('header-img-upload')?.click()}
-                  >
-                    {headerUploading ? '…' : t('uploadHeaderImage')}
-                  </Button>
-                  {coverImagePath && currentHeaderImagePath !== coverImagePath && (
+            <Field
+              label={t('headerImage')}
+              help={t('headerImageHelp')}
+              error={headerUploadError || undefined}
+            >
+              {({ id, describedBy }) => (
+                <div className={styles.panelGroup}>
+                  {headerImageUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element --
+                       a Supabase storage URL; see RegisterPreview. */
+                    <img className={styles.panelThumb} src={headerImageUrl} alt="" />
+                  )}
+                  <div className={styles.panelButtonRow}>
+                    {/* The Field's own label points at this input, so clicking
+                        the label opens the picker — which is why the id comes
+                        from Field rather than being invented here. */}
+                    <input
+                      type="file"
+                      id={id}
+                      ref={headerFileRef}
+                      accept={HEADER_IMAGE_TYPES.join(',')}
+                      aria-describedby={describedBy}
+                      hidden
+                      onChange={onHeaderFile}
+                    />
                     <Button
                       variant="secondary"
                       size="sm"
                       disabled={headerUploading}
-                      onClick={onInheritCover}
+                      onClick={() => headerFileRef.current?.click()}
                     >
-                      {t('inheritHeroImage')}
+                      {headerUploading
+                        ? t('uploading')
+                        : headerImagePath
+                          ? t('replaceHeaderImage')
+                          : t('uploadHeaderImage')}
                     </Button>
-                  )}
-                  {currentHeaderImagePath && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={headerUploading}
-                      onClick={onRemoveHeader}
-                    >
-                      {t('removeHeaderImage')}
-                    </Button>
-                  )}
+                    {/* Absent when there is no cover to inherit, and when the
+                        header is already showing it — a button that would
+                        re-set the value it already holds reads as broken. */}
+                    {coverImagePath && !inheritsCover && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={headerUploading}
+                        onClick={onInheritCover}
+                      >
+                        {t('inheritHeroImage')}
+                      </Button>
+                    )}
+                    {headerImagePath && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={headerUploading}
+                        onClick={onRemoveHeader}
+                      >
+                        {t('removeHeaderImage')}
+                      </Button>
+                    )}
+                  </div>
+                  {inheritsCover && <p className={styles.panelNote}>{t('inheritingHeroImage')}</p>}
                 </div>
               )}
             </Field>

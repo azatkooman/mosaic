@@ -17,6 +17,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { eventMediaUrl } from '@/lib/storage'
 import { LOCALES, lt } from '@/lib/i18n/locales'
 import { hasStaleTranslations } from '@/lib/form-localization'
 import {
@@ -50,7 +51,13 @@ export function FormBuilder({
   participantTypes,
   eventName,
   formId,
+  eventId,
   initialAppearance,
+  // The event's hero image, offered in the panel as "use the event cover" so a
+  // header can track the event page instead of needing its own upload. Passed
+  // as the stored PATH, not a URL: it is what gets written into the appearance
+  // when inherited, and a URL there would rot the moment the bucket moves.
+  coverImagePath,
   eventTheme,
   defaultLocale,
   supportedLocales,

@@ -93,12 +93,45 @@ describe('RegisterPreview — the Forms page tab', () => {
   it('renders a header background image and white shell back button when headerImageUrl is provided', () => {
     const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
     expect(html).toContain('src="https://example.com/cover.jpg"')
-    expect(html).toContain('btn-shell')
+    // The GLOBAL class names, spelled out rather than read from the module, and
+    // that is the assertion: the real register page is a server component with
+    // no CSS module, so these three are the only thing making the band it draws
+    // and the band drawn here the same band. A rename that only reached one
+    // file has to fail here.
+    expect(html).toContain('class="form-header"')
+    expect(html).toContain('class="form-header-bg"')
+    expect(html).toContain('class="form-header-scrim"')
+    expect(html).toContain('class="form-header-content"')
+    // Legible over a dark photo, where the ghost link is not. Scoped to the
+    // band because the wizard's own "Back" button below it stays ghost — it
+    // sits on the page, not on the picture.
+    const band = html.slice(html.indexOf('class="form-header"'), html.indexOf('page-title'))
+    expect(band).toContain('btn-shell')
+    expect(band).not.toContain('btn-ghost')
   })
 
   it('uses standard ghost button style when headerImageUrl is omitted', () => {
     const html = render()
     expect(html).toContain('btn-ghost')
     expect(html).not.toContain('btn-shell')
+    expect(html).not.toContain('form-header')
+  })
+
+  it('keeps the header controls when an image is behind them', () => {
+    // The band must not become a picture INSTEAD of the header — the back link
+    // and the picker still have to be in it, or switching on an image quietly
+    // takes away the reader's way out of the form.
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    expect(html).toContain('Back to event page')
+    expect(html).toContain('lang-picker')
+  })
+
+  it('leaves the background image decorative', () => {
+    // Empty alt, deliberately: it is a backdrop behind controls that already
+    // carry their own labels, so a screen reader announcing it would only add
+    // noise between the heading and the first field.
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    const tag = html.match(/<img[^>]*form-header-bg[^>]*>/)?.[0] ?? ''
+    expect(tag).toContain('alt=""')
   })
 })

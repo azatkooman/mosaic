@@ -210,10 +210,14 @@ function RegisterPreviewBody({
       <div className={styles.zone}>
         {edit('header', tConsole('formZone_header'))}
         {headerImageUrl ? (
-          <div className={styles.headerZone}>
-            <img src={headerImageUrl} alt="" className={styles.headerBg} />
-            <div className={styles.headerOverlay} />
-            <div className={styles.headerContent}>{headerRow}</div>
+          <div className="form-header">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Supabase
+                storage URL for an image whose size the organizer controls;
+                next/image would need the bucket host in remotePatterns and
+                bills per optimization for no benefit at this size. */}
+            <img src={headerImageUrl} alt="" className="form-header-bg" />
+            <div className="form-header-scrim" />
+            <div className="form-header-content">{headerRow}</div>
           </div>
         ) : (
           headerRow
