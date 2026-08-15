@@ -76,6 +76,10 @@ export function FormAppearancePanel({
   // that green is what would happen.
   const inherited = resolved?.theme ?? {}
   const header = appearance?.header ?? {}
+  // The header AFTER inheritance, which is what the band is actually painting.
+  // The controls below read their current value from `header` and their
+  // fallback from here, the same split the theme controls use.
+  const resolvedHeader = resolved?.header ?? {}
   const intro = appearance?.intro ?? {}
   const nav = appearance?.nav ?? {}
 
@@ -193,13 +197,10 @@ export function FormAppearancePanel({
               clearLabel={t('formInherit')}
               onChange={(v) => patch('theme', { primary_color: v })}
             />
-            <ColorField
-              label={t('titleColor')}
-              value={theme.title_color}
-              fallback={inherited.title_color ?? '#20242b'}
-              clearLabel={t('formInherit')}
-              onChange={(v) => patch('theme', { title_color: v })}
-            />
+            {/* Title colour is NOT here — it moved to the Header tab, beside
+                the band its title now sits inside. Only the control moved; the
+                value is still theme.title_color, which is what keeps it
+                inheriting from the event page. */}
             <Field label={t('titleFontLabel')}>
               {() => (
                 <FontSelect
@@ -320,6 +321,53 @@ export function FormAppearancePanel({
                 </div>
               )}
             </Field>
+            <ColorField
+              label={t('headerBackgroundColor')}
+              value={header.bg_color}
+              fallback={resolvedHeader.bg_color ?? '#111111'}
+              clearLabel={t('formInherit')}
+              onChange={(v) =>
+                // Opacity is meaningless without a colour and would sit in the
+                // JSON describing one that is gone, so it clears with it.
+                patch('header', { bg_color: v, bg_opacity: v == null ? undefined : header.bg_opacity })
+              }
+            />
+            {/* Only once there is a colour to be transparent — a slider that
+                changes nothing on screen is a control that looks broken. */}
+            {resolvedHeader.bg_color && (
+              <div className={styles.panelColorRow}>
+                <span className="field-label">
+                  {t('headerBackgroundOpacity')}: {resolvedHeader.bg_opacity ?? 100}%
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={resolvedHeader.bg_opacity ?? 100}
+                  aria-label={t('headerBackgroundOpacity')}
+                  onChange={(e) =>
+                    // Writing the colour alongside the opacity is what makes
+                    // dragging the slider on an INHERITED colour work: without
+                    // it the form would own an opacity for a colour it does not
+                    // own, and resolveHeader would drop it on the next read.
+                    patch('header', {
+                      bg_color: header.bg_color ?? resolvedHeader.bg_color,
+                      bg_opacity: Number(e.target.value),
+                    })
+                  }
+                />
+                <p className="field-help">{t('headerBackgroundOpacityHelp')}</p>
+              </div>
+            )}
+            <ColorField
+              label={t('titleColor')}
+              value={theme.title_color}
+              fallback={inherited.title_color ?? '#20242b'}
+              clearLabel={t('formInherit')}
+              onChange={(v) => patch('theme', { title_color: v })}
+            />
+            <p className={styles.panelNote}>{t('titleColorHelp')}</p>
             <CheckboxRow
               size="sm"
               label={t('showBackToEvent')}

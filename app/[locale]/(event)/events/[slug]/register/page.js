@@ -12,6 +12,7 @@ import { eventMediaUrl } from '@/lib/storage'
 import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
 import {
   appearanceVars,
+  headerBand,
   introTextFor,
   resolveFormAppearance,
   showsBackLink,
@@ -83,18 +84,18 @@ export default async function RegisterPage({ params, searchParams }) {
   // <a>, not next-intl's Link: eventPageUrl already carries the locale prefix
   // (and a ?lang= for custom languages), which Link would prefix a second time.
   const eventHref = eventPageUrl({ slug, code: contentLocale, uiLocale: locale })
-  // Takes its variant because the same link is drawn in two places: on the page
-  // background, where `ghost` is right, and on a header image, where a quiet
-  // link disappears the moment the organizer picks a busy photo. `shell` is the
-  // white pill that survives either.
+  // Takes its variant because the same link is drawn on two different surfaces.
+  // In the header zone it is always `shell` — the translucent pill holds up over
+  // a photo, a brand colour, or a page background set to black, and a `ghost`
+  // link disappears into any of the three.
   const backLink = (variant) => (
     <a href={eventHref} className={`btn btn-${variant} btn-sm`}>
       <span aria-hidden="true">&larr;</span> {t('backToEvent')}
     </a>
   )
-  // The early returns below render before any form's appearance is known — they
-  // are the closed/already-registered/no-types screens, which carry no header
-  // image and no theme — so they keep the plain link.
+  // The early returns below are the closed / already-registered / no-types
+  // screens. They render before any form's appearance is known and apply none
+  // of it, so they sit on the platform's own background where `ghost` is right.
   const backToEvent = backLink('ghost')
 
   // One registration per account per event (the submit RPC enforces this
@@ -285,61 +286,52 @@ export default async function RegisterPage({ params, searchParams }) {
   // the panel wrote — both land in the same key as a storage path, so there is
   // nothing to branch on here.
   const headerImageUrl = eventMediaUrl(shell.header?.bg_image_path)
-
-  const headerRow = (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 'var(--s-3)',
-        // The picker keeps the right edge on a narrow screen; the back link
-        // drops to its own line rather than squeezing both onto one.
-        flexWrap: 'wrap',
-        // Inside the band the padding already supplies the gap.
-        marginBottom: headerImageUrl ? 0 : 'var(--s-3)',
-      }}
-    >
-      {showsBackLink(shell) ? backLink(headerImageUrl ? 'shell' : 'ghost') : <span />}
-      <LanguagePicker
-        options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
-          value: code,
-          // Short code here too, matching the event page an attendee just
-          // came from; the console keeps full names.
-          label: localeAcronym(code),
-          // Built-in locales have their own route; custom codes ride the
-          // current route via ?lang=.
-          href: eventPageUrl({
-            slug, code, uiLocale: locale, subPath: '/register',
-            params: { type: typeParam },
-          }),
-        })) : []}
-        value={contentLocale}
-        ariaLabel={tCommon('language')}
-      />
-    </div>
-  )
+  const band = headerBand(shell, headerImageUrl)
 
   return (
     <div
       className="container-narrow"
       style={{ paddingBlock: 'var(--s-6)', ...appearanceVars(shell) }}
     >
-      {headerImageUrl ? (
-        <div className="form-header">
-          {/* eslint-disable-next-line @next/next/no-img-element -- see the
-              matching note in RegisterPreview: a Supabase storage URL that
-              next/image would need remotePatterns for and bill to optimize. */}
-          <img src={headerImageUrl} alt="" className="form-header-bg" />
-          <div className="form-header-scrim" />
-          <div className="form-header-content">{headerRow}</div>
+      {/* The header zone: controls and title together, over whatever backdrop
+          the organizer gave it. Mirrored in RegisterPreview — same classes,
+          same order, same helper deciding all of it. */}
+      <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
+        {band.hasImage && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- see the
+                matching note in RegisterPreview: a Supabase storage URL that
+                next/image would need remotePatterns for and bill to optimize. */}
+            <img src={headerImageUrl} alt="" className="form-header-bg" />
+            <div className="form-header-scrim" style={band.overlayStyle} />
+          </>
+        )}
+        <div className="form-header-content">
+          <div className="form-header-row">
+            {showsBackLink(shell) ? backLink('shell') : <span />}
+            <LanguagePicker
+              variant="shell"
+              options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
+                value: code,
+                // Short code here too, matching the event page an attendee just
+                // came from; the console keeps full names.
+                label: localeAcronym(code),
+                // Built-in locales have their own route; custom codes ride the
+                // current route via ?lang=.
+                href: eventPageUrl({
+                  slug, code, uiLocale: locale, subPath: '/register',
+                  params: { type: typeParam },
+                }),
+              })) : []}
+              value={contentLocale}
+              ariaLabel={tCommon('language')}
+            />
+          </div>
+          <h1 className="page-title" style={titleStyle(shell)}>
+            {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
+          </h1>
         </div>
-      ) : (
-        headerRow
-      )}
-      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)', ...titleStyle(shell) }}>
-        {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
-      </h1>
+      </div>
       {intro && <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap' }}>{intro}</p>}
       {wizard}
     </div>

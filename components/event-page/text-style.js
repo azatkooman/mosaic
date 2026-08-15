@@ -45,3 +45,25 @@ export function textStyle(hs = {}, sizes = HEADING_SIZES) {
   if (hs.align && TEXT_ALIGNS.includes(hs.align)) style.textAlign = hs.align
   return style
 }
+
+/**
+ * `#rrggbb` (or `#rgb`) plus a 0–100 opacity → an `rgba()` string.
+ *
+ * Here rather than in either caller because the event page's hero background
+ * and a form header's background are the same control offered twice, and the
+ * form inherits its value from the event page — two implementations of this
+ * could disagree about what a stored opacity means while both looked right in
+ * isolation. Returns null for anything unparseable, which every caller treats
+ * as "no colour" rather than as an error.
+ */
+export function hexToRgba(hex, opacityPct) {
+  if (!hex) return null
+  const h = String(hex).replace('#', '')
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+  const r = parseInt(full.slice(0, 2), 16)
+  const g = parseInt(full.slice(2, 4), 16)
+  const b = parseInt(full.slice(4, 6), 16)
+  if ([r, g, b].some(Number.isNaN)) return null
+  const a = opacityPct == null ? 1 : Math.max(0, Math.min(100, opacityPct)) / 100
+  return `rgba(${r}, ${g}, ${b}, ${a})`
+}

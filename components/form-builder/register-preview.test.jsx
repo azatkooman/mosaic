@@ -90,40 +90,56 @@ describe('RegisterPreview — the Forms page tab', () => {
     expect(render({ supportedLocales: ['en'] })).not.toContain('lang-picker')
   })
 
-  it('renders a header background image and white shell back button when headerImageUrl is provided', () => {
+  // The band, and everything that has to hold whether or not it has a backdrop.
+  // The GLOBAL class names are spelled out rather than read from the module on
+  // purpose: the real register page is a server component with no CSS module,
+  // so these names are the only thing making the band it draws and the band
+  // drawn here the same band. A rename that reached one file has to fail here.
+  const bandOf = (html) =>
+    html.slice(html.indexOf('class="form-header"'), html.indexOf('</h1>'))
+
+  it('renders a header background image when one is provided', () => {
     const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
     expect(html).toContain('src="https://example.com/cover.jpg"')
-    // The GLOBAL class names, spelled out rather than read from the module, and
-    // that is the assertion: the real register page is a server component with
-    // no CSS module, so these three are the only thing making the band it draws
-    // and the band drawn here the same band. A rename that only reached one
-    // file has to fail here.
-    expect(html).toContain('class="form-header"')
     expect(html).toContain('class="form-header-bg"')
     expect(html).toContain('class="form-header-scrim"')
-    expect(html).toContain('class="form-header-content"')
-    // Legible over a dark photo, where the ghost link is not. Scoped to the
-    // band because the wizard's own "Back" button below it stays ghost — it
-    // sits on the page, not on the picture.
-    const band = html.slice(html.indexOf('class="form-header"'), html.indexOf('page-title'))
-    expect(band).toContain('btn-shell')
-    expect(band).not.toContain('btn-ghost')
+    // data-backdrop is what turns on the padding, the radius and the crop, so
+    // it is the difference between a band and a plain block.
+    expect(html).toContain('data-backdrop="true"')
   })
 
-  it('uses standard ghost button style when headerImageUrl is omitted', () => {
-    const html = render()
-    expect(html).toContain('btn-ghost')
-    expect(html).not.toContain('btn-shell')
-    expect(html).not.toContain('form-header')
-  })
-
-  it('keeps the header controls when an image is behind them', () => {
-    // The band must not become a picture INSTEAD of the header — the back link
-    // and the picker still have to be in it, or switching on an image quietly
-    // takes away the reader's way out of the form.
+  it('puts the title INSIDE the header band, so a backdrop covers it too', () => {
     const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
-    expect(html).toContain('Back to event page')
-    expect(html).toContain('lang-picker')
+    const band = bandOf(html)
+    expect(band).toContain('Register for Demo Event')
+    expect(band).toContain('Back to event page')
+    expect(band).toContain('lang-picker')
+    // …and the form itself is emphatically not in there.
+    expect(band).not.toContain('Your name')
+  })
+
+  it('renders the band with no backdrop when nothing is set, and no image', () => {
+    const html = render()
+    // Still a band — it holds the header zone either way — but a bare one, so
+    // an untouched form renders the screen that existed before any of this.
+    expect(html).toContain('class="form-header"')
+    expect(html).not.toContain('data-backdrop')
+    expect(html).not.toContain('form-header-bg')
+    expect(html).not.toContain('form-header-scrim')
+  })
+
+  it('gives the back link and the language picker matching shells, always', () => {
+    // Always, not only over an image: a ghost link vanishes on a page whose
+    // background the organizer set to black, which is the case this variant was
+    // widened to cover. Both controls, because they sit at opposite ends of one
+    // row and a mismatch between them is the thing that reads as broken.
+    for (const props of [{}, { headerImageUrl: 'https://example.com/cover.jpg' }]) {
+      const band = bandOf(render(props))
+      expect(band).toContain('btn-shell')
+      expect(band).toContain("data-variant=\"shell\"")
+      // The wizard's own Back button stays ghost, but it is below the band.
+      expect(band).not.toContain('btn-ghost')
+    }
   })
 
   it('leaves the background image decorative', () => {
