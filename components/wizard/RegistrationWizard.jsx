@@ -12,6 +12,7 @@ import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
 import {
   appearanceVars,
+  progressStyle,
   questionVars,
   resolveFormAppearance,
   showsProgress,
@@ -453,7 +454,7 @@ export function RegistrationWizard({
       // the shell's for everything from the eyebrow down.
       <div className={styles.panel} style={appearanceVars(look)}>
         {showsProgress(look) && (
-          <p className="eyebrow">
+          <p className="eyebrow" style={progressStyle(look)}>
             {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}
             {lt(pt.name, locale, event.default_locale)}
           </p>

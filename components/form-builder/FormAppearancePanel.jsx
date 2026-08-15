@@ -417,6 +417,16 @@ export function FormAppearancePanel({
                 />
               )}
             </Field>
+            {/* No inherit fallback from the event page, which has no intro to
+                inherit one from — the swatch shows the page's own text colour,
+                which is what an unset intro is actually rendering in. */}
+            <ColorField
+              label={t('introColor')}
+              value={intro.color}
+              fallback={inherited.text_color ?? '#20242b'}
+              clearLabel={t('resetColor')}
+              onChange={(v) => patch('intro', { color: v })}
+            />
           </>
         )}
 
@@ -435,21 +445,37 @@ export function FormAppearancePanel({
         )}
 
         {zone === 'nav' && (
-          <Field label={t('progressIndicator')} help={t('progressIndicatorHelp')}>
-            {({ id }) => (
-              <NativeSelect
-                id={id}
-                value={nav.progress ?? 'count'}
-                onChange={(e) => patch('nav', { progress: e.target.value })}
-              >
-                {APPEARANCE_OPTIONS.progress.map((o) => (
-                  <option key={o} value={o}>
-                    {t(`formProgress_${o}`)}
-                  </option>
-                ))}
-              </NativeSelect>
+          <>
+            <Field label={t('progressIndicator')} help={t('progressIndicatorHelp')}>
+              {({ id }) => (
+                <NativeSelect
+                  id={id}
+                  value={nav.progress ?? 'count'}
+                  onChange={(e) => patch('nav', { progress: e.target.value })}
+                >
+                  {APPEARANCE_OPTIONS.progress.map((o) => (
+                    <option key={o} value={o}>
+                      {t(`formProgress_${o}`)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+            {/* Hidden along with the line it colours, or the panel would offer a
+                control for something the organizer has just switched off. */}
+            {(nav.progress ?? 'count') !== 'none' && (
+              <ColorField
+                label={t('progressColor')}
+                // The `.eyebrow` gold, not the page ink: that is what this line
+                // renders in when nobody has touched it, and a swatch showing
+                // black beside a gold line would state something untrue.
+                value={nav.progress_color}
+                fallback="#b57717"
+                clearLabel={t('resetColor')}
+                onChange={(v) => patch('nav', { progress_color: v })}
+              />
             )}
-          </Field>
+          </>
         )}
       </div>
     </aside>

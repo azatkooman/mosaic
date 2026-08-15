@@ -13,6 +13,7 @@ import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participa
 import {
   appearanceVars,
   headerBand,
+  introStyle,
   introTextFor,
   resolveFormAppearance,
   showsBackLink,
@@ -332,7 +333,11 @@ export default async function RegisterPage({ params, searchParams }) {
           </h1>
         </div>
       </div>
-      {intro && <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap' }}>{intro}</p>}
+      {intro && (
+        <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(shell) }}>
+          {intro}
+        </p>
+      )}
       {wizard}
     </div>
   )

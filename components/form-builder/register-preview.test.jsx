@@ -142,6 +142,27 @@ describe('RegisterPreview — the Forms page tab', () => {
     }
   })
 
+  it('applies the intro and progress colours where they belong', () => {
+    const html = render({
+      resolved: {
+        theme: {}, header: {}, questions: {},
+        intro: { enabled: true, text: { en: 'Please read this first.' }, color: '#8a2f5f' },
+        nav: { progress_color: '#146b5c' },
+      },
+    })
+    // Each colour has to land on its OWN line — the two live one element apart
+    // and swapping them is the kind of mistake nothing else would catch.
+    expect(html).toMatch(/<p[^>]*color:#8a2f5f[^>]*>Please read this first\.<\/p>/)
+    expect(html).toMatch(/<p class="eyebrow" style="color:#146b5c">Participant 1 of 1/)
+  })
+
+  it('leaves both colours off when unset, so the defaults still apply', () => {
+    // The counter keeps .eyebrow's gold and the intro keeps the page ink; an
+    // inline style here would override both with nothing.
+    const html = render()
+    expect(html).toContain('<p class="eyebrow">Participant 1 of 1')
+  })
+
   it('leaves the background image decorative', () => {
     // Empty alt, deliberately: it is a backdrop behind controls that already
     // carry their own labels, so a screen reader announcing it would only add

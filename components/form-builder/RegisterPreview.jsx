@@ -10,7 +10,9 @@ import { LOCALES, lt, localeAcronym } from '@/lib/i18n/locales'
 import {
   appearanceVars,
   headerBand,
+  introStyle,
   introTextFor,
+  progressStyle,
   questionVars,
   showsBackLink,
   showsLanguagePicker,
@@ -223,7 +225,9 @@ function RegisterPreviewBody({
         <div className={styles.zone}>
           {edit('intro', tConsole('formZone_intro'))}
           {intro ? (
-            <p className={styles.introText}>{intro}</p>
+            <p className={styles.introText} style={introStyle(resolved)}>
+              {intro}
+            </p>
           ) : (
             <p className={styles.introEmpty}>{tConsole('showIntro')}</p>
           )}
@@ -234,7 +238,7 @@ function RegisterPreviewBody({
         {/* One participant, because a preview has no counts step to have
             answered — a real registration reads "Participant 2 of 4" here. */}
         {showsProgress(resolved) && (
-          <p className="eyebrow">
+          <p className="eyebrow" style={progressStyle(resolved)}>
             {t('participantOf', { index: 1, total: 1 })}
             {typeName ? ` · ${typeName}` : ''}
           </p>

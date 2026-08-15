@@ -449,17 +449,15 @@ export function FormBuilder({
               </Button>
               </div>
 
-              {/* "Publish", not "Publish form": inside a form builder the noun
-                  is already given, and it is what this file's own
-                  unsaved-changes dialog has always called it. Preview used to
-                  stand beside it here; the Preview form tab replaced it. */}
+              {/* "Publish Form", spelled out: the same button now also stands
+                  on the Preview form tab, where the surrounding controls are
+                  about appearance and a bare "Publish" would read as publishing
+                  the colours — which is exactly what it does NOT do (appearance
+                  saves on its own and is never versioned). Naming it once, in
+                  `publishForm`, is what keeps the two labels identical.
+                  Preview used to stand beside it here; the tab replaced it. */}
               <div className={styles.headActions}>
-                <span style={{ position: 'relative', display: 'inline-flex' }}>
-                  <Button size="sm" onClick={publish}>
-                    {t('publish')}
-                  </Button>
-                  <ConfettiBurst burst={publishBurst} />
-                </span>
+                <PublishButton onPublish={publish} burst={publishBurst} label={t('publishForm')} />
               </div>
             </div>
 
@@ -469,22 +467,7 @@ export function FormBuilder({
                 it can never push Publish sideways from here. Absent when idle. */}
             {saveState !== 'idle' && (
               <p aria-live="polite" className={styles.saveStateRow}>
-                {saveState === 'saving' && t('draftSaving')}
-                {saveState === 'saved' && t('draftSaved')}
-                {saveState === 'published' && (
-                  <strong className="publish-flash" style={{ color: 'var(--success)' }}>
-                    {t('formPublished')}
-                  </strong>
-                )}
-                {saveState === 'saveFailed' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
-                )}
-                {saveState === 'publishFailed' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
-                )}
-                {saveState === 'publishEmpty' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
-                )}
+                <SaveStateText t={t} state={saveState} />
               </p>
             )}
 
@@ -560,21 +543,49 @@ export function FormBuilder({
                   </NativeSelect>
                 </label>
               )}
+              {/* Secondary in both states now, where it used to go primary while
+                  the panel was closed. That toggle was fine when this was the
+                  only button on the row; beside Publish Form it put two filled
+                  primaries side by side in the common case, which says the two
+                  matter equally when only one of them changes what registrants
+                  get. Nothing is lost — a whole panel opening next to the
+                  preview says "open" far louder than a fill ever did. */}
               <Button
-                variant={zone ? 'secondary' : 'primary'}
+                variant="secondary"
                 size="sm"
+                aria-pressed={!!zone}
                 onClick={() => setZone(zone ? null : 'theme')}
               >
                 {t('formCustomize')}
               </Button>
-              <p className={styles.pageTabHint}>
-                {appearanceState === 'saving' && t('draftSaving')}
-                {appearanceState === 'saved' && t('draftSaved')}
-                {appearanceState === 'failed' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+              {/* One status line for two independent things, in priority order.
+                  The appearance autosave is the tab's own background chatter and
+                  is what this line has always shown; a publish result is a reply
+                  to something the organizer just clicked, so it wins while it is
+                  showing. They cannot both be mid-flight in any realistic order
+                  of clicks, and if they were, the answer to the click is the one
+                  worth reading. */}
+              <p aria-live="polite" className={styles.pageTabHint}>
+                {saveState !== 'idle' ? (
+                  <SaveStateText t={t} state={saveState} />
+                ) : (
+                  <>
+                    {appearanceState === 'saving' && t('draftSaving')}
+                    {appearanceState === 'saved' && t('draftSaved')}
+                    {appearanceState === 'failed' && (
+                      <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+                    )}
+                    {appearanceState === 'idle' && t('formsPageHint')}
+                  </>
                 )}
-                {appearanceState === 'idle' && t('formsPageHint')}
               </p>
+              {/* Last in the row and after the hint, which grows — so it sits at
+                  the far right, where the Questions tab also keeps it. Publishing
+                  from here is the point: the questions are what needs publishing
+                  and they are edited on the other tab, but an organizer who has
+                  just finished styling should not have to go back to a tab they
+                  are done with to make any of it live. */}
+              <PublishButton onPublish={publish} burst={publishBurst} label={t('publishForm')} />
             </div>
             <div className={`${styles.pageSplit} ${zone ? styles.pageSplitOpen : ''}`}>
               <div className={styles.pageFrame}>
@@ -625,4 +636,53 @@ export function FormBuilder({
       </Tabs>
     </>
   )
+}
+
+/**
+ * Publish Form, with its confetti.
+ *
+ * Extracted because it now stands on two tabs, and the pair has to stay one
+ * button: the wrapper span is what positions the burst over it, so a second
+ * hand-rolled copy would be a button that publishes without celebrating — or
+ * worse, one whose label drifts from the other's.
+ */
+function PublishButton({ onPublish, burst, label }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <Button size="sm" onClick={onPublish}>
+        {label}
+      </Button>
+      <ConfettiBurst burst={burst} />
+    </span>
+  )
+}
+
+/**
+ * The save/publish outcome as text, shared by both tabs' status lines.
+ *
+ * Renders nothing at idle so a caller can drop it straight into a line that
+ * shows something else the rest of the time. Kept as one component rather than
+ * six inline conditionals twice over, because half of these are failures and a
+ * failure that only one tab knows how to say is a failure the organizer on the
+ * other tab never sees.
+ */
+function SaveStateText({ t, state }) {
+  if (state === 'saving') return t('draftSaving')
+  if (state === 'saved') return t('draftSaved')
+  if (state === 'published') {
+    return (
+      <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+        {t('formPublished')}
+      </strong>
+    )
+  }
+  const failures = {
+    saveFailed: 'saveFailed',
+    publishFailed: 'publishFailed',
+    publishEmpty: 'publishNeedsQuestion',
+  }
+  if (failures[state]) {
+    return <strong style={{ color: 'var(--danger)' }}>{t(failures[state])}</strong>
+  }
+  return null
 }
