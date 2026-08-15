@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const COLORS = ['#e8555a', '#f2a33c', '#3aa981', '#4a90d9', '#b678d4', '#e8c547']
 
@@ -13,9 +13,21 @@ const COLORS = ['#e8555a', '#f2a33c', '#3aa981', '#4a90d9', '#b678d4', '#e8c547'
  */
 export function ConfettiBurst({ burst }) {
   const [activeBurst, setActiveBurst] = useState(null)
+  // The value this instance was BORN with, so mounting never counts as firing.
+  //
+  // `burst` says "something just happened", but it is stored as a timestamp
+  // that outlives the moment — a caller sets it once and leaves it set. The
+  // effect below cannot tell "the prop changed" from "this is the first render"
+  // on its own, so a fresh mount replayed the celebration for an event that
+  // happened minutes ago. That is not hypothetical: Radix unmounts an inactive
+  // tab panel, so in the form builder, switching tabs any time after publishing
+  // fired the confetti again and read as a second publish having been
+  // triggered by the tab switch.
+  const bornWith = useRef(burst)
 
   useEffect(() => {
-    if (!burst) return
+    if (!burst || burst === bornWith.current) return
+    bornWith.current = burst
     setActiveBurst(burst)
     const id = setTimeout(() => setActiveBurst(null), 1600)
     return () => clearTimeout(id)

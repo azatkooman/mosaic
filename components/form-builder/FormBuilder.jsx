@@ -239,6 +239,21 @@ export function FormBuilder({
     if (dirty) setUnpublished(true)
   }, [dirty])
 
+  // Successes are announcements of something that finished; failures are
+  // conditions that still need dealing with. Only the first kind expires.
+  //
+  // Left set, 'published' sat on screen for the rest of the session — and since
+  // Radix unmounts the inactive tab panel, every tab switch remounted the
+  // element and replayed its `publish-flash` animation, so the form looked like
+  // it had just been published again. Clearing the state is what stops that,
+  // rather than suppressing the animation: a confirmation that never goes away
+  // has stopped confirming anything in particular by the time it is stale.
+  useEffect(() => {
+    if (saveState !== 'saved' && saveState !== 'published') return
+    const id = setTimeout(() => setSaveState('idle'), 4000)
+    return () => clearTimeout(id)
+  }, [saveState])
+
   // Debounced autosave of the draft version.
   useEffect(() => {
     if (!dirty) return
