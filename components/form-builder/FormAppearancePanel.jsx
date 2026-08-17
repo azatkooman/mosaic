@@ -90,6 +90,7 @@ export function FormAppearancePanel({
   // The controls below read their current value from `header` and their
   // fallback from here, the same split the theme controls use.
   const resolvedHeader = resolved?.header ?? {}
+  const background = appearance?.background ?? {}
   const intro = appearance?.intro ?? {}
   const nav = appearance?.nav ?? {}
 
@@ -187,7 +188,55 @@ export function FormAppearancePanel({
             visible, and the layer behind it has not been built yet. The note
             stops it reading as a panel that failed to load; it is not a
             control and is meant to be deleted with the first real one. */}
-        {zone === 'background' && <p className={styles.panelNote}>{t('formZoneBackgroundSoon')}</p>}
+        {zone === 'background' && (
+          <>
+            {/* Says what this layer IS, because it is the one zone whose extent
+                the preview frame cannot show honestly: the frame is a fixed
+                box, the real thing is the registrant's whole screen, and how
+                much of it they ever see depends on their window. */}
+            <p className={styles.panelNote}>{t('formZoneBackgroundHelp')}</p>
+            <Field label={t('backgroundKind')}>
+              {({ id }) => (
+                <NativeSelect
+                  id={id}
+                  value={background.kind ?? 'none'}
+                  onChange={(e) => {
+                    const kind = e.target.value
+                    // Back to 'none' clears the colour with it: it describes a
+                    // background that is no longer being painted, and leaving
+                    // it behind would make the next visit to this tab show a
+                    // swatch for something the form is not using.
+                    patch('background', {
+                      kind: kind === 'none' ? undefined : kind,
+                      color: kind === 'none' ? undefined : background.color,
+                    })
+                  }}
+                >
+                  {APPEARANCE_OPTIONS.background_kind.map((o) => (
+                    <option key={o} value={o}>
+                      {t(`formBgKind_${o}`)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+            {background.kind === 'solid' && (
+              <ColorField
+                label={t('backgroundColor')}
+                value={background.color}
+                fallback="#faf9f6"
+                clearLabel={t('resetColor')}
+                onChange={(v) => patch('background', { color: v })}
+              />
+            )}
+            {/* Selectable but not yet wired to anything. Saying so is the
+                difference between a control that is unfinished and one that
+                looks broken. */}
+            {(background.kind === 'image' || background.kind === 'gradient') && (
+              <p className={styles.panelNote}>{t('formBgKindSoon')}</p>
+            )}
+          </>
+        )}
 
         {zone === 'theme' && (
           <>

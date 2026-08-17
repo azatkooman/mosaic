@@ -13,6 +13,7 @@ import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participa
 import {
   appearanceVars,
   formSurfaceStyle,
+  screenBackgroundStyle,
   headerBand,
   introStyle,
   introTextFor,
@@ -291,59 +292,64 @@ export default async function RegisterPage({ params, searchParams }) {
   const band = headerBand(shell, headerImageUrl)
 
   return (
-    <div
-      className="container-narrow"
-      style={{
-        paddingBlock: 'var(--s-6)',
-        ...appearanceVars(shell),
-        ...formSurfaceStyle(shell),
-      }}
-    >
-      {/* The header zone: controls and title together, over whatever backdrop
-          the organizer gave it. Mirrored in RegisterPreview — same classes,
-          same order, same helper deciding all of it. */}
-      <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
-        {band.hasImage && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- see the
-                matching note in RegisterPreview: a Supabase storage URL that
-                next/image would need remotePatterns for and bill to optimize. */}
-            <img src={headerImageUrl} alt="" className="form-header-bg" />
-            <div className="form-header-scrim" style={band.overlayStyle} />
-          </>
-        )}
-        <div className="form-header-content">
-          <div className="form-header-row">
-            {showsBackLink(shell) ? backLink('shell') : <span />}
-            <LanguagePicker
-              variant="shell"
-              options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
-                value: code,
-                // Short code here too, matching the event page an attendee just
-                // came from; the console keeps full names.
-                label: localeAcronym(code),
-                // Built-in locales have their own route; custom codes ride the
-                // current route via ?lang=.
-                href: eventPageUrl({
-                  slug, code, uiLocale: locale, subPath: '/register',
-                  params: { type: typeParam },
-                }),
-              })) : []}
-              value={contentLocale}
-              ariaLabel={tCommon('language')}
-            />
+    // The screen the form sits ON. Mirrors RegisterPreview, which draws the
+    // same layer from the same helper — see .form-screen for why only this one
+    // carries the class.
+    <div className="form-screen" style={screenBackgroundStyle(shell)}>
+      <div
+        className="container-narrow"
+        style={{
+          paddingBlock: 'var(--s-6)',
+          ...appearanceVars(shell),
+          ...formSurfaceStyle(shell),
+        }}
+      >
+        {/* The header zone: controls and title together, over whatever backdrop
+            the organizer gave it. Mirrored in RegisterPreview — same classes,
+            same order, same helper deciding all of it. */}
+        <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
+          {band.hasImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- see the
+                  matching note in RegisterPreview: a Supabase storage URL that
+                  next/image would need remotePatterns for and bill to optimize. */}
+              <img src={headerImageUrl} alt="" className="form-header-bg" />
+              <div className="form-header-scrim" style={band.overlayStyle} />
+            </>
+          )}
+          <div className="form-header-content">
+            <div className="form-header-row">
+              {showsBackLink(shell) ? backLink('shell') : <span />}
+              <LanguagePicker
+                variant="shell"
+                options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
+                  value: code,
+                  // Short code here too, matching the event page an attendee just
+                  // came from; the console keeps full names.
+                  label: localeAcronym(code),
+                  // Built-in locales have their own route; custom codes ride the
+                  // current route via ?lang=.
+                  href: eventPageUrl({
+                    slug, code, uiLocale: locale, subPath: '/register',
+                    params: { type: typeParam },
+                  }),
+                })) : []}
+                value={contentLocale}
+                ariaLabel={tCommon('language')}
+              />
+            </div>
+            <h1 className="page-title" style={titleStyle(shell)}>
+              {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
+            </h1>
           </div>
-          <h1 className="page-title" style={titleStyle(shell)}>
-            {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
-          </h1>
         </div>
+        {intro && (
+          <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(shell) }}>
+            {intro}
+          </p>
+        )}
+        {wizard}
       </div>
-      {intro && (
-        <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(shell) }}>
-          {intro}
-        </p>
-      )}
-      {wizard}
     </div>
   )
 }

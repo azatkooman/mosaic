@@ -641,6 +641,20 @@
   color: var(--gold-deep);
 }
 
+/* The screen a registration form sits on (forms.appearance.background).
+ *
+ * Only the height is here. The paint is an inline style from
+ * screenBackgroundStyle(), because it is per-form data rather than a rule, and
+ * the preview draws the same layer with no class at all — inside a fixed frame
+ * a viewport height would be nonsense.
+ *
+ * dvh, not vh: on iOS the expanded URL bar makes 100vh taller than what is
+ * actually on screen, which would leave the background running under the fold
+ * on exactly the devices where the form covers most of it anyway. */
+.form-screen {
+  min-block-size: 100dvh;
+}
+
 /* --- Registration form header band ---
  *
  * The header ZONE of a registration form: the back link, the language picker
