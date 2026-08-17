@@ -231,12 +231,36 @@ export function FormBuilder({
   // brings the whole form up to date instead of demanding a tour of the tabs —
   // and it fires switching back to the source language too, since by then the
   // organizer has usually just finished editing it.
+  //
+  // Keyed on the CONTENTS of the language set, and compared against a ref
+  // seeded on the first render. Both halves are load-bearing, and both were
+  // wrong before:
+  //
+  //  - `if (!initialized.current) return` was meant to skip the mount pass and
+  //    never did. That ref is set by the init effect ABOVE, which React runs
+  //    first in the same commit, so this one always read it as already true.
+  //    Every arrival at a multi-language form therefore fired a translation
+  //    run, and any run that comes back with so much as a provenance stamp
+  //    calls replaceDefinition — which marks the store dirty, which latches
+  //    `unpublished`. The organizer had changed nothing and was still asked to
+  //    publish on the way out.
+  //  - `supportedLocales` is a fresh array from the server on every render, so
+  //    depending on the array itself re-fired this on any re-render that
+  //    reached for new props — including the `router.refresh()` at the end of
+  //    publish(), which re-dirtied the form seconds after it was published.
+  //
+  // A joined string fixes both: it is stable across identical prop arrays, and
+  // seeding the ref with the first value makes "no change yet" and "mounted"
+  // the same condition.
+  const translateKey = `${editLocale}|${defaultLocale}|${[...translateTargets].sort().join(',')}`
+  const translatedFor = useRef(translateKey)
   useEffect(() => {
-    if (!initialized.current) return
+    if (translatedFor.current === translateKey) return
+    translatedFor.current = translateKey
     if (!translateTargets.length) return
     translateLocale(translateTargets)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editLocale, defaultLocale, supportedLocales])
+  }, [translateKey])
 
   // Any edit at all leaves something unpublished, and stays that way through
   // the autosave that follows — only Publish clears it.
