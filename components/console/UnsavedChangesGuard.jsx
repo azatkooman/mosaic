@@ -148,15 +148,10 @@ export function UnsavedChangesGuard({
       title={title ?? t('unsavedTitle')}
     >
       <p style={{ margin: 0, color: 'var(--ink-soft)' }}>{body ?? t('unsavedBody')}</p>
-      <div
-        style={{
-          display: 'flex',
-          gap: 'var(--s-3)',
-          justifyContent: 'flex-end',
-          flexWrap: 'wrap',
-          marginTop: 'var(--s-4)',
-        }}
-      >
+      {/* .dialog-actions rather than inline style: the row has to hold three
+          buttons on one line at the dialog's shared width, which takes a
+          descendant rule on .btn that an inline style cannot express. */}
+      <div className="dialog-actions">
         <Dialog.Close asChild>
           <Button variant="ghost" type="button" disabled={running}>
             {t('unsavedStay')}
