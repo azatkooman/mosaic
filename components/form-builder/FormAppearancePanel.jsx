@@ -33,7 +33,17 @@ import styles from './builder.module.css'
  * repeat that.
  */
 
-export const ZONES = ['theme', 'header', 'intro', 'questions', 'nav']
+/**
+ * First because it is furthest back: the zones read front-to-back from the
+ * screen behind the form inward, which is the order an organizer builds in.
+ *
+ * `background` is the screen behind the form and is deliberately empty for now
+ * — the tab exists so the split it implies is visible while the layer itself is
+ * still being designed. What used to be called the page background is the
+ * FORM's background and lives under `theme`; the two are separate surfaces and
+ * always were, which is what the rename admits.
+ */
+export const ZONES = ['background', 'theme', 'header', 'intro', 'questions', 'nav']
 
 export function FormAppearancePanel({
   appearance,
@@ -173,11 +183,20 @@ export function FormAppearancePanel({
       </div>
 
       <div className={styles.panelBody}>
+        {/* Empty on purpose — the tab is here so the form/screen split is
+            visible, and the layer behind it has not been built yet. The note
+            stops it reading as a panel that failed to load; it is not a
+            control and is meant to be deleted with the first real one. */}
+        {zone === 'background' && <p className={styles.panelNote}>{t('formZoneBackgroundSoon')}</p>}
+
         {zone === 'theme' && (
           <>
             <p className={styles.panelNote}>{t('formThemeInherits')}</p>
             <ColorField
-              label={t('pageBackground')}
+              /* Not `pageBackground`: that key is the EVENT PAGE editor's own
+                 label (EventPageEditor.jsx), where it really is the page's
+                 background, and reusing it would have renamed that control too. */
+              label={t('formBackground')}
               value={theme.page_bg}
               fallback={inherited.page_bg ?? '#ffffff'}
               clearLabel={t('formInherit')}

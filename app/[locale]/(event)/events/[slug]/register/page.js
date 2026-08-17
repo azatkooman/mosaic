@@ -12,6 +12,7 @@ import { eventMediaUrl } from '@/lib/storage'
 import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
 import {
   appearanceVars,
+  formSurfaceStyle,
   headerBand,
   introStyle,
   introTextFor,
@@ -292,7 +293,11 @@ export default async function RegisterPage({ params, searchParams }) {
   return (
     <div
       className="container-narrow"
-      style={{ paddingBlock: 'var(--s-6)', ...appearanceVars(shell) }}
+      style={{
+        paddingBlock: 'var(--s-6)',
+        ...appearanceVars(shell),
+        ...formSurfaceStyle(shell),
+      }}
     >
       {/* The header zone: controls and title together, over whatever backdrop
           the organizer gave it. Mirrored in RegisterPreview — same classes,

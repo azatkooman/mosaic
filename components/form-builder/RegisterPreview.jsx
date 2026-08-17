@@ -9,6 +9,7 @@ import ukMessages from '@/messages/uk.json'
 import { LOCALES, lt, localeAcronym } from '@/lib/i18n/locales'
 import {
   appearanceVars,
+  formSurfaceStyle,
   headerBand,
   introStyle,
   introTextFor,
@@ -163,7 +164,11 @@ function RegisterPreviewBody({
     // width, so `--container-narrow` is in scope for the class that reads it.
     <div
       className="container-narrow"
-      style={{ paddingBlock: 'var(--s-6)', ...appearanceVars(resolved) }}
+      style={{
+        paddingBlock: 'var(--s-6)',
+        ...appearanceVars(resolved),
+        ...formSurfaceStyle(resolved),
+      }}
     >
       {/* The register page's own header zone, rule for rule — the controls and
           the title together, because the title is inside the band and takes the
