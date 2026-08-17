@@ -98,7 +98,7 @@ export function FormBuilder({
   const [zone, setZone] = useState(null) // null = panel closed
   const [styledQuestionId, setStyledQuestionId] = useState(null)
   const [appearanceState, setAppearanceState] = useState('idle') // idle|saving|saved|failed
-  const appearanceLoaded = useRef(false)
+  const [appearanceDirty, setAppearanceDirty] = useState(false)
 
   const resolved = useMemo(
     () => resolveFormAppearance(appearance, eventTheme),
@@ -172,6 +172,11 @@ export function FormBuilder({
             ? nextAppearance
             : current
         )
+        // A translated intro blurb is an unsaved change like any other now that
+        // appearance waits for Save. It used to ride out on the autosave; left
+        // unflagged it would sit in the editor looking done and never be
+        // written, which is worse than the nagging the flag causes.
+        setAppearanceDirty(true)
       }
       // Also persists translation bookkeeping on runs that translated nothing:
       // adopting provenance for content that predates tracking has to be saved,
@@ -276,42 +281,58 @@ export function FormBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, dirty, versionId])
 
-  // Debounced autosave of the appearance, mirroring the draft autosave above.
-  // No Publish and no dirty flag: forms.appearance is not versioned, so what is
-  // written here is what a registrant gets, and the unpublished-work guard has
-  // nothing to warn about.
+  // Appearance is held here until Save, and that is a deliberate reversal of
+  // how it used to work.
   //
-  // The ref skips the mount pass. Without it every visit to a form would write
-  // its appearance straight back — harmless in content but enough to make every
-  // form look freshly edited.
-  useEffect(() => {
-    if (!appearanceLoaded.current) {
-      appearanceLoaded.current = true
-      return
-    }
+  // It autosaved on a 900ms debounce, which followed correctly from the column
+  // being unversioned (0055): what is written to forms.appearance IS what a
+  // registrant gets, so there was no draft to publish and nothing for a guard
+  // to warn about. What that missed is that "not versioned" and "live the
+  // instant you drag a slider" are different claims, and only the first one was
+  // wanted. Every intermediate colour on the way to the intended one reached
+  // the public form, and leaving the tab mid-experiment left whatever was on
+  // screen at the time as the live appearance.
+  //
+  // So it now matches the event page editor: edit freely, see it in the
+  // preview, and nothing reaches a registrant until Save. Still no versions —
+  // that part of 0055 stands, and a colour change still mints nothing and
+  // needs no Publish.
+  // Wraps every write from the panel so no caller has to remember the flag, and
+  // clears any stale "Saved" so the line cannot claim work is stored while an
+  // enabled Save button says otherwise.
+  function editAppearance(next) {
+    setAppearance(next)
+    setAppearanceDirty(true)
+    setAppearanceState('idle')
+  }
+
+  async function saveAppearance() {
     setAppearanceState('saving')
-    const handle = setTimeout(async () => {
-      // Deleting a question strands its override, which is already harmless at
-      // render time — the resolver never looks an unknown id up — so this is
-      // housekeeping, and it runs here because saving is the only moment that
-      // sees both the appearance and the current question list.
-      const pruned = pruneQuestionStyles(
-        appearance,
-        useBuilderStore.getState().definition.questions.map((q) => q.id)
-      )
-      if (pruned !== appearance) {
-        setAppearance(pruned)
-        return
-      }
-      const { error } = await supabase
-        .from('forms')
-        .update({ appearance: pruned })
-        .eq('id', formId)
-      setAppearanceState(error ? 'failed' : 'saved')
-    }, 900)
-    return () => clearTimeout(handle)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appearance, formId])
+    // Deleting a question strands its override, which is already harmless at
+    // render time — the resolver never looks an unknown id up — so this is
+    // housekeeping, and it runs here because saving is the only moment that
+    // sees both the appearance and the current question list.
+    const pruned = pruneQuestionStyles(
+      appearance,
+      useBuilderStore.getState().definition.questions.map((q) => q.id)
+    )
+    const { error } = await supabase
+      .from('forms')
+      .update({ appearance: pruned })
+      .eq('id', formId)
+    if (error) {
+      setAppearanceState('failed')
+      return false
+    }
+    // Adopted only on success, so a failed save leaves the organizer's own
+    // object in hand rather than a pruned copy of something never stored.
+    if (pruned !== appearance) setAppearance(pruned)
+    setAppearanceState('saved')
+    setAppearanceDirty(false)
+    // Returned so the leave-guard can tell a real save from a failed one and
+    // only then continue the navigation it interrupted.
+    return true
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -358,23 +379,66 @@ export function FormBuilder({
 
   const selected = definition.questions.find((q) => q.id === selectedId)
 
+  // Which of the two tabs has work outstanding decides which question the guard
+  // asks, because they are not the same question and one dialog cannot ask
+  // both. Questions autosave to a draft and are lost to nobody — what is at
+  // stake there is that the live form still shows the old version, so the ask
+  // is "publish?". Appearance is not saved at all until Save, so what is at
+  // stake there is losing it, and the ask is the ordinary "leave without
+  // saving?" the event page editor uses for exactly the same reason.
+  //
+  // One instance rather than three mounted side by side: each guard registers
+  // its own document-wide click listener and owns its own dialog, so three
+  // would mean three listeners and, if two ever armed at once, two dialogs over
+  // one click. Choosing the shape here keeps it to one of each.
+  //
+  // Note this is about the two tabs' STATE, not which tab is open. Switching
+  // tabs is not navigation and never has been — the triggers are buttons, not
+  // links, so the guard does not see them — which is what lets an organizer
+  // move between Questions and Preview form freely while both have work in
+  // hand, and get asked only on the way off the page.
+  const guard =
+    unpublished && appearanceDirty
+      ? {
+          title: t('unsavedBothTitle'),
+          body: t('unsavedBothBody'),
+          leaveLabel: t('unsavedBothLeave'),
+          action: {
+            label: t('unsavedBothAction'),
+            busyLabel: t('publishing'),
+            // Appearance first: it is the one that would be lost. If it fails,
+            // stop — publishing on top would report success for half the work
+            // while the half that can vanish silently did.
+            run: async () => (await saveAppearance()) && (await publish()),
+          },
+        }
+      : unpublished
+        ? {
+            title: t('unpublishedTitle'),
+            body: t('unpublishedBody'),
+            leaveLabel: t('unpublishedLeave'),
+            action: { label: t('publishForm'), busyLabel: t('publishing'), run: publish },
+          }
+        : appearanceDirty
+          ? {
+              // The event page editor's own copy, by default rather than by
+              // copying strings: same situation, same words.
+              action: { label: t('savePreview'), busyLabel: t('draftSaving'), run: saveAppearance },
+            }
+          : null
+
   return (
     <>
-      {/* Unlike the other two editors this one autosaves, so the question on
-          the way out is not "save?" but "publish?" — the edits are safe in the
-          draft either way, and the thing that would surprise an organizer is
-          finding the live form unchanged. Hence a third button rather than
-          reworded copy: publishing IS what they meant to do.
-
-          Outside the tabs, not inside one: the draft is just as unpublished
-          from the Forms page tab, and a guard mounted on only one of them would
-          let the organizer leave unwarned from the other. */}
+      {/* Outside the tabs, not inside one: work on either tab is just as
+          outstanding from the other, and a guard mounted on a single tab would
+          let the organizer leave unwarned from its neighbour. `guard` above
+          decides which of the three questions this asks. */}
       <UnsavedChangesGuard
-        when={unpublished}
-        title={t('unpublishedTitle')}
-        body={t('unpublishedBody')}
-        leaveLabel={t('unpublishedLeave')}
-        action={{ label: t('publish'), busyLabel: t('publishing'), run: publish }}
+        when={!!guard}
+        title={guard?.title}
+        body={guard?.body}
+        leaveLabel={guard?.leaveLabel}
+        action={guard?.action ?? null}
       />
       {/* Questions is what "Edit form" means and stays the landing tab; Forms
           page is the same form seen from the registrant's side. */}
@@ -573,34 +637,35 @@ export function FormBuilder({
               >
                 {t('formCustomize')}
               </Button>
-              {/* One status line for two independent things, in priority order.
-                  The appearance autosave is the tab's own background chatter and
-                  is what this line has always shown; a publish result is a reply
-                  to something the organizer just clicked, so it wins while it is
-                  showing. They cannot both be mid-flight in any realistic order
-                  of clicks, and if they were, the answer to the click is the one
-                  worth reading. */}
+              {/* This tab's own status, and only its own. It used to give way
+                  to `saveState` because Publish Form stood in this row and its
+                  result had to land somewhere; with that button gone, publishing
+                  is a Questions-tab action again and reporting it here would be
+                  answering a click that happened on another screen. */}
               <p aria-live="polite" className={styles.pageTabHint}>
-                {saveState !== 'idle' ? (
-                  <SaveStateText t={t} state={saveState} />
-                ) : (
-                  <>
-                    {appearanceState === 'saving' && t('draftSaving')}
-                    {appearanceState === 'saved' && t('draftSaved')}
-                    {appearanceState === 'failed' && (
-                      <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
-                    )}
-                    {appearanceState === 'idle' && t('formsPageHint')}
-                  </>
+                {appearanceState === 'saving' && t('draftSaving')}
+                {appearanceState === 'saved' && t('saved')}
+                {appearanceState === 'failed' && (
+                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
                 )}
+                {appearanceState === 'idle' &&
+                  (appearanceDirty ? t('unsavedPreview') : t('formsPageHint'))}
               </p>
-              {/* Last in the row and after the hint, which grows — so it sits at
-                  the far right, where the Questions tab also keeps it. Publishing
-                  from here is the point: the questions are what needs publishing
-                  and they are edited on the other tab, but an organizer who has
-                  just finished styling should not have to go back to a tab they
-                  are done with to make any of it live. */}
-              <PublishButton onPublish={publish} burst={publishBurst} label={t('publishForm')} />
+              {/* Save, not Publish. Publish Form stood here and had to go: it
+                  publishes the QUESTIONS, and beside a row of appearance
+                  controls that reads as publishing the colours — which it never
+                  did and now visibly does not, since the colours have their own
+                  button that does exactly what it says.
+
+                  Disabled until there is something to save, matching the event
+                  page editor's own Save Page down to the condition. */}
+              <Button
+                size="sm"
+                onClick={saveAppearance}
+                disabled={appearanceState === 'saving' || !appearanceDirty}
+              >
+                {t('savePreview')}
+              </Button>
             </div>
             <div className={`${styles.pageSplit} ${zone ? styles.pageSplitOpen : ''}`}>
               <div className={styles.pageFrame}>
@@ -632,7 +697,7 @@ export function FormBuilder({
                 <FormAppearancePanel
                   appearance={appearance}
                   resolved={resolved}
-                  onChange={setAppearance}
+                  onChange={editAppearance}
                   zone={zone}
                   onZoneChange={setZone}
                   onClose={() => setZone(null)}
