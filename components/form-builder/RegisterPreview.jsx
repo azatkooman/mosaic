@@ -172,10 +172,11 @@ function RegisterPreviewBody({
     // its own is invisible — so the DOM keeps one shape instead of growing a
     // level the first time someone opens the Background tab.
     //
-    // No `.form-screen` class here, unlike the register page: that class only
-    // carries the viewport height, and inside the preview frame the layer is
-    // as tall as the form it is behind.
-    <div style={screen}>
+    // Shares `.form-screen` with the register page for the formatting context
+    // that keeps the card's margin from collapsing the layer downward; only the
+    // real page adds `data-viewport`, since a viewport height inside a fixed
+    // preview frame would be nonsense.
+    <div className="form-screen" style={screen}>
       {/* The theme rides here, on the same element that holds the page's own
           width, so `--container-narrow` is in scope for the class that reads it. */}
       <div

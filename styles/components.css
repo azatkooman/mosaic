@@ -652,6 +652,21 @@
  * actually on screen, which would leave the background running under the fold
  * on exactly the devices where the form covers most of it anyway. */
 .form-screen {
+  /* flow-root, not the default block, and this is the whole reason the preview
+     shares the class rather than going classless: the form card inside carries
+     a top margin (formSurfaceStyle), and through a plain block that margin
+     COLLAPSES out — moving the screen layer down instead of insetting the card,
+     so the colour began below the top of the screen and left a strip of the
+     platform's own paper above it. Visible at normal and round radius and not
+     at square, purely because square is the one setting that draws no card.
+     A formatting context contains the margin, so the layer starts at the top
+     whatever the form and the radius are doing. */
+  display: flow-root;
+}
+
+/* Only the real page fills the viewport; inside the preview frame the layer is
+   as tall as the form it is behind. */
+.form-screen[data-viewport] {
   min-block-size: 100dvh;
 }
 

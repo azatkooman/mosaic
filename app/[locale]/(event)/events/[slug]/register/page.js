@@ -295,7 +295,7 @@ export default async function RegisterPage({ params, searchParams }) {
     // The screen the form sits ON. Mirrors RegisterPreview, which draws the
     // same layer from the same helper — see .form-screen for why only this one
     // carries the class.
-    <div className="form-screen" style={screenBackgroundStyle(shell)}>
+    <div className="form-screen" data-viewport style={screenBackgroundStyle(shell)}>
       <div
         className="container-narrow"
         style={{
