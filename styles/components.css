@@ -88,6 +88,44 @@
   background: color-mix(in srgb, var(--surface-sunken) 70%, var(--line));
 }
 
+/* Shell — a translucent white pill for a control that has to stay visible on
+ * whatever it happens to be sitting on: a photograph, a brand colour, or a page
+ * background the organizer set to black.
+ *
+ * Translucent rather than solid so what is behind still reads through, which is
+ * the whole point of the variant: the pill separates the control from its
+ * backdrop without covering it. That makes `color: inherit` the only correct
+ * text colour — at 25% white the pill is mostly its backdrop, so the text has
+ * to be whatever that backdrop's text is. It inherits the header band's ink
+ * over an image or a colour, and the page's own `--ink` otherwise, so a black
+ * page gives light text and a white page gives dark text with nothing here
+ * needing to know which. A literal colour would be wrong in one of the two and
+ * invisible to an organizer who only ever looks at the other.
+ *
+ * The radius is a hard-coded pill, deliberately ignoring `--r-md`: this is
+ * chrome around the form rather than part of it, and a square-cornered shell
+ * over a photo reads as a mis-rendered box rather than as a deliberate square.
+ * See the matching `[data-variant='shell']` rule on .lang-picker — the two are
+ * one control visually and must stay identical. */
+.btn.btn-shell {
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  /* `.btn.btn-shell` rather than `.btn-shell`, and only because of this line:
+     `.btn-sm` sets its own border-radius and is declared further down the file,
+     so at equal specificity it wins and the pill came out at --r-sm while the
+     language picker beside it — a different selector, unaffected — stayed
+     round. Two classes settle it wherever either rule later moves to. */
+  border-radius: 999px;
+}
+.btn-shell:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.38);
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+.btn-shell:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Danger — destructive actions, same elevated treatment as primary. */
 .btn-danger {
   background: linear-gradient(180deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 82%, black) 100%);
@@ -138,9 +176,14 @@
   gap: var(--s-2);
 }
 
+/* The three --q-* variables below are the hooks a themed registration form
+   sets on a wrapper (see lib/form-appearance.js). Every fallback is the value
+   that was here before them, so a page that sets none renders identically —
+   which is every page in the console. */
 .field-label {
   font-weight: 600;
-  font-size: var(--text-sm);
+  font-size: var(--q-label-size, var(--text-sm));
+  color: var(--q-label-color, inherit);
 }
 
 .field-label .req {
@@ -150,7 +193,7 @@
 
 .field-help {
   font-size: var(--text-xs);
-  color: var(--ink-soft);
+  color: var(--q-help-color, var(--ink-soft));
 }
 
 .field-error {
@@ -205,9 +248,29 @@
   border-color: var(--line-strong);
 }
 
+/* The selected state tints what is BEHIND the row rather than painting a colour
+ * over it, and the difference matters as soon as a page is not white.
+ *
+ * `--pine-tint` is the primary colour mixed into **white** — a literal white,
+ * both in tokens.css and in appearanceVars(). That is safe for a rule that also
+ * sets its own text colour (`.alert-info` does, and is fine), but this row does
+ * not: its label inherits the page's `--ink`. On a dark registration page that
+ * ink is near-white, so a selected option came out as white text on pale mint
+ * and could not be read at all — on the registrant's screen, and invisible to
+ * an organizer working in light mode.
+ *
+ * `transparent` instead of a base colour is what makes this hold up: the
+ * browser composites the tint against whatever is actually painted behind the
+ * row, so the row follows the page without anything here having to know what
+ * the page is. Deriving it from `theme.page_bg` in JS would have worked only
+ * for a flat colour that the resolver happens to know about — not for an image,
+ * a gradient, or the header band.
+ *
+ * 14% is the same ratio `--pine-tint` uses, so over a white page this composites
+ * to within a hair of the colour it replaces and light mode is unchanged. */
 .choice-row[data-checked='true'] {
   border-color: var(--pine);
-  background: var(--pine-tint);
+  background: color-mix(in srgb, var(--pine) 14%, transparent);
 }
 
 /* Compact variant for a lone preference sitting among labelled fields, where
@@ -578,6 +641,108 @@
   color: var(--gold-deep);
 }
 
+/* The screen a registration form sits on (forms.appearance.background).
+ *
+ * Only the height is here. The paint is an inline style from
+ * screenBackgroundStyle(), because it is per-form data rather than a rule, and
+ * the preview draws the same layer with no class at all — inside a fixed frame
+ * a viewport height would be nonsense.
+ *
+ * dvh, not vh: on iOS the expanded URL bar makes 100vh taller than what is
+ * actually on screen, which would leave the background running under the fold
+ * on exactly the devices where the form covers most of it anyway. */
+.form-screen {
+  /* flow-root, not the default block, and this is the whole reason the preview
+     shares the class rather than going classless: the form card inside carries
+     a top margin (formSurfaceStyle), and through a plain block that margin
+     COLLAPSES out — moving the screen layer down instead of insetting the card,
+     so the colour began below the top of the screen and left a strip of the
+     platform's own paper above it. Visible at normal and round radius and not
+     at square, purely because square is the one setting that draws no card.
+     A formatting context contains the margin, so the layer starts at the top
+     whatever the form and the radius are doing. */
+  display: flow-root;
+}
+
+/* Only the real page fills the viewport; inside the preview frame the layer is
+   as tall as the form it is behind. */
+.form-screen[data-viewport] {
+  min-block-size: 100dvh;
+}
+
+/* --- Registration form header band ---
+ *
+ * The header ZONE of a registration form: the back link, the language picker
+ * and the "Register for …" title, over an optional image and/or colour
+ * (forms.appearance.header, 0055). Global rather than a module, and that is the
+ * point: two surfaces draw this band — the console's preview frame and the real
+ * /register page, which is a server component with no module of its own — and
+ * lib/form-appearance.js exists to stop those two disagreeing. One rule set
+ * means they cannot.
+ *
+ * Every token here is one appearanceVars() rewrites, so the band picks up the
+ * form's own radius and density rather than sitting at fixed sizes inside a
+ * themed page.
+ *
+ * The band always renders; only the backdrop is conditional. Without one it is
+ * a plain block with no padding and no background, so an untouched form is
+ * pixel-for-pixel the screen that existed before any of this. */
+.form-header {
+  margin-bottom: var(--s-5);
+}
+
+.form-header[data-backdrop] {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  /* Enough band for the image to read as an image rather than as a tint behind
+     the controls, which at row height is all it would be. */
+  min-block-size: 9rem;
+}
+
+.form-header-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* The default darkening over an untinted photo. It covers the whole band
+   rather than fading out, because the title lives in here too now and light
+   text has to hold over the bottom of the image as well as the top — a gradient
+   that cleared by 60% left the title sitting on raw photo. An organizer who
+   sets a header colour replaces this with their own tint (headerBand()), which
+   is the same trade the event page's hero_bg makes over a cover. */
+.form-header-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+/* Positioned, so it paints over the two absolute siblings above it in document
+   order — no z-index needed, and none wanted: this band is dropped into pages
+   whose stacking contexts it does not own. */
+.form-header-content {
+  position: relative;
+}
+
+.form-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  /* The picker keeps the right edge on a narrow screen; the back link drops to
+     its own line rather than squeezing both onto one. */
+  flex-wrap: wrap;
+  /* The row still has to hold its height with both controls hidden, or the
+     title jumps up and the header stops being a place to click. */
+  min-block-size: 2rem;
+  margin-bottom: var(--s-3);
+}
+
 /* --- Alerts --- */
 .alert {
   padding: var(--s-3) var(--s-4);
@@ -803,4 +968,22 @@ input[type='datetime-local'].input {
   background: var(--ep-lang-bg, color-mix(in srgb, currentColor 12%, transparent));
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+/* Shell variant: the picker beside a form's back link. Every value here is
+   copied from .btn-shell rather than derived, because the two sit at opposite
+   ends of the same row and any drift between them is immediately visible as a
+   mismatch — which is exactly what this variant was added to fix. Keep them in
+   step. `color: inherit` is already the base rule's, restated so the pairing is
+   readable in one place. */
+.lang-picker-wrap[data-variant='shell'] .lang-picker {
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 999px;
+}
+
+.lang-picker-wrap[data-variant='shell'] .lang-picker:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.38);
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
 }

@@ -89,4 +89,86 @@ describe('RegisterPreview — the Forms page tab', () => {
     // page for a single-language event.
     expect(render({ supportedLocales: ['en'] })).not.toContain('lang-picker')
   })
+
+  // The band, and everything that has to hold whether or not it has a backdrop.
+  // The GLOBAL class names are spelled out rather than read from the module on
+  // purpose: the real register page is a server component with no CSS module,
+  // so these names are the only thing making the band it draws and the band
+  // drawn here the same band. A rename that reached one file has to fail here.
+  const bandOf = (html) =>
+    html.slice(html.indexOf('class="form-header"'), html.indexOf('</h1>'))
+
+  it('renders a header background image when one is provided', () => {
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    expect(html).toContain('src="https://example.com/cover.jpg"')
+    expect(html).toContain('class="form-header-bg"')
+    expect(html).toContain('class="form-header-scrim"')
+    // data-backdrop is what turns on the padding, the radius and the crop, so
+    // it is the difference between a band and a plain block.
+    expect(html).toContain('data-backdrop="true"')
+  })
+
+  it('puts the title INSIDE the header band, so a backdrop covers it too', () => {
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    const band = bandOf(html)
+    expect(band).toContain('Register for Demo Event')
+    expect(band).toContain('Back to event page')
+    expect(band).toContain('lang-picker')
+    // …and the form itself is emphatically not in there.
+    expect(band).not.toContain('Your name')
+  })
+
+  it('renders the band with no backdrop when nothing is set, and no image', () => {
+    const html = render()
+    // Still a band — it holds the header zone either way — but a bare one, so
+    // an untouched form renders the screen that existed before any of this.
+    expect(html).toContain('class="form-header"')
+    expect(html).not.toContain('data-backdrop')
+    expect(html).not.toContain('form-header-bg')
+    expect(html).not.toContain('form-header-scrim')
+  })
+
+  it('gives the back link and the language picker matching shells, always', () => {
+    // Always, not only over an image: a ghost link vanishes on a page whose
+    // background the organizer set to black, which is the case this variant was
+    // widened to cover. Both controls, because they sit at opposite ends of one
+    // row and a mismatch between them is the thing that reads as broken.
+    for (const props of [{}, { headerImageUrl: 'https://example.com/cover.jpg' }]) {
+      const band = bandOf(render(props))
+      expect(band).toContain('btn-shell')
+      expect(band).toContain("data-variant=\"shell\"")
+      // The wizard's own Back button stays ghost, but it is below the band.
+      expect(band).not.toContain('btn-ghost')
+    }
+  })
+
+  it('applies the intro and progress colours where they belong', () => {
+    const html = render({
+      resolved: {
+        theme: {}, header: {}, questions: {},
+        intro: { enabled: true, text: { en: 'Please read this first.' }, color: '#8a2f5f' },
+        nav: { progress_color: '#146b5c' },
+      },
+    })
+    // Each colour has to land on its OWN line — the two live one element apart
+    // and swapping them is the kind of mistake nothing else would catch.
+    expect(html).toMatch(/<p[^>]*color:#8a2f5f[^>]*>Please read this first\.<\/p>/)
+    expect(html).toMatch(/<p class="eyebrow" style="color:#146b5c">Participant 1 of 1/)
+  })
+
+  it('leaves both colours off when unset, so the defaults still apply', () => {
+    // The counter keeps .eyebrow's gold and the intro keeps the page ink; an
+    // inline style here would override both with nothing.
+    const html = render()
+    expect(html).toContain('<p class="eyebrow">Participant 1 of 1')
+  })
+
+  it('leaves the background image decorative', () => {
+    // Empty alt, deliberately: it is a backdrop behind controls that already
+    // carry their own labels, so a screen reader announcing it would only add
+    // noise between the heading and the first field.
+    const html = render({ headerImageUrl: 'https://example.com/cover.jpg' })
+    const tag = html.match(/<img[^>]*form-header-bg[^>]*>/)?.[0] ?? ''
+    expect(tag).toContain('alt=""')
+  })
 })

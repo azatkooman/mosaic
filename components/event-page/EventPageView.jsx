@@ -9,7 +9,7 @@ import { eventMediaUrl } from '@/lib/storage'
 import { externalHref, eventPageUrl } from '@/lib/url'
 import { StatIcon } from './stat-icons'
 import { Countdown } from './Countdown'
-import { textStyle, TITLE_SIZES, FONT_FAMILIES } from './text-style'
+import { textStyle, hexToRgba, TITLE_SIZES, FONT_FAMILIES } from './text-style'
 import { videoEmbedSrc } from './video'
 import {
   TracksSection,
@@ -51,19 +51,6 @@ export function resolveSectionOrder(content) {
 // Text-style options live in ./text-style (shared with sections-extra and the
 // console editor); re-exported here so existing imports keep working.
 export { HEADING_SIZES, TITLE_SIZES, FONT_CHOICES, FONT_FAMILIES } from './text-style'
-
-// Hex (#rgb or #rrggbb) + opacity percent (0–100) → rgba() string.
-function hexToRgba(hex, opacityPct) {
-  if (!hex) return null
-  const h = hex.replace('#', '')
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
-  const r = parseInt(full.slice(0, 2), 16)
-  const g = parseInt(full.slice(2, 4), 16)
-  const b = parseInt(full.slice(4, 6), 16)
-  if ([r, g, b].some(Number.isNaN)) return null
-  const a = opacityPct == null ? 1 : Math.max(0, Math.min(100, opacityPct)) / 100
-  return `rgba(${r}, ${g}, ${b}, ${a})`
-}
 
 function PencilIcon() {
   return (

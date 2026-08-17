@@ -8,7 +8,20 @@ import { getContentMessages } from '@/lib/i18n/ui-messages-server'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
 import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
+import { eventMediaUrl } from '@/lib/storage'
 import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
+import {
+  appearanceVars,
+  formSurfaceStyle,
+  screenBackgroundStyle,
+  headerBand,
+  introStyle,
+  introTextFor,
+  resolveFormAppearance,
+  showsBackLink,
+  showsLanguagePicker,
+  titleStyle,
+} from '@/lib/form-appearance'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,11 +87,19 @@ export default async function RegisterPage({ params, searchParams }) {
   // <a>, not next-intl's Link: eventPageUrl already carries the locale prefix
   // (and a ?lang= for custom languages), which Link would prefix a second time.
   const eventHref = eventPageUrl({ slug, code: contentLocale, uiLocale: locale })
-  const backToEvent = (
-    <a href={eventHref} className="btn btn-ghost btn-sm">
+  // Takes its variant because the same link is drawn on two different surfaces.
+  // In the header zone it is always `shell` — the translucent pill holds up over
+  // a photo, a brand colour, or a page background set to black, and a `ghost`
+  // link disappears into any of the three.
+  const backLink = (variant) => (
+    <a href={eventHref} className={`btn btn-${variant} btn-sm`}>
       <span aria-hidden="true">&larr;</span> {t('backToEvent')}
     </a>
   )
+  // The early returns below are the closed / already-registered / no-types
+  // screens. They render before any form's appearance is known and apply none
+  // of it, so they sit on the platform's own background where `ghost` is right.
+  const backToEvent = backLink('ghost')
 
   // One registration per account per event (the submit RPC enforces this
   // authoritatively) — send returning registrants to their registration
@@ -144,7 +165,7 @@ export default async function RegisterPage({ params, searchParams }) {
 
   const { data: types } = await supabase
     .from('participant_types')
-    .select('id, key, name, capacity, hidden, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id )')
+    .select('id, key, name, capacity, hidden, min_per_registration, max_per_registration, sort_order, form_id, forms:form_id ( current_version_id, appearance )')
     .eq('event_id', event.id)
     .order('sort_order')
   if (!types?.length) notFound()
@@ -153,7 +174,7 @@ export default async function RegisterPage({ params, searchParams }) {
   // respondent picks that registration mode.
   const { data: modeFormRows } = await supabase
     .from('forms')
-    .select('registration_mode, current_version_id')
+    .select('registration_mode, current_version_id, appearance')
     .eq('event_id', event.id)
     .not('registration_mode', 'is', null)
 
@@ -172,9 +193,16 @@ export default async function RegisterPage({ params, searchParams }) {
   const defById = new Map((versions ?? []).map((v) => [v.id, v.definition]))
 
   const modeForms = {}
+  // Appearance (0055) is per FORM, so it follows the same override order the
+  // definitions do: a mode form's look wins over the participant type's for
+  // exactly the registrations that mode form covers. Kept as its own map rather
+  // than folded into modeForms, whose values are definitions everywhere they
+  // are read.
+  const modeAppearance = {}
   for (const f of modeFormRows ?? []) {
     if (f.current_version_id && defById.has(f.current_version_id)) {
       modeForms[f.registration_mode] = defById.get(f.current_version_id)
+      modeAppearance[f.registration_mode] = f.appearance ?? {}
     }
   }
 
@@ -193,6 +221,7 @@ export default async function RegisterPage({ params, searchParams }) {
       definition: pt.forms?.current_version_id
         ? defById.get(pt.forms.current_version_id) ?? { questions: [] }
         : null,
+      appearance: pt.forms?.appearance ?? {},
     }))
 
   // Resolve the deep link against types that are actually registerable, then
@@ -227,6 +256,8 @@ export default async function RegisterPage({ params, searchParams }) {
       participantTypes={offeredTypes}
       preselectedTypeKey={preselectedTypeKey}
       modeForms={modeForms}
+      modeAppearance={modeAppearance}
+      eventTheme={event.page_content?.theme ?? {}}
       userId={user.id}
       profile={profile}
       contentLocale={contentLocale}
@@ -240,42 +271,85 @@ export default async function RegisterPage({ params, searchParams }) {
     wizardElement
   )
 
+  // The shell — title, back link, language picker — is drawn before the reader
+  // has chosen anything, so it takes the look of the form they will land on:
+  // the one their ?type= link names, otherwise the first type on offer. Once a
+  // mode or type IS chosen the wizard re-applies that form's own variables over
+  // these, which is what makes "the group form can look different" true rather
+  // than only true below the title.
+  const shellAppearance =
+    (preselectedTypeKey
+      ? offeredTypes.find((pt) => pt.key === preselectedTypeKey)?.appearance
+      : null) ??
+    offeredTypes[0]?.appearance ??
+    {}
+  const shell = resolveFormAppearance(shellAppearance, event.page_content?.theme)
+  const intro = introTextFor(shell, contentLocale, event.default_locale)
+  // Either the organizer's own upload or the event's cover, depending on which
+  // the panel wrote — both land in the same key as a storage path, so there is
+  // nothing to branch on here.
+  const headerImageUrl = eventMediaUrl(shell.header?.bg_image_path)
+  const band = headerBand(shell, headerImageUrl)
+
   return (
-    <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+    // The screen the form sits ON. Mirrors RegisterPreview, which draws the
+    // same layer from the same helper — see .form-screen for why only this one
+    // carries the class.
+    <div className="form-screen" data-viewport style={screenBackgroundStyle(shell)}>
       <div
+        className="container-narrow"
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 'var(--s-3)',
-          // The picker keeps the right edge on a narrow screen; the back link
-          // drops to its own line rather than squeezing both onto one.
-          flexWrap: 'wrap',
-          marginBottom: 'var(--s-3)',
+          paddingBlock: 'var(--s-6)',
+          ...appearanceVars(shell),
+          ...formSurfaceStyle(shell),
         }}
       >
-        {backToEvent}
-        <LanguagePicker
-          options={localeOptions.map((code) => ({
-            value: code,
-            // Short code here too, matching the event page an attendee just
-            // came from; the console keeps full names.
-            label: localeAcronym(code),
-            // Built-in locales have their own route; custom codes ride the
-            // current route via ?lang=.
-            href: eventPageUrl({
-              slug, code, uiLocale: locale, subPath: '/register',
-              params: { type: typeParam },
-            }),
-          }))}
-          value={contentLocale}
-          ariaLabel={tCommon('language')}
-        />
+        {/* The header zone: controls and title together, over whatever backdrop
+            the organizer gave it. Mirrored in RegisterPreview — same classes,
+            same order, same helper deciding all of it. */}
+        <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
+          {band.hasImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- see the
+                  matching note in RegisterPreview: a Supabase storage URL that
+                  next/image would need remotePatterns for and bill to optimize. */}
+              <img src={headerImageUrl} alt="" className="form-header-bg" />
+              <div className="form-header-scrim" style={band.overlayStyle} />
+            </>
+          )}
+          <div className="form-header-content">
+            <div className="form-header-row">
+              {showsBackLink(shell) ? backLink('shell') : <span />}
+              <LanguagePicker
+                variant="shell"
+                options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
+                  value: code,
+                  // Short code here too, matching the event page an attendee just
+                  // came from; the console keeps full names.
+                  label: localeAcronym(code),
+                  // Built-in locales have their own route; custom codes ride the
+                  // current route via ?lang=.
+                  href: eventPageUrl({
+                    slug, code, uiLocale: locale, subPath: '/register',
+                    params: { type: typeParam },
+                  }),
+                })) : []}
+                value={contentLocale}
+                ariaLabel={tCommon('language')}
+              />
+            </div>
+            <h1 className="page-title" style={titleStyle(shell)}>
+              {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
+            </h1>
+          </div>
+        </div>
+        {intro && (
+          <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(shell) }}>
+            {intro}
+          </p>
+        )}
+        {wizard}
       </div>
-      <h1 className="page-title" style={{ marginBottom: 'var(--s-5)' }}>
-        {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
-      </h1>
-      {wizard}
     </div>
   )
 }

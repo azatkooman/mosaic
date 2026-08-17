@@ -18,8 +18,9 @@ export default async function FormBuilderPage({ params }) {
   })
   if (error || !draftId) notFound()
 
-  const [{ data: version }, { data: types }, { data: event }] = await Promise.all([
+  const [{ data: version }, { data: form }, { data: types }, { data: event }] = await Promise.all([
     supabase.from('form_versions').select('id, version, definition').eq('id', draftId).single(),
+    supabase.from('forms').select('appearance').eq('id', formId).single(),
     supabase
       .from('participant_types')
       .select('key, name')
@@ -29,7 +30,7 @@ export default async function FormBuilderPage({ params }) {
     // "Register for {event}" title.
     supabase
       .from('events')
-      .select('name, default_locale, supported_locales, page_content')
+      .select('name, default_locale, supported_locales, page_content, cover_image_path')
       .eq('id', eventId)
       .single(),
   ])
@@ -37,11 +38,18 @@ export default async function FormBuilderPage({ params }) {
 
   return (
     <FormBuilder
+      formId={formId}
+      eventId={eventId}
       versionId={version.id}
       versionNumber={version.version}
       initialDefinition={version.definition ?? { questions: [] }}
+      initialAppearance={form?.appearance ?? {}}
+      coverImagePath={event?.cover_image_path ?? null}
       participantTypes={types ?? []}
       eventName={event?.name ?? {}}
+      /* What an unset appearance falls back to, so a form nobody has
+         customized already looks like the event it belongs to. */
+      eventTheme={event?.page_content?.theme ?? {}}
       defaultLocale={event?.default_locale ?? 'en'}
       supportedLocales={eventLocales(event)}
       localeNames={Object.fromEntries(

@@ -10,6 +10,13 @@ import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
 import { initialWizardState, draftWinsOverLink } from './initial-state'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
+import {
+  appearanceVars,
+  progressStyle,
+  questionVars,
+  resolveFormAppearance,
+  showsProgress,
+} from '@/lib/form-appearance'
 import styles from './wizard.module.css'
 
 /**
@@ -31,6 +38,8 @@ export function RegistrationWizard({
   participantTypes,
   preselectedTypeKey = null,
   modeForms = {},
+  modeAppearance = {},
+  eventTheme = {},
   userId,
   profile = null,
   contentLocale,
@@ -74,6 +83,15 @@ export function RegistrationWizard({
   // one, otherwise the participant type's own assigned form.
   function definitionFor(pt, forMode = mode) {
     return (forMode ? modeForms?.[forMode] : null) ?? pt.definition ?? { questions: [] }
+  }
+
+  // How that form looks, chosen by the same override order — appearance is per
+  // form (0055), so the form that supplies the questions supplies the styling.
+  // Resolved against the event page's theme, so a form nobody customized is
+  // still the event's colours rather than the platform's.
+  function appearanceFor(pt, forMode = mode) {
+    const own = (forMode ? modeAppearance?.[forMode] : null) ?? pt?.appearance ?? {}
+    return resolveFormAppearance(own, eventTheme)
   }
 
   // Types that can actually be registered under a mode: a mode form covers
@@ -428,12 +446,19 @@ export function RegistrationWizard({
   if (step === 'person') {
     const p = people[personIndex]
     const pt = typeByKey.get(p.participantTypeKey)
+    const look = appearanceFor(pt)
     return (
-      <div className={styles.panel}>
-        <p className="eyebrow">
-          {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}
-          {lt(pt.name, locale, event.default_locale)}
-        </p>
+      // Re-applied here rather than inherited from the page shell: the shell is
+      // drawn before a mode is picked, and picking one can change which form —
+      // and so which look — applies. The variables cascade, so this overrides
+      // the shell's for everything from the eyebrow down.
+      <div className={styles.panel} style={appearanceVars(look)}>
+        {showsProgress(look) && (
+          <p className="eyebrow" style={progressStyle(look)}>
+            {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}
+            {lt(pt.name, locale, event.default_locale)}
+          </p>
+        )}
         <FormRenderer
           definition={definitionFor(pt)}
           participantTypeKey={pt.key}
@@ -443,6 +468,7 @@ export function RegistrationWizard({
           errors={errors}
           onChange={(qid, value) => setAnswer(personIndex, qid, value)}
           uploadContext={{ eventId: event.id, userId }}
+          questionVars={(q) => questionVars(look, q)}
         />
         <div className={styles.nav}>
           {/* A ?type= link skipped mode + type selection, so on the first

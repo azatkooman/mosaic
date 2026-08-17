@@ -17,6 +17,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { eventMediaUrl } from '@/lib/storage'
 import { LOCALES, lt } from '@/lib/i18n/locales'
 import { hasStaleTranslations } from '@/lib/form-localization'
 import {
@@ -30,7 +31,9 @@ import {
   TabsContent,
 } from '@/components/ui'
 import { UnsavedChangesGuard } from '@/components/console/UnsavedChangesGuard'
+import { resolveFormAppearance, pruneQuestionStyles } from '@/lib/form-appearance'
 import { RegisterPreview } from './RegisterPreview'
+import { FormAppearancePanel } from './FormAppearancePanel'
 import { useBuilderStore } from './store'
 import { SortableQuestionCard } from './SortableQuestionCard'
 import { QuestionInspector } from './QuestionInspector'
@@ -47,6 +50,15 @@ export function FormBuilder({
   initialDefinition,
   participantTypes,
   eventName,
+  formId,
+  eventId,
+  initialAppearance,
+  // The event's hero image, offered in the panel as "use the event cover" so a
+  // header can track the event page instead of needing its own upload. Passed
+  // as the stored PATH, not a URL: it is what gets written into the appearance
+  // when inherited, and a URL there would rot the moment the bucket moves.
+  coverImagePath,
+  eventTheme,
   defaultLocale,
   supportedLocales,
   localeNames,
@@ -76,6 +88,23 @@ export function FormBuilder({
   const [editLocale, setEditLocale] = useState(defaultLocale)
   const initialized = useRef(false)
 
+  // --- Appearance (the Forms page tab) ---
+  //
+  // Kept in its own state and its own column rather than in the builder store,
+  // because it is not part of the definition and must not join the undo stack
+  // or the draft/publish cycle: a colour is live the moment it saves, and the
+  // questions are not live until Publish. Two lifecycles, two homes.
+  const [appearance, setAppearance] = useState(initialAppearance ?? {})
+  const [zone, setZone] = useState(null) // null = panel closed
+  const [styledQuestionId, setStyledQuestionId] = useState(null)
+  const [appearanceState, setAppearanceState] = useState('idle') // idle|saving|saved|failed
+  const appearanceLoaded = useRef(false)
+
+  const resolved = useMemo(
+    () => resolveFormAppearance(appearance, eventTheme),
+    [appearance, eventTheme]
+  )
+
   useEffect(() => {
     if (!initialized.current) {
       store.init(initialDefinition)
@@ -101,12 +130,18 @@ export function FormBuilder({
     const targets = Array.isArray(target) ? target : [target]
     if (!targets.length) return
     const snapshot = useBuilderStore.getState().definition
+    // The intro blurb on the Forms page tab is localized text like any question
+    // label, and it lives in the appearance rather than the definition — so both
+    // travel as one document. The walker only touches objects whose keys are
+    // language codes, which is why hex colours, question ids and type names
+    // inside the appearance pass through untouched.
+    const appearanceSnapshot = appearance
     try {
       const res = await fetch('/api/translate-form', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          definition: snapshot,
+          document: { definition: snapshot, appearance: appearanceSnapshot },
           source: defaultLocale,
           targets,
           // Tell the route the event's full language set so custom-language
@@ -118,11 +153,25 @@ export function FormBuilder({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) return
 
-      const nextDefinition = data?.translatedDefinition
+      const nextDefinition = data?.translatedDocument?.definition
+      const nextAppearance = data?.translatedDocument?.appearance
       if (!nextDefinition) return
       const latestDefinition = useBuilderStore.getState().definition
       if (JSON.stringify(latestDefinition) !== JSON.stringify(snapshot)) {
         return
+      }
+      // Guarded separately: the appearance can have been edited in the panel
+      // while the request was in flight, and adopting a stale copy would undo
+      // whatever the organizer just picked.
+      if (
+        nextAppearance &&
+        JSON.stringify(nextAppearance) !== JSON.stringify(appearanceSnapshot)
+      ) {
+        setAppearance((current) =>
+          JSON.stringify(current) === JSON.stringify(appearanceSnapshot)
+            ? nextAppearance
+            : current
+        )
       }
       // Also persists translation bookkeeping on runs that translated nothing:
       // adopting provenance for content that predates tracking has to be saved,
@@ -190,6 +239,21 @@ export function FormBuilder({
     if (dirty) setUnpublished(true)
   }, [dirty])
 
+  // Successes are announcements of something that finished; failures are
+  // conditions that still need dealing with. Only the first kind expires.
+  //
+  // Left set, 'published' sat on screen for the rest of the session — and since
+  // Radix unmounts the inactive tab panel, every tab switch remounted the
+  // element and replayed its `publish-flash` animation, so the form looked like
+  // it had just been published again. Clearing the state is what stops that,
+  // rather than suppressing the animation: a confirmation that never goes away
+  // has stopped confirming anything in particular by the time it is stale.
+  useEffect(() => {
+    if (saveState !== 'saved' && saveState !== 'published') return
+    const id = setTimeout(() => setSaveState('idle'), 4000)
+    return () => clearTimeout(id)
+  }, [saveState])
+
   // Debounced autosave of the draft version.
   useEffect(() => {
     if (!dirty) return
@@ -211,6 +275,43 @@ export function FormBuilder({
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, dirty, versionId])
+
+  // Debounced autosave of the appearance, mirroring the draft autosave above.
+  // No Publish and no dirty flag: forms.appearance is not versioned, so what is
+  // written here is what a registrant gets, and the unpublished-work guard has
+  // nothing to warn about.
+  //
+  // The ref skips the mount pass. Without it every visit to a form would write
+  // its appearance straight back — harmless in content but enough to make every
+  // form look freshly edited.
+  useEffect(() => {
+    if (!appearanceLoaded.current) {
+      appearanceLoaded.current = true
+      return
+    }
+    setAppearanceState('saving')
+    const handle = setTimeout(async () => {
+      // Deleting a question strands its override, which is already harmless at
+      // render time — the resolver never looks an unknown id up — so this is
+      // housekeeping, and it runs here because saving is the only moment that
+      // sees both the appearance and the current question list.
+      const pruned = pruneQuestionStyles(
+        appearance,
+        useBuilderStore.getState().definition.questions.map((q) => q.id)
+      )
+      if (pruned !== appearance) {
+        setAppearance(pruned)
+        return
+      }
+      const { error } = await supabase
+        .from('forms')
+        .update({ appearance: pruned })
+        .eq('id', formId)
+      setAppearanceState(error ? 'failed' : 'saved')
+    }, 900)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appearance, formId])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -363,17 +464,15 @@ export function FormBuilder({
               </Button>
               </div>
 
-              {/* "Publish", not "Publish form": inside a form builder the noun
-                  is already given, and it is what this file's own
-                  unsaved-changes dialog has always called it. Preview used to
-                  stand beside it here; the Preview form tab replaced it. */}
+              {/* "Publish Form", spelled out: the same button now also stands
+                  on the Preview form tab, where the surrounding controls are
+                  about appearance and a bare "Publish" would read as publishing
+                  the colours — which is exactly what it does NOT do (appearance
+                  saves on its own and is never versioned). Naming it once, in
+                  `publishForm`, is what keeps the two labels identical.
+                  Preview used to stand beside it here; the tab replaced it. */}
               <div className={styles.headActions}>
-                <span style={{ position: 'relative', display: 'inline-flex' }}>
-                  <Button size="sm" onClick={publish}>
-                    {t('publish')}
-                  </Button>
-                  <ConfettiBurst burst={publishBurst} />
-                </span>
+                <PublishButton onPublish={publish} burst={publishBurst} label={t('publishForm')} />
               </div>
             </div>
 
@@ -383,22 +482,7 @@ export function FormBuilder({
                 it can never push Publish sideways from here. Absent when idle. */}
             {saveState !== 'idle' && (
               <p aria-live="polite" className={styles.saveStateRow}>
-                {saveState === 'saving' && t('draftSaving')}
-                {saveState === 'saved' && t('draftSaved')}
-                {saveState === 'published' && (
-                  <strong className="publish-flash" style={{ color: 'var(--success)' }}>
-                    {t('formPublished')}
-                  </strong>
-                )}
-                {saveState === 'saveFailed' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
-                )}
-                {saveState === 'publishFailed' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('publishFailed')}</strong>
-                )}
-                {saveState === 'publishEmpty' && (
-                  <strong style={{ color: 'var(--danger)' }}>{t('publishNeedsQuestion')}</strong>
-                )}
+                <SaveStateText t={t} state={saveState} />
               </p>
             )}
 
@@ -474,31 +558,146 @@ export function FormBuilder({
                   </NativeSelect>
                 </label>
               )}
-              <p className={styles.pageTabHint}>{t('formsPageHint')}</p>
+              {/* Secondary in both states now, where it used to go primary while
+                  the panel was closed. That toggle was fine when this was the
+                  only button on the row; beside Publish Form it put two filled
+                  primaries side by side in the common case, which says the two
+                  matter equally when only one of them changes what registrants
+                  get. Nothing is lost — a whole panel opening next to the
+                  preview says "open" far louder than a fill ever did. */}
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-pressed={!!zone}
+                onClick={() => setZone(zone ? null : 'theme')}
+              >
+                {t('formCustomize')}
+              </Button>
+              {/* One status line for two independent things, in priority order.
+                  The appearance autosave is the tab's own background chatter and
+                  is what this line has always shown; a publish result is a reply
+                  to something the organizer just clicked, so it wins while it is
+                  showing. They cannot both be mid-flight in any realistic order
+                  of clicks, and if they were, the answer to the click is the one
+                  worth reading. */}
+              <p aria-live="polite" className={styles.pageTabHint}>
+                {saveState !== 'idle' ? (
+                  <SaveStateText t={t} state={saveState} />
+                ) : (
+                  <>
+                    {appearanceState === 'saving' && t('draftSaving')}
+                    {appearanceState === 'saved' && t('draftSaved')}
+                    {appearanceState === 'failed' && (
+                      <strong style={{ color: 'var(--danger)' }}>{t('saveFailed')}</strong>
+                    )}
+                    {appearanceState === 'idle' && t('formsPageHint')}
+                  </>
+                )}
+              </p>
+              {/* Last in the row and after the hint, which grows — so it sits at
+                  the far right, where the Questions tab also keeps it. Publishing
+                  from here is the point: the questions are what needs publishing
+                  and they are edited on the other tab, but an organizer who has
+                  just finished styling should not have to go back to a tab they
+                  are done with to make any of it live. */}
+              <PublishButton onPublish={publish} burst={publishBurst} label={t('publishForm')} />
             </div>
-            <div className={styles.pageFrame}>
-              <RegisterPreview
-                definition={definition}
-                eventName={eventName}
-                participantTypes={participantTypes}
-                participantTypeKey={previewTypeKey}
-                /* The language the form is being previewed in follows the
-                   builder's own language control on the Questions tab — the
-                   picker inside the frame belongs to the registrant's screen
-                   and does nothing. */
-                locale={editLocale}
-                defaultLocale={defaultLocale}
-                supportedLocales={supportedLocales}
-                localeNames={localeNames}
-                answers={previewAnswers}
-                onAnswerChange={(questionId, value) =>
-                  setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
-                }
-              />
+            <div className={`${styles.pageSplit} ${zone ? styles.pageSplitOpen : ''}`}>
+              <div className={styles.pageFrame}>
+                <RegisterPreview
+                  definition={definition}
+                  eventName={eventName}
+                  participantTypes={participantTypes}
+                  participantTypeKey={previewTypeKey}
+                  headerImageUrl={eventMediaUrl(resolved?.header?.bg_image_path)}
+                  /* The language the form is being previewed in follows the
+                     builder's own language control on the Questions tab — the
+                     picker inside the frame belongs to the registrant's screen
+                     and does nothing. */
+                  locale={editLocale}
+                  defaultLocale={defaultLocale}
+                  supportedLocales={supportedLocales}
+                  localeNames={localeNames}
+                  answers={previewAnswers}
+                  onAnswerChange={(questionId, value) =>
+                    setPreviewAnswers((a) => ({ ...a, [questionId]: value }))
+                  }
+                  resolved={resolved}
+                  /* Only while the panel is open, so a preview being read
+                     rather than edited carries no console controls at all. */
+                  onEditZone={zone ? setZone : undefined}
+                />
+              </div>
+              {zone && (
+                <FormAppearancePanel
+                  appearance={appearance}
+                  resolved={resolved}
+                  onChange={setAppearance}
+                  zone={zone}
+                  onZoneChange={setZone}
+                  onClose={() => setZone(null)}
+                  questions={definition.questions.filter((q) => !q.archived)}
+                  selectedQuestionId={styledQuestionId}
+                  onSelectQuestion={setStyledQuestionId}
+                  editLocale={editLocale}
+                  defaultLocale={defaultLocale}
+                  eventId={eventId}
+                  coverImagePath={coverImagePath}
+                />
+              )}
             </div>
           </div>
         </TabsContent>
       </Tabs>
     </>
   )
+}
+
+/**
+ * Publish Form, with its confetti.
+ *
+ * Extracted because it now stands on two tabs, and the pair has to stay one
+ * button: the wrapper span is what positions the burst over it, so a second
+ * hand-rolled copy would be a button that publishes without celebrating — or
+ * worse, one whose label drifts from the other's.
+ */
+function PublishButton({ onPublish, burst, label }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <Button size="sm" onClick={onPublish}>
+        {label}
+      </Button>
+      <ConfettiBurst burst={burst} />
+    </span>
+  )
+}
+
+/**
+ * The save/publish outcome as text, shared by both tabs' status lines.
+ *
+ * Renders nothing at idle so a caller can drop it straight into a line that
+ * shows something else the rest of the time. Kept as one component rather than
+ * six inline conditionals twice over, because half of these are failures and a
+ * failure that only one tab knows how to say is a failure the organizer on the
+ * other tab never sees.
+ */
+function SaveStateText({ t, state }) {
+  if (state === 'saving') return t('draftSaving')
+  if (state === 'saved') return t('draftSaved')
+  if (state === 'published') {
+    return (
+      <strong className="publish-flash" style={{ color: 'var(--success)' }}>
+        {t('formPublished')}
+      </strong>
+    )
+  }
+  const failures = {
+    saveFailed: 'saveFailed',
+    publishFailed: 'publishFailed',
+    publishEmpty: 'publishNeedsQuestion',
+  }
+  if (failures[state]) {
+    return <strong style={{ color: 'var(--danger)' }}>{t(failures[state])}</strong>
+  }
+  return null
 }

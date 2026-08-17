@@ -29,10 +29,17 @@ export async function POST(request) {
   // organizer-picked custom languages translate too — not just the built-ins.
   const supported = new Set((await getTranslateLanguages()).map((l) => l.code))
 
-  const { definition, source, targets, locales, force } = body ?? {}
+  // `document` is any JSON tree with localized text in it; `definition` is the
+  // original, narrower name and still accepted, because retranslateDocument
+  // never cared what the tree was — it walks for locale maps and translates
+  // those. The Forms page tab needs its intro blurb translated and that blurb
+  // lives in forms.appearance, not in the definition, so both now ride in one
+  // request rather than one of them going untranslated.
+  const { document, definition, source, targets, locales, force } = body ?? {}
+  const tree = document ?? definition
   if (
-    !definition ||
-    typeof definition !== 'object' ||
+    !tree ||
+    typeof tree !== 'object' ||
     typeof source !== 'string' ||
     !Array.isArray(targets) ||
     !supported.has(source)
@@ -45,7 +52,11 @@ export async function POST(request) {
     .filter((target) => typeof target === 'string' && supported.has(target) && target !== source)
     .slice(0, MAX_TARGETS)
   if (targetList.length === 0) {
-    return NextResponse.json({ translatedDefinition: definition, translated: 0 })
+    return NextResponse.json({
+      translatedDocument: tree,
+      translatedDefinition: tree,
+      translated: 0,
+    })
   }
 
   const validLocales = Array.isArray(locales)
@@ -56,14 +67,15 @@ export async function POST(request) {
     // Only fields whose source text changed since they were last translated (or
     // that have no translation yet) reach Google, so switching language tabs on
     // an unedited form costs nothing beyond this round trip.
-    const { node, translated } = await retranslateDocument(definition, {
+    const { node, translated } = await retranslateDocument(tree, {
       source,
       targets: targetList,
       locales: validLocales.length ? validLocales : [source, ...targetList],
       force: force === true,
       translate: (requests) => translateRequests(requests, source, apiKey, supported),
     })
-    return NextResponse.json({ translatedDefinition: node, translated })
+    // Both names, so an older caller sending `definition` keeps working.
+    return NextResponse.json({ translatedDocument: node, translatedDefinition: node, translated })
   } catch (error) {
     return NextResponse.json(
       { error: 'translation_failed', detail: String(error?.message ?? error) },
