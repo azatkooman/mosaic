@@ -805,6 +805,8 @@
     "formThemeInherits": "Anything left unset follows the event page’s own theme, so the form matches the event by default.",
     "formZone_theme": "Theme",
     "formBackground": "Form Background Color",
+    "formBackgroundOpacity": "Background Opacity",
+    "formBackgroundOpacityHelp": "Lower this to let the screen behind the form show through the colour.",
     "formZone_background": "Background",
     "formZoneBackgroundSoon": "Coming next: the screen behind the form.",
     "formZone_header": "Header",

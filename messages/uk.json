@@ -805,6 +805,8 @@
     "formThemeInherits": "Усе, що не задано, береться з теми сторінки події — тож форма за замовчуванням збігається з подією.",
     "formZone_theme": "Тема",
     "formBackground": "Колір тла форми",
+    "formBackgroundOpacity": "Непрозорість фону",
+    "formBackgroundOpacityHelp": "Зменште, щоб крізь колір проступав екран за формою.",
     "formZone_background": "Тло",
     "formZoneBackgroundSoon": "Незабаром: екран позаду форми.",
     "formZone_header": "Шапка",

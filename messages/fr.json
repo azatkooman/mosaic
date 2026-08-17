@@ -805,6 +805,8 @@
     "formThemeInherits": "Tout ce qui n’est pas défini suit le thème de la page de l’événement : le formulaire s’accorde donc à l’événement par défaut.",
     "formZone_theme": "Thème",
     "formBackground": "Couleur de fond du formulaire",
+    "formBackgroundOpacity": "Opacité du fond",
+    "formBackgroundOpacityHelp": "Baissez-la pour laisser l’écran derrière le formulaire transparaître sous la couleur.",
     "formZone_background": "Arrière-plan",
     "formZoneBackgroundSoon": "Bientôt : l’écran derrière le formulaire.",
     "formZone_header": "En-tête",

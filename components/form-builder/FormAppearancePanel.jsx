@@ -200,8 +200,36 @@ export function FormAppearancePanel({
               value={theme.page_bg}
               fallback={inherited.page_bg ?? '#ffffff'}
               clearLabel={t('formInherit')}
-              onChange={(v) => patch('theme', { page_bg: v })}
+              onChange={(v) =>
+                // Opacity describes a colour, so it goes when the colour does
+                // rather than sitting in the JSON describing one that is gone.
+                patch('theme', {
+                  page_bg: v,
+                  page_bg_opacity: v == null ? undefined : theme.page_bg_opacity,
+                })
+              }
             />
+            {/* Only once there is a colour to be transparent — a slider that
+                changes nothing on screen is a control that looks broken. Reads
+                the RESOLVED colour, so it is offered for an inherited one too:
+                the opacity is the form's own either way. */}
+            {inherited.page_bg && (
+              <div className={styles.panelColorRow}>
+                <span className="field-label">
+                  {t('formBackgroundOpacity')}: {theme.page_bg_opacity ?? 100}%
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={theme.page_bg_opacity ?? 100}
+                  aria-label={t('formBackgroundOpacity')}
+                  onChange={(e) => patch('theme', { page_bg_opacity: Number(e.target.value) })}
+                />
+                <p className="field-help">{t('formBackgroundOpacityHelp')}</p>
+              </div>
+            )}
             <ColorField
               label={t('textColor')}
               value={theme.text_color}

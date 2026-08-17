@@ -805,6 +805,8 @@
     "formThemeInherits": "Lo que no definas sigue el tema de la página del evento, así el formulario combina con el evento por defecto.",
     "formZone_theme": "Tema",
     "formBackground": "Color de fondo del formulario",
+    "formBackgroundOpacity": "Opacidad del fondo",
+    "formBackgroundOpacityHelp": "Baja esto para dejar que la pantalla detrás del formulario se vea a través del color.",
     "formZone_background": "Fondo",
     "formZoneBackgroundSoon": "Próximamente: la pantalla detrás del formulario.",
     "formZone_header": "Encabezado",
