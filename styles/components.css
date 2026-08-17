@@ -248,9 +248,29 @@
   border-color: var(--line-strong);
 }
 
+/* The selected state tints what is BEHIND the row rather than painting a colour
+ * over it, and the difference matters as soon as a page is not white.
+ *
+ * `--pine-tint` is the primary colour mixed into **white** — a literal white,
+ * both in tokens.css and in appearanceVars(). That is safe for a rule that also
+ * sets its own text colour (`.alert-info` does, and is fine), but this row does
+ * not: its label inherits the page's `--ink`. On a dark registration page that
+ * ink is near-white, so a selected option came out as white text on pale mint
+ * and could not be read at all — on the registrant's screen, and invisible to
+ * an organizer working in light mode.
+ *
+ * `transparent` instead of a base colour is what makes this hold up: the
+ * browser composites the tint against whatever is actually painted behind the
+ * row, so the row follows the page without anything here having to know what
+ * the page is. Deriving it from `theme.page_bg` in JS would have worked only
+ * for a flat colour that the resolver happens to know about — not for an image,
+ * a gradient, or the header band.
+ *
+ * 14% is the same ratio `--pine-tint` uses, so over a white page this composites
+ * to within a hair of the colour it replaces and light mode is unchanged. */
 .choice-row[data-checked='true'] {
   border-color: var(--pine);
-  background: var(--pine-tint);
+  background: color-mix(in srgb, var(--pine) 14%, transparent);
 }
 
 /* Compact variant for a lone preference sitting among labelled fields, where
