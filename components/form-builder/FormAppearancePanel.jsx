@@ -529,9 +529,12 @@ function QuestionsZone({
 
   return (
     <>
+      {/* The only level that reaches both kinds at once, so the only one that
+          shows the full set. */}
       <h3 className={styles.panelGroupHead}>{t('allQuestions')}</h3>
       <StyleControls
         t={t}
+        scope="both"
         style={q.defaults ?? {}}
         onChange={(values) => write('defaults', null, values)}
       />
@@ -548,6 +551,7 @@ function QuestionsZone({
           </summary>
           <StyleControls
             t={t}
+            scope={type === 'section' ? 'section' : 'field'}
             style={q.byType?.[type] ?? {}}
             onChange={(values) => write('byType', type, values)}
           />
@@ -576,6 +580,7 @@ function QuestionsZone({
         <>
           <StyleControls
             t={t}
+            scope={selected.type === 'section' ? 'section' : 'field'}
             style={q.byId?.[selected.id] ?? {}}
             onChange={(values) => write('byId', selected.id, values)}
           />
@@ -590,47 +595,75 @@ function QuestionsZone({
   )
 }
 
-/** The same four controls at every level of the chain, so the levels compare. */
-function StyleControls({ t, style, onChange }) {
+/**
+ * The style controls that can actually do something to what is being styled.
+ *
+ * `scope` is 'field' | 'section' | 'both'. The reason it exists is that the
+ * four controls reach two different pieces of markup and neither renders both:
+ * `FormRenderer` draws a question of type `section` as a heading and a blurb
+ * (`.section h3` / `.section p`, reading `--q-section-color`) and everything
+ * else as a `QuestionField` (`.field-label` / `.field-help`, reading
+ * `--q-label-*` and `--q-help-color`). So Section heading colour on a Text
+ * question was inert, and Label colour, Label size and Help colour on a Section
+ * question were inert — half the controls silently doing nothing on whatever
+ * you happened to point them at, with the value stored and resolved correctly
+ * and simply never read.
+ *
+ * Hiding them rather than disabling them: a disabled control still claims the
+ * setting exists for this thing and is merely unavailable, which is the wrong
+ * claim. It does not exist for this thing.
+ *
+ * 'both' is the "All questions" level, where the rule genuinely reaches
+ * questions and sections at once, and it is the one place the full set belongs.
+ */
+function StyleControls({ t, style, onChange, scope = 'both' }) {
+  const fields = scope !== 'section'
+  const sections = scope !== 'field'
   return (
     <div className={styles.panelGroup}>
-      <ColorField
-        label={t('labelColor')}
-        value={style.label_color}
-        fallback="#20242b"
-        clearLabel={t('formInherit')}
-        onChange={(v) => onChange({ label_color: v })}
-      />
-      <Field label={t('labelSize')}>
-        {({ id }) => (
-          <NativeSelect
-            id={id}
-            value={style.label_size ?? ''}
-            onChange={(e) => onChange({ label_size: e.target.value || undefined })}
-          >
-            <option value="">{t('formInherit')}</option>
-            {Object.keys(LABEL_SIZES).map((k) => (
-              <option key={k} value={k}>
-                {t(`size_${k}`)}
-              </option>
-            ))}
-          </NativeSelect>
-        )}
-      </Field>
-      <ColorField
-        label={t('helpColor')}
-        value={style.help_color}
-        fallback="#4d5560"
-        clearLabel={t('formInherit')}
-        onChange={(v) => onChange({ help_color: v })}
-      />
-      <ColorField
-        label={t('sectionHeadingColor')}
-        value={style.section_color}
-        fallback="#0e5044"
-        clearLabel={t('formInherit')}
-        onChange={(v) => onChange({ section_color: v })}
-      />
+      {fields && (
+        <>
+          <ColorField
+            label={t('labelColor')}
+            value={style.label_color}
+            fallback="#20242b"
+            clearLabel={t('formInherit')}
+            onChange={(v) => onChange({ label_color: v })}
+          />
+          <Field label={t('labelSize')}>
+            {({ id }) => (
+              <NativeSelect
+                id={id}
+                value={style.label_size ?? ''}
+                onChange={(e) => onChange({ label_size: e.target.value || undefined })}
+              >
+                <option value="">{t('formInherit')}</option>
+                {Object.keys(LABEL_SIZES).map((k) => (
+                  <option key={k} value={k}>
+                    {t(`size_${k}`)}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
+          </Field>
+          <ColorField
+            label={t('helpColor')}
+            value={style.help_color}
+            fallback="#4d5560"
+            clearLabel={t('formInherit')}
+            onChange={(v) => onChange({ help_color: v })}
+          />
+        </>
+      )}
+      {sections && (
+        <ColorField
+          label={t('sectionHeadingColor')}
+          value={style.section_color}
+          fallback="#0e5044"
+          clearLabel={t('formInherit')}
+          onChange={(v) => onChange({ section_color: v })}
+        />
+      )}
     </div>
   )
 }
