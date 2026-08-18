@@ -210,8 +210,47 @@
 }
 
 /* --- "Forms page" tab --- */
+/* The tab strip and the way back to the forms list, on one line.
+ *
+ * The underline belongs to this row rather than to the tablist inside it, or it
+ * would stop after the last tab and leave the link floating off the end of a
+ * rule that is supposed to run the width of the page. */
 .tabsHead {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+  border-bottom: 1px solid var(--line);
   margin-bottom: var(--s-5);
+}
+
+/* Two classes, so this wins over the global `.tabs-list` however the module and
+   the stylesheet end up ordered — the border it carries has moved to the row. */
+.tabsHead .tabsList {
+  border-bottom: none;
+}
+
+/* Quiet by design: leaving the form is not what an organizer came here to do,
+   so it reads as a way out rather than as a third tab competing with the two
+   beside it. Aligned to the strip's baseline so the row is one line, not a
+   button perched above a rule. */
+.backToForms {
+  margin-inline-start: auto;
+  padding: var(--s-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.backToForms:hover {
+  color: var(--ink);
+}
+
+.backToForms:focus-visible {
+  outline: none;
+  border-radius: var(--r-sm);
+  box-shadow: var(--focus-ring);
 }
 
 .pageTab {

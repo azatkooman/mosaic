@@ -280,6 +280,7 @@
     "anyOf": "se cumpla alguna condición",
     "tabQuestions": "Preguntas",
     "tabFormsPage": "Vista previa",
+    "backToForms": "Volver a formularios",
     "formsPageHint": "Lo que ve una persona al rellenar este formulario. Los enlaces y botones que rodean el formulario no funcionan aquí.",
     "previewAs": "Ver como",
     "headerImage": "Fondo del encabezado",

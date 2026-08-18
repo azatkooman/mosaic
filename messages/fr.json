@@ -280,6 +280,7 @@
     "anyOf": "au moins une condition est remplie",
     "tabQuestions": "Questions",
     "tabFormsPage": "Aperçu",
+    "backToForms": "Retour aux formulaires",
     "formsPageHint": "Ce que voit une personne qui remplit ce formulaire. Les liens et boutons autour du formulaire sont inactifs ici.",
     "previewAs": "Voir comme",
     "headerImage": "Arrière-plan de l’en-tête",

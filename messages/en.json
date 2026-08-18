@@ -280,6 +280,7 @@
     "anyOf": "any condition matches",
     "tabQuestions": "Questions",
     "tabFormsPage": "Preview form",
+    "backToForms": "Back to forms",
     "formsPageHint": "What a registrant sees when they fill in this form. The links and buttons around the form are inactive here.",
     "previewAs": "Preview as",
     "headerImage": "Header background",
