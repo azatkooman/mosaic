@@ -18,7 +18,10 @@ export default async function EventSettingsPage({ params }) {
       .select('*')
       .eq('event_id', eventId)
       .order('sort_order'),
-    supabase.from('forms').select('id, title').eq('event_id', eventId),
+    supabase.from('forms').select('id, title').eq('event_id', eventId)
+      // Archived forms are not choices. archive_form already nulls the
+      // types that pointed at one; this stops a new one being aimed there.
+      .is('archived_at', null),
   ])
   if (!event) notFound()
 

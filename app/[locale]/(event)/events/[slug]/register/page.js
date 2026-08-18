@@ -177,6 +177,11 @@ export default async function RegisterPage({ params, searchParams }) {
     .select('registration_mode, current_version_id, appearance')
     .eq('event_id', event.id)
     .not('registration_mode', 'is', null)
+    // An archived mode form (0056) stops standing in for the type's own form,
+    // which is what makes archiving the single form send a single registration
+    // back to the default one. submit_registration rejects its versions too, so
+    // this is the pleasant half of the rule rather than the whole of it.
+    .is('archived_at', null)
 
   const versionIds = [
     ...new Set(

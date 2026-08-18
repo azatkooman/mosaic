@@ -84,6 +84,30 @@ export function NewFormButton({ eventId, existingForms }) {
       return
     }
 
+    // Pick up the version numbering where an archived form of the same mode
+    // left off. A re-added form is a NEW row, so create_draft_version starts it
+    // at 1 — which would tell an organizer their single form had gone back to
+    // v1 when the versions it is continuing from are still in the table and
+    // still answer for the registrations made on them. Same event, same mode:
+    // continuing from some other form's count would be a number with no story.
+    const { data: prior } = await supabase
+      .from('form_versions')
+      .select('version, forms!inner ( event_id, registration_mode, archived_at )')
+      .eq('forms.event_id', eventId)
+      .eq('forms.registration_mode', mode)
+      .not('forms.archived_at', 'is', null)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (prior?.version) {
+      // Best-effort: a form that starts at v1 is a cosmetic disappointment, not
+      // a broken one, so a failure here must not strand the form just created.
+      await supabase
+        .from('form_versions')
+        .update({ version: prior.version + 1 })
+        .eq('id', versionId)
+    }
+
     if (copyFromId) {
       // Copy the source form's latest definition (draft if one exists,
       // otherwise the published version) into the new draft.

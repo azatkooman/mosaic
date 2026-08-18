@@ -27,7 +27,7 @@ export default async function AdminEventForms({ params }) {
     supabase
       .from('forms')
       .select(
-        'id, title, registration_mode, current_version_id, ' +
+        'id, title, registration_mode, current_version_id, archived_at, ' +
           'form_versions!form_versions_form_id_fkey ( id, version, published_at, definition )'
       )
       .eq('event_id', eventId),
@@ -57,6 +57,10 @@ export default async function AdminEventForms({ params }) {
               }}
             >
               <strong>{form.title}</strong>
+              {/* The admin view is the one place archived forms still appear —
+                  that is what archiving them rather than deleting them is for —
+                  so it has to say which ones they are. */}
+              {form.archived_at && <Badge tone="cancelled">{t('console.archived')}</Badge>}
               {form.registration_mode && (
                 <Badge tone="draft">
                   {t(
