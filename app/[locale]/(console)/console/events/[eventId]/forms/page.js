@@ -62,18 +62,20 @@ export default async function FormsPage({ params }) {
                   </td>
                   <td data-cell="actions">
                     <div style={{ display: 'flex', gap: 'var(--s-2)', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      {/* Mode forms only. The default form has no menu because
+                          it has no archivable state: every participant type
+                          falls back to it. Left of Edit form, so the primary
+                          action stays on the row's outer edge where the eye
+                          lands and the destructive one does not. */}
+                      {form.registration_mode && (
+                        <ArchiveFormButton formId={form.id} formTitle={form.title} />
+                      )}
                       <Link
                         href={`/console/events/${eventId}/forms/${form.id}`}
                         className="btn btn-secondary btn-sm"
                       >
                         {t('editForm')}
                       </Link>
-                      {/* Mode forms only. The default form has no menu because
-                          it has no archivable state: every participant type
-                          falls back to it. */}
-                      {form.registration_mode && (
-                        <ArchiveFormButton formId={form.id} formTitle={form.title} />
-                      )}
                     </div>
                   </td>
                 </tr>

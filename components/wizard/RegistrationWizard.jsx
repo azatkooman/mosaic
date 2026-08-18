@@ -450,9 +450,14 @@ export function RegistrationWizard({
     return (
       // Re-applied here rather than inherited from the page shell: the shell is
       // drawn before a mode is picked, and picking one can change which form —
-      // and so which look — applies. The variables cascade, so this overrides
-      // the shell's for everything from the eyebrow down.
-      <div className={styles.panel} style={appearanceVars(look)}>
+      // and so which look — applies.
+      //
+      // `isolate` because custom properties inherit, and overriding is not the
+      // same as replacing. Without it, every family THIS form leaves unset kept
+      // the shell form's value: pick a mode whose form has its own styling and
+      // you got both forms' customizations at once — its colours over the other
+      // one's fonts, corners and spacing.
+      <div className={styles.panel} style={appearanceVars(look, { isolate: true })}>
         {showsProgress(look) && (
           <p className="eyebrow" style={progressStyle(look)}>
             {t('participantOf', { index: personIndex + 1, total: people.length })} ·{' '}

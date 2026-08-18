@@ -20,6 +20,14 @@
   --pine: #146b5c;
   --pine-deep: #0e5044;
   --pine-tint: #e2efec;
+  /* Untouchable twins of the three above. A registration form re-themes
+     --pine on a wrapper, and a SECOND form nested inside the first has to be
+     able to put it back to the platform's value — which is mode-dependent,
+     so a literal in JS cannot do it. Declared here, next to the originals,
+     so the two cannot drift apart unnoticed. */
+  --base-pine: #146b5c;
+  --base-pine-deep: #0e5044;
+  --base-pine-tint: #e2efec;
   --gold: #e8a33d;
   --gold-deep: #b57717;
   --gold-tint: #fbf0dc;
@@ -83,6 +91,9 @@
     --pine: #3ba58f;
     --pine-deep: #52bda6;
     --pine-tint: #1c2f2b;
+    --base-pine: #3ba58f;
+    --base-pine-deep: #52bda6;
+    --base-pine-tint: #1c2f2b;
     --gold: #e8a33d;
     --gold-deep: #f0b95f;
     --gold-tint: #322a1a;
@@ -115,6 +126,9 @@
   --pine: #3ba58f;
   --pine-deep: #52bda6;
   --pine-tint: #1c2f2b;
+  --base-pine: #3ba58f;
+  --base-pine-deep: #52bda6;
+  --base-pine-tint: #1c2f2b;
   --gold: #e8a33d;
   --gold-deep: #f0b95f;
   --gold-tint: #322a1a;
