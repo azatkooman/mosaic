@@ -530,6 +530,30 @@
   padding: var(--s-5);
 }
 
+/* A dialog's row of choices.
+ *
+ * Trims its own horizontal padding and gap rather than the buttons changing
+ * size: at the shared 34rem width, three full-size buttons overflow by ~24px in
+ * English, and the leave-guard asks a three-way question whenever there is work
+ * outstanding on both builder tabs. Keeping `--text-sm` and taking the space out
+ * of the padding is the smallest change that fits them on one line, and leaves
+ * the buttons reading as ordinary dialog buttons rather than compact ones.
+ *
+ * `flex-wrap` stays deliberately: it is the safety net for narrow screens and
+ * for the longer translations, where even this does not fit and wrapping is the
+ * correct outcome rather than an overflowing row. */
+.dialog-actions {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: var(--s-4);
+}
+
+.dialog-actions .btn {
+  padding-inline: 0.8rem;
+}
+
 .dialog-title {
   font-size: var(--text-xl);
   margin-bottom: var(--s-3);
