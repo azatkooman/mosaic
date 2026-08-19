@@ -3,6 +3,7 @@ import { Link } from '@/lib/i18n/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui'
 import { NewFormButton } from './NewFormButton'
+import { ArchiveFormButton } from './ArchiveFormButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,10 @@ export default async function FormsPage({ params }) {
     // the embed must name one or PostgREST rejects it as ambiguous (PGRST201).
     .select('id, title, registration_mode, current_version_id, form_versions!form_versions_form_id_fkey ( id, version, published_at )')
     .eq('event_id', eventId)
+    // Archived forms (0056) stay in the table for admins and for the
+    // participants whose answers point at their versions; the organizer's list
+    // is not where they belong.
+    .is('archived_at', null)
     .order('created_at')
 
   return (
@@ -56,12 +61,22 @@ export default async function FormsPage({ params }) {
                     </div>
                   </td>
                   <td data-cell="actions">
-                    <Link
-                      href={`/console/events/${eventId}/forms/${form.id}`}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      {t('editForm')}
-                    </Link>
+                    <div style={{ display: 'flex', gap: 'var(--s-2)', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      {/* Mode forms only. The default form has no menu because
+                          it has no archivable state: every participant type
+                          falls back to it. Left of Edit form, so the primary
+                          action stays on the row's outer edge where the eye
+                          lands and the destructive one does not. */}
+                      {form.registration_mode && (
+                        <ArchiveFormButton formId={form.id} formTitle={form.title} />
+                      )}
+                      <Link
+                        href={`/console/events/${eventId}/forms/${form.id}`}
+                        className="btn btn-secondary btn-sm"
+                      >
+                        {t('editForm')}
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               )

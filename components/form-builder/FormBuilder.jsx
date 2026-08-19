@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useRouter } from '@/lib/i18n/navigation'
+import { Link, useRouter } from '@/lib/i18n/navigation'
 import {
   DndContext,
   PointerSensor,
@@ -467,10 +467,23 @@ export function FormBuilder({
       {/* Questions is what "Edit form" means and stays the landing tab; Forms
           page is the same form seen from the registrant's side. */}
       <Tabs defaultValue="questions">
-        <TabsList className={`tabs-list ${styles.tabsHead}`}>
-          <TabsTrigger value="questions">{t('tabQuestions')}</TabsTrigger>
-          <TabsTrigger value="formsPage">{t('tabFormsPage')}</TabsTrigger>
-        </TabsList>
+        {/* The tab strip and the way out of the form share a line, but the
+            link is NOT inside the tablist: Radix gives a list roving focus over
+            its children and a screen reader announces them as tabs, so a link
+            in there would be a third tab that does not switch anything. A row
+            around both keeps the underline running the full width — it belongs
+            to the row now rather than to the list — while the link stays an
+            ordinary anchor, which is also what makes the unsaved-changes guard
+            catch it: the guard listens for anchor clicks and nothing else. */}
+        <div className={styles.tabsHead}>
+          <TabsList className={`tabs-list ${styles.tabsList}`}>
+            <TabsTrigger value="questions">{t('tabQuestions')}</TabsTrigger>
+            <TabsTrigger value="formsPage">{t('tabFormsPage')}</TabsTrigger>
+          </TabsList>
+          <Link href={`/console/events/${eventId}/forms`} className={styles.backToForms}>
+            <span aria-hidden="true">&larr;</span> {t('backToForms')}
+          </Link>
+        </div>
 
         <TabsContent value="questions">
         <div className={styles.builder}>

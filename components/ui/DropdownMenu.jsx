@@ -32,6 +32,24 @@ export function DropdownMenu({ trigger, children, align = 'start', className }) 
 }
 
 /**
+ * A plain action entry, for menus that DO something rather than filter.
+ *
+ * Unlike CheckboxItem it lets the menu close on select, because the action is
+ * the end of the interaction. `tone="danger"` colours entries whose effect the
+ * organizer would want to think about before clicking.
+ */
+DropdownMenu.Item = function DropdownMenuItem({ tone, children, ...rest }) {
+  return (
+    <RadixDropdownMenu.Item className="menu-item" data-tone={tone} {...rest}>
+      {/* The same fixed gutter the checkable entries use, so a menu holding
+          both kinds still lines its labels up. */}
+      <span aria-hidden="true" style={{ inlineSize: 14, display: 'inline-flex', flexShrink: 0 }} />
+      {children}
+    </RadixDropdownMenu.Item>
+  )
+}
+
+/**
  * A togglable entry, for menus that filter rather than act.
  *
  * `onSelect` preventDefaults so the menu stays open: the whole point of a
