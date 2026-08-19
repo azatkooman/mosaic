@@ -9,14 +9,23 @@ import { extractIdentity } from '@/lib/form-engine/identity'
 import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
 import { initialWizardState, draftWinsOverLink } from './initial-state'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
-import { Button, Badge, RadioGroup, RadioRow } from '@/components/ui'
+import { Button, Badge, LanguagePicker, RadioGroup, RadioRow } from '@/components/ui'
 import {
   appearanceVars,
+  formSurfaceStyle,
+  headerBand,
+  introStyle,
+  introTextFor,
   progressStyle,
   questionVars,
   resolveFormAppearance,
+  screenBackgroundStyle,
+  showsBackLink,
+  showsLanguagePicker,
   showsProgress,
+  titleStyle,
 } from '@/lib/form-appearance'
+import { eventMediaUrl } from '@/lib/storage'
 import styles from './wizard.module.css'
 
 /**
@@ -43,6 +52,11 @@ export function RegistrationWizard({
   userId,
   profile = null,
   contentLocale,
+  // The chrome's own data. Built on the server because the hrefs need the
+  // route's locale and the ?type= it arrived with, neither of which is worth
+  // rebuilding here.
+  backHref,
+  langOptions = [],
 }) {
   const t = useTranslations('wizard')
   const tCommon = useTranslations('common')
@@ -298,6 +312,21 @@ export function RegistrationWizard({
 
   // ---- render ----
 
+  // The form a person is filling RIGHT NOW, or null on every screen that is not
+  // a form. This is the split the registration flow now has: the pre-form
+  // questions — which mode, which participant type, how many of each — belong
+  // to the event and carry no form's styling at all, and the form screens carry
+  // all of it. Review and the success screen count as pre-form here: they are
+  // about the registration, not about any one form.
+  //
+  // Deciding it here rather than on the server is the whole point. The page
+  // cannot know which form applies: the reader picks a mode after it has been
+  // rendered, and picking one changes the answer.
+  const activeLook =
+    step === 'person' ? appearanceFor(typeByKey.get(people[personIndex]?.participantTypeKey)) : null
+  const title = t('title', { event: lt(event.name, locale, event.default_locale) })
+
+  const body = (() => {
   if (step === 'done' && result) {
     return (
       <div className={styles.panel}>
@@ -533,6 +562,100 @@ export function RegistrationWizard({
         <Button onClick={submit} disabled={submitState === 'submitting'}>
           {submitState === 'submitting' ? t('submitting') : t('submitRegistration')}
         </Button>
+      </div>
+    </div>
+  )
+  })()
+
+  return <RegisterChrome look={activeLook} title={title} backHref={backHref}
+    langOptions={langOptions} langLabel={tCommon('language')} backLabel={t('backToEvent')}
+    contentLocale={contentLocale} defaultLocale={event.default_locale}>{body}</RegisterChrome>
+}
+
+/**
+ * Everything around the step: the screen, the back link, the language picker,
+ * the title, and the form's intro.
+ *
+ * `look` is the form being filled in, or null on the pre-form screens — and the
+ * two render differently on purpose. With no form chosen there is nothing whose
+ * styling would be right to show, so the chrome stays the platform's own: white
+ * in light mode, dark in dark mode, no header band, no intro. With a form
+ * chosen it is that form's, all of it, which is what makes a registrant see the
+ * same screen the organizer saw in the Preview form tab.
+ *
+ * The intro lives here rather than on the page for the same reason: it is per
+ * form (0055), so showing one before a form is picked would be showing some
+ * other form's writing.
+ */
+function RegisterChrome({
+  look, title, backHref, backLabel, langOptions, langLabel,
+  contentLocale, defaultLocale, children,
+}) {
+  if (!look) {
+    return (
+      <div className="container-narrow" style={{ paddingBlock: 'var(--s-6)' }}>
+        <div className="form-header">
+          <div className="form-header-row">
+            <a href={backHref} className="btn btn-ghost btn-sm">
+              <span aria-hidden="true">&larr;</span> {backLabel}
+            </a>
+            <LanguagePicker options={langOptions} value={contentLocale} ariaLabel={langLabel} />
+          </div>
+          <h1 className="page-title">{title}</h1>
+        </div>
+        {children}
+      </div>
+    )
+  }
+
+  const headerImageUrl = eventMediaUrl(look.header?.bg_image_path)
+  const band = headerBand(look, headerImageUrl)
+  const intro = introTextFor(look, contentLocale, defaultLocale)
+
+  return (
+    <div className="form-screen" data-viewport style={screenBackgroundStyle(look)}>
+      <div
+        className="container-narrow"
+        style={{
+          paddingBlock: 'var(--s-6)',
+          ...appearanceVars(look),
+          ...formSurfaceStyle(look),
+        }}
+      >
+        <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
+          {band.hasImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a Supabase
+                  storage URL; see the matching note in RegisterPreview. */}
+              <img src={headerImageUrl} alt="" className="form-header-bg" />
+              <div className="form-header-scrim" style={band.overlayStyle} />
+            </>
+          )}
+          <div className="form-header-content">
+            <div className="form-header-row">
+              {showsBackLink(look) ? (
+                <a href={backHref} className="btn btn-shell btn-sm">
+                  <span aria-hidden="true">&larr;</span> {backLabel}
+                </a>
+              ) : (
+                <span />
+              )}
+              <LanguagePicker
+                variant="shell"
+                options={showsLanguagePicker(look) ? langOptions : []}
+                value={contentLocale}
+                ariaLabel={langLabel}
+              />
+            </div>
+            <h1 className="page-title" style={titleStyle(look)}>{title}</h1>
+          </div>
+        </div>
+        {intro && (
+          <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(look) }}>
+            {intro}
+          </p>
+        )}
+        {children}
       </div>
     </div>
   )

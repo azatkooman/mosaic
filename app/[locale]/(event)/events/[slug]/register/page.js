@@ -6,22 +6,8 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt, eventLocales, localeAcronym } from '@/lib/i18n/locales'
 import { getContentMessages } from '@/lib/i18n/ui-messages-server'
 import { RegistrationWizard } from '@/components/wizard/RegistrationWizard'
-import { LanguagePicker } from '@/components/ui'
 import { eventPageUrl } from '@/lib/url'
-import { eventMediaUrl } from '@/lib/storage'
 import { resolvePreselectedType, visibleParticipantTypes } from '@/lib/participant-types'
-import {
-  appearanceVars,
-  formSurfaceStyle,
-  screenBackgroundStyle,
-  headerBand,
-  introStyle,
-  introTextFor,
-  resolveFormAppearance,
-  showsBackLink,
-  showsLanguagePicker,
-  titleStyle,
-} from '@/lib/form-appearance'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,19 +73,16 @@ export default async function RegisterPage({ params, searchParams }) {
   // <a>, not next-intl's Link: eventPageUrl already carries the locale prefix
   // (and a ?lang= for custom languages), which Link would prefix a second time.
   const eventHref = eventPageUrl({ slug, code: contentLocale, uiLocale: locale })
-  // Takes its variant because the same link is drawn on two different surfaces.
-  // In the header zone it is always `shell` — the translucent pill holds up over
-  // a photo, a brand colour, or a page background set to black, and a `ghost`
-  // link disappears into any of the three.
-  const backLink = (variant) => (
-    <a href={eventHref} className={`btn btn-${variant} btn-sm`}>
+  // Only the three early-return screens below use this now — closed,
+  // already-registered, no-types. They carry no form's styling because no form
+  // has been chosen on any of them, so `ghost` on the platform background is
+  // right. The wizard draws its own back link, in whichever variant the screen
+  // it is on calls for.
+  const backToEvent = (
+    <a href={eventHref} className="btn btn-ghost btn-sm">
       <span aria-hidden="true">&larr;</span> {t('backToEvent')}
     </a>
   )
-  // The early returns below are the closed / already-registered / no-types
-  // screens. They render before any form's appearance is known and apply none
-  // of it, so they sit on the platform's own background where `ghost` is right.
-  const backToEvent = backLink('ghost')
 
   // One registration per account per event (the submit RPC enforces this
   // authoritatively) — send returning registrants to their registration
@@ -266,6 +249,21 @@ export default async function RegisterPage({ params, searchParams }) {
       userId={user.id}
       profile={profile}
       contentLocale={contentLocale}
+      // Built here because the hrefs need the route's locale and the ?type= the
+      // reader arrived with; everything else the chrome shows it already has.
+      backHref={eventHref}
+      langOptions={localeOptions.map((code) => ({
+        value: code,
+        // Short code, matching the event page an attendee just came from; the
+        // console keeps full names.
+        label: localeAcronym(code),
+        // Built-in locales have their own route; custom codes ride the current
+        // route via ?lang=.
+        href: eventPageUrl({
+          slug, code, uiLocale: locale, subPath: '/register',
+          params: { type: typeParam },
+        }),
+      }))}
     />
   )
   const wizard = hasContentMessages ? (
@@ -276,85 +274,6 @@ export default async function RegisterPage({ params, searchParams }) {
     wizardElement
   )
 
-  // The shell — title, back link, language picker — is drawn before the reader
-  // has chosen anything, so it takes the look of the form they will land on:
-  // the one their ?type= link names, otherwise the first type on offer. Once a
-  // mode or type IS chosen the wizard re-applies that form's own variables over
-  // these, which is what makes "the group form can look different" true rather
-  // than only true below the title.
-  const shellAppearance =
-    (preselectedTypeKey
-      ? offeredTypes.find((pt) => pt.key === preselectedTypeKey)?.appearance
-      : null) ??
-    offeredTypes[0]?.appearance ??
-    {}
-  const shell = resolveFormAppearance(shellAppearance, event.page_content?.theme)
-  const intro = introTextFor(shell, contentLocale, event.default_locale)
-  // Either the organizer's own upload or the event's cover, depending on which
-  // the panel wrote — both land in the same key as a storage path, so there is
-  // nothing to branch on here.
-  const headerImageUrl = eventMediaUrl(shell.header?.bg_image_path)
-  const band = headerBand(shell, headerImageUrl)
-
-  return (
-    // The screen the form sits ON. Mirrors RegisterPreview, which draws the
-    // same layer from the same helper — see .form-screen for why only this one
-    // carries the class.
-    <div className="form-screen" data-viewport style={screenBackgroundStyle(shell)}>
-      <div
-        className="container-narrow"
-        style={{
-          paddingBlock: 'var(--s-6)',
-          ...appearanceVars(shell),
-          ...formSurfaceStyle(shell),
-        }}
-      >
-        {/* The header zone: controls and title together, over whatever backdrop
-            the organizer gave it. Mirrored in RegisterPreview — same classes,
-            same order, same helper deciding all of it. */}
-        <div className="form-header" data-backdrop={band.hasBackdrop || undefined} style={band.style}>
-          {band.hasImage && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element -- see the
-                  matching note in RegisterPreview: a Supabase storage URL that
-                  next/image would need remotePatterns for and bill to optimize. */}
-              <img src={headerImageUrl} alt="" className="form-header-bg" />
-              <div className="form-header-scrim" style={band.overlayStyle} />
-            </>
-          )}
-          <div className="form-header-content">
-            <div className="form-header-row">
-              {showsBackLink(shell) ? backLink('shell') : <span />}
-              <LanguagePicker
-                variant="shell"
-                options={showsLanguagePicker(shell) ? localeOptions.map((code) => ({
-                  value: code,
-                  // Short code here too, matching the event page an attendee just
-                  // came from; the console keeps full names.
-                  label: localeAcronym(code),
-                  // Built-in locales have their own route; custom codes ride the
-                  // current route via ?lang=.
-                  href: eventPageUrl({
-                    slug, code, uiLocale: locale, subPath: '/register',
-                    params: { type: typeParam },
-                  }),
-                })) : []}
-                value={contentLocale}
-                ariaLabel={tCommon('language')}
-              />
-            </div>
-            <h1 className="page-title" style={titleStyle(shell)}>
-              {t('title', { event: lt(event.name, contentLocale, event.default_locale) })}
-            </h1>
-          </div>
-        </div>
-        {intro && (
-          <p style={{ marginBottom: 'var(--s-5)', whiteSpace: 'pre-wrap', ...introStyle(shell) }}>
-            {intro}
-          </p>
-        )}
-        {wizard}
-      </div>
-    </div>
-  )
+  return wizard
 }
+
