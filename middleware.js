@@ -4,6 +4,24 @@ import { routing } from './lib/i18n/routing'
 
 const intlMiddleware = createIntlMiddleware(routing)
 
+// Cap every auth request. supabase-js has no timeout of its own, so when the
+// auth host is slow — or gone, as when its Supabase project is deleted — the
+// await below never settles and the platform kills the whole middleware:
+// MIDDLEWARE_INVOCATION_TIMEOUT, i.e. a 504 on every page, for what is only a
+// stale env var. The catch below never fired because a hang is not an error.
+// 2.5s is far above a healthy call (tens of ms) and far below the platform's
+// middleware limit, so a sick auth host costs one slow request and then
+// renders signed-out instead of taking the site down.
+const AUTH_TIMEOUT_MS = 2500
+
+function timeoutFetch(input, init = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS)
+  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  )
+}
+
 export async function middleware(request) {
   // Locale negotiation / redirect first — it may produce the response we
   // attach refreshed auth cookies to.
@@ -17,6 +35,7 @@ export async function middleware(request) {
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (url && anonKey) {
       const supabase = createServerClient(url, anonKey, {
+        global: { fetch: timeoutFetch },
         cookies: {
           getAll() {
             return request.cookies.getAll()
