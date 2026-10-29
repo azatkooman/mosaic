@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { lt } from '@/lib/i18n/locales'
+import { eventPhase } from '@/lib/event-phase'
 import { PurgeEventButton } from './PurgeEventButton'
 import consoleStyles from '../../../../(console)/console/console.module.css'
 
@@ -107,7 +108,7 @@ export default async function AdminEventOverview({ params }) {
       <PurgeEventButton
         eventId={event.id}
         eventName={lt(event.name, locale, event.default_locale)}
-        eligible={Boolean(event.deleted_at) || (!!event.ends_at && Date.parse(event.ends_at) < Date.now())}
+        eligible={Boolean(event.deleted_at) || eventPhase(event) === 'ended'}
         participantCount={total + (byStatus.cancelled ?? 0) + (archivedRows ?? []).length}
         labels={{
           dangerZone: t('console.adminDangerZone'),

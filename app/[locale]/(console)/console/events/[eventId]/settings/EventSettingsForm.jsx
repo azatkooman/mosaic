@@ -28,6 +28,16 @@ function newContactId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
+// A placeholder id for a participant type staged in the editor; see addType.
+function newStagedTypeId() {
+  return `new-${Math.random().toString(36).slice(2, 10)}`
+}
+
+// The key a custom type starts from; uniqueTypeKey settles any collision.
+function newCustomTypeKey() {
+  return `type_${Date.now().toString(36)}`
+}
+
 export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = {} }) {
   const t = useTranslations('console')
   const tCommon = useTranslations('common')
@@ -444,14 +454,15 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
     const { error } = await supabase.from('events').update({ status }).eq('id', event.id)
     if (!error) {
       setPublishError(null)
-      if (status === 'published') setPublishBurst(Date.now())
+      // A new value is what fires the confetti; a counter is enough.
+      if (status === 'published') setPublishBurst((n) => (n ?? 0) + 1)
       router.refresh()
     }
   }
 
   function addType(preset) {
     const base = preset ?? {
-      key: `type_${Date.now().toString(36)}`,
+      key: newCustomTypeKey(),
       // Seeded under the event's default language, in that language's own
       // wording. t() would render in the CONSOLE locale instead, so a Spanish
       // console on an English-default event stored Spanish text under `en` —
@@ -474,7 +485,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
     // never reaches the database — `isNew` is what save() branches on, rather
     // than sniffing the id's shape.
     const staged = {
-      id: `new-${Math.random().toString(36).slice(2, 10)}`,
+      id: newStagedTypeId(),
       isNew: true,
       key,
       name: base.name,
