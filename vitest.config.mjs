@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 // enables the automatic JSX runtime so component tests can render without
 // importing React explicitly.
 export default defineConfig({
-  esbuild: { jsx: 'automatic' },
+  oxc: { jsx: { runtime: 'automatic' } },
   resolve: {
     alias: { '@': fileURLToPath(new URL('.', import.meta.url)) },
   },
