@@ -7,7 +7,7 @@ const COLORS = ['#e8555a', '#f2a33c', '#3aa981', '#4a90d9', '#b678d4', '#e8c547'
 /**
  * A small celebratory confetti burst, no dependencies. Place inside a
  * `position: relative` wrapper around the element to celebrate; pass a new
- * `burst` value (e.g. Date.now()) to fire. Cleans itself up after ~1.6s.
+ * `burst` value (a timestamp or a counter) to fire. Cleans itself up after ~1.6s.
  * Purely decorative: hidden from assistive tech and honors reduced motion
  * (via the CSS in components.css).
  */

@@ -217,7 +217,6 @@ export function GallerySection({ content = {}, contentLocale, defaultLocale, edi
                     allowFullScreen
                   />
                 ) : video?.type === 'video' ? (
-                  /* eslint-disable-next-line jsx-a11y/media-has-caption */
                   <video src={video.src} controls playsInline />
                 ) : (
                   /* eslint-disable-next-line @next/next/no-img-element */

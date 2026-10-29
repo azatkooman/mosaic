@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/lib/i18n/navigation'
 import {
@@ -113,12 +113,12 @@ export function FormBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Keep editLocale valid if supportedLocales changes.
-  useEffect(() => {
-    if (supportedLocales && !supportedLocales.includes(editLocale)) {
-      setEditLocale(defaultLocale)
-    }
-  }, [supportedLocales, defaultLocale, editLocale])
+  // Keep editLocale valid if supportedLocales changes. Corrected during render,
+  // so nothing (the translate pass below included) ever acts on a language that
+  // is gone; the second condition stops a loop if the default is not listed.
+  if (supportedLocales && !supportedLocales.includes(editLocale) && editLocale !== defaultLocale) {
+    setEditLocale(defaultLocale)
+  }
 
   // Machine-translate into the selected language. The route only sends fields
   // whose default-language text changed since they were last translated, so
@@ -252,21 +252,28 @@ export function FormBuilder({
   // A joined string fixes both: it is stable across identical prop arrays, and
   // seeding the ref with the first value makes "no change yet" and "mounted"
   // the same condition.
+  //
+  // The run itself is an effect event: it reads the latest definition and
+  // appearance when it fires, but only `translateKey` decides WHEN it fires.
   const translateKey = `${editLocale}|${defaultLocale}|${[...translateTargets].sort().join(',')}`
   const translatedFor = useRef(translateKey)
+  const catchUpTranslations = useEffectEvent(() => {
+    if (translateTargets.length) translateLocale(translateTargets)
+  })
   useEffect(() => {
     if (translatedFor.current === translateKey) return
     translatedFor.current = translateKey
-    if (!translateTargets.length) return
-    translateLocale(translateTargets)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    catchUpTranslations()
   }, [translateKey])
 
   // Any edit at all leaves something unpublished, and stays that way through
-  // the autosave that follows — only Publish clears it.
-  useEffect(() => {
+  // the autosave that follows — only Publish clears it. Latched on each
+  // clean -> dirty transition (and on mounting dirty), noticed during render.
+  const [wasDirty, setWasDirty] = useState(false)
+  if (dirty !== wasDirty) {
+    setWasDirty(dirty)
     if (dirty) setUnpublished(true)
-  }, [dirty])
+  }
 
   // Successes are announcements of something that finished; failures are
   // conditions that still need dealing with. Only the first kind expires.
@@ -283,10 +290,17 @@ export function FormBuilder({
     return () => clearTimeout(id)
   }, [saveState])
 
-  // Debounced autosave of the draft version.
+  // Debounced autosave of the draft version. "Saving…" shows from the first
+  // render that sees a new unsaved definition (or a new draft version), which
+  // is the same moment the debounce below restarts.
+  const pendingSave = dirty ? [definition, versionId] : null
+  const [shownPending, setShownPending] = useState(null)
+  if (pendingSave?.[0] !== shownPending?.[0] || pendingSave?.[1] !== shownPending?.[1]) {
+    setShownPending(pendingSave)
+    if (pendingSave) setSaveState('saving')
+  }
   useEffect(() => {
     if (!dirty) return
-    setSaveState('saving')
     const handle = setTimeout(async () => {
       const { error } = await supabase
         .from('form_versions')

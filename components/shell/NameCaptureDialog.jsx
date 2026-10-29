@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useIsClient } from '@/lib/use-is-client'
 import { usePathname, useRouter } from '@/lib/i18n/navigation'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales'
@@ -34,9 +35,20 @@ export function NameCaptureDialog({
   const pathname = usePathname()
   const supabase = getSupabaseBrowserClient()
 
-  // Start closed so server and client markup match; open after mount only if
-  // this browser hasn't dismissed it and we're not on an excluded route.
+  // Start closed so server and client markup match; open once on the client,
+  // and again on arriving at each new route, unless that route is excluded.
+  // Adjusted during render rather than in an effect, so the dialog appears in
+  // the same pass that first sees the route instead of one commit later.
+  const isClient = useIsClient()
   const [open, setOpen] = useState(false)
+  const route = isClient ? pathname : null
+  // Starts unseen (null) even on the client, so mounting after a client-side
+  // navigation counts as arriving, just as the first post-hydration render does.
+  const [seenRoute, setSeenRoute] = useState(null)
+  if (route !== seenRoute) {
+    setSeenRoute(route)
+    if (route != null && !isExcludedPath(route)) setOpen(true)
+  }
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [preferredLocale, setPreferredLocale] = useState(initialLocale ?? uiLocale)
@@ -44,11 +56,6 @@ export function NameCaptureDialog({
   const [timeFormat, setTimeFormat] = useState(initialTimeFormat)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (isExcludedPath(pathname)) return
-    setOpen(true)
-  }, [pathname])
 
   function onOpenChange(next) {
     // Escape / overlay clicks must not dismiss: saving is the only way out.

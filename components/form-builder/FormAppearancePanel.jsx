@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { eventMediaUrl } from '@/lib/storage'
@@ -772,11 +772,15 @@ function StyleControls({ t, style, onChange, scope = 'both' }) {
  * return the form to inheriting the event page's theme, only to a hex code that
  * happens to match today.
  */
-function ColorField({ label, value, fallback, clearLabel, onChange }) {
-  const [pending, setPending] = useState(value ?? fallback)
-  useEffect(() => {
-    setPending(value ?? fallback)
-  }, [value, fallback])
+export function ColorField({ label, value, fallback, clearLabel, onChange }) {
+  const shown = value ?? fallback
+  const [pending, setPending] = useState(shown)
+  // Follow changes from outside (undo, Clear, a new fallback) during render.
+  const [followed, setFollowed] = useState(shown)
+  if (shown !== followed) {
+    setFollowed(shown)
+    setPending(shown)
+  }
 
   return (
     <div className={styles.panelColorRow}>

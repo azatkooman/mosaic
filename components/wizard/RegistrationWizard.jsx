@@ -8,6 +8,7 @@ import { validateParticipantAnswers } from '@/lib/form-engine/validate'
 import { extractIdentity } from '@/lib/form-engine/identity'
 import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
 import { initialWizardState, draftWinsOverLink } from './initial-state'
+import { useIsClient } from '@/lib/use-is-client'
 import { FormRenderer } from '@/components/form-runtime/FormRenderer'
 import { Button, Badge, LanguagePicker, RadioGroup, RadioRow } from '@/components/ui'
 import {
@@ -116,41 +117,36 @@ export function RegistrationWizard({
       : participantTypes.filter((pt) => pt.definition)
   }
 
-  // Restore draft once on mount — but only when it still matches the event's
-  // CURRENT participant types. A draft saved before an organizer removed a
-  // type (or unpublished its form) would otherwise crash every render.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey)
-      if (!raw) return
-      const draft = JSON.parse(raw)
+  // Restore the draft once, on the first client render (localStorage does not
+  // exist on the server, and the hydration pass must match it) — but only
+  // when it still matches the event's CURRENT participant types. A draft
+  // saved before an organizer removed a type (or unpublished its form) would
+  // otherwise crash every render. Applied during render rather than in an
+  // effect, so the opening step never paints before the restored one.
+  const isClient = useIsClient()
+  const [draftCheckedFor, setDraftCheckedFor] = useState(null)
+  const [staleDraftKey, setStaleDraftKey] = useState(null)
+  if (isClient && draftCheckedFor !== storageKey) {
+    setDraftCheckedFor(storageKey)
+    const saved = readSavedDraft(storageKey, participantTypes, preselectedTypeKey)
+    if (saved === 'stale') {
+      setStaleDraftKey(storageKey)
+    } else if (saved) {
       const validTypes = new Set(participantTypes.map((pt) => pt.key))
-      const usable =
-        draft.people?.length > 0 &&
-        draft.people.every((p) => p && validTypes.has(p.participantTypeKey)) &&
-        Object.keys(draft.counts ?? {}).every((k) => validTypes.has(k))
-      if (!usable) {
-        localStorage.removeItem(storageKey)
-        return
-      }
-      // A draft for a different type is stale relative to the link the reader
-      // just followed; the link wins and the draft goes.
-      if (!draftWinsOverLink(draft, preselectedTypeKey)) {
-        localStorage.removeItem(storageKey)
-        return
-      }
-      setCounts(draft.counts ?? {})
-      setPeople(draft.people)
-      setMode(draft.mode === 'single' || draft.mode === 'family' ? draft.mode : null)
-      setSingleTypeKey(validTypes.has(draft.singleTypeKey) ? draft.singleTypeKey : null)
-      setStep(draft.step ?? 'counts')
-      setPersonIndex(Math.min(draft.personIndex ?? 0, draft.people.length - 1))
+      setCounts(saved.counts ?? {})
+      setPeople(saved.people)
+      setMode(saved.mode === 'single' || saved.mode === 'family' ? saved.mode : null)
+      setSingleTypeKey(validTypes.has(saved.singleTypeKey) ? saved.singleTypeKey : null)
+      setStep(saved.step ?? 'counts')
+      setPersonIndex(Math.min(saved.personIndex ?? 0, saved.people.length - 1))
       setRestored(true)
-    } catch {
-      // corrupted draft — start fresh
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey])
+  }
+
+  // Deleting a rejected draft is a side effect, so it waits for the commit.
+  useEffect(() => {
+    if (staleDraftKey) localStorage.removeItem(staleDraftKey)
+  }, [staleDraftKey])
 
   // Persist draft on every change (until submitted).
   useEffect(() => {
@@ -687,4 +683,32 @@ function CountStepper({ value, min, max, onChange }) {
       </button>
     </div>
   )
+}
+
+/**
+ * The saved draft for this wizard, if it can be restored: null when there is
+ * none or it is unreadable, 'stale' when it names participant types the event
+ * no longer has or loses to the ?type= link the reader followed.
+ */
+function readSavedDraft(storageKey, participantTypes, preselectedTypeKey) {
+  let draft
+  try {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) return null
+    draft = JSON.parse(raw)
+  } catch {
+    // corrupted draft — start fresh
+    return null
+  }
+  if (draft == null) return null
+  const validTypes = new Set(participantTypes.map((pt) => pt.key))
+  const usable =
+    draft?.people?.length > 0 &&
+    draft.people.every((p) => p && validTypes.has(p.participantTypeKey)) &&
+    Object.keys(draft.counts ?? {}).every((k) => validTypes.has(k))
+  if (!usable) return 'stale'
+  // A draft for a different type is stale relative to the link the reader
+  // just followed; the link wins and the draft goes.
+  if (!draftWinsOverLink(draft, preselectedTypeKey)) return 'stale'
+  return draft
 }

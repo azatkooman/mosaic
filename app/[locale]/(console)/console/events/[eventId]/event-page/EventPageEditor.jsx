@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocale, useTranslations, NextIntlClientProvider } from 'next-intl'
 import enMessages from '@/messages/en.json'
 import esMessages from '@/messages/es.json'
@@ -164,17 +164,36 @@ function defaultLabelsFor(locales) {
   return labels
 }
 
-function useIsDarkMode() {
-  const [isDark, setIsDark] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    setIsDark(media.matches)
-    const listener = (e) => setIsDark(e.matches)
-    media.addEventListener('change', listener)
-    return () => media.removeEventListener('change', listener)
-  }, [])
-  return isDark
+const DARK_QUERY = '(prefers-color-scheme: dark)'
+
+function subscribeToColorScheme(onChange) {
+  const media = window.matchMedia(DARK_QUERY)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
+
+// Light on the server and through hydration, so the first client render
+// matches; the OS setting from then on.
+export function useIsDarkMode() {
+  return useSyncExternalStore(
+    subscribeToColorScheme,
+    () => window.matchMedia(DARK_QUERY).matches,
+    () => false
+  )
+}
+
+// The page's own origin, for the absolute public link. Empty on the server,
+// which yields a root-relative link until the client takes over.
+function useOrigin() {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => window.location.origin,
+    () => ''
+  )
+}
+
+function subscribeToNothing() {
+  return () => {}
 }
 
 // These editors are defined at module scope ON PURPOSE: declaring components
@@ -183,12 +202,16 @@ function useIsDarkMode() {
 // keystroke.
 
 // The swatch stages a pending color; "Add color" applies it to the page.
-function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
-  const [pending, setPending] = useState(value ?? defaultValue)
-  useEffect(() => {
-    setPending(value ?? defaultValue)
-  }, [value, defaultValue])
-  const applied = (value ?? defaultValue) === pending && value != null
+export function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
+  const shown = value ?? defaultValue
+  const [pending, setPending] = useState(shown)
+  // A new applied value (Add color, Reset, undo) replaces whatever was staged.
+  const [followed, setFollowed] = useState(shown)
+  if (shown !== followed) {
+    setFollowed(shown)
+    setPending(shown)
+  }
+  const applied = shown === pending && value != null
   return (
     <div className={styles.colorField}>
       <span className="field-label">{label}</span>
@@ -380,7 +403,6 @@ export function EventPageEditor({ initialEvent }) {
   const [panelSection, setPanelSection] = useState(null) // null = closed
   const [dirty, setDirty] = useState(false)
   const [saveState, setSaveState] = useState('idle')
-  const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(0)
   const [uploadError, setUploadError] = useState('')
@@ -400,11 +422,7 @@ export function EventPageEditor({ initialEvent }) {
   const logoInputRef = useRef(null)
   const faviconInputRef = useRef(null)
 
-
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+  const origin = useOrigin()
 
   // A custom language isn't a route — it needs ?lang=, not a path segment
   // (a path segment produced /en/th/events/slug, which 404s).
@@ -431,12 +449,12 @@ export function EventPageEditor({ initialEvent }) {
   const availableLocales = eventLocales(event)
 
   // If the previewed language is no longer available (e.g. just unchecked),
-  // fall back to the default language.
-  useEffect(() => {
-    if (!availableLocales.includes(previewLocale)) {
-      setPreviewLocale(event.default_locale)
-    }
-  }, [availableLocales, previewLocale, event.default_locale])
+  // fall back to the default language, before anything renders in the
+  // language that just went away. The second condition stops a loop when the
+  // default itself is not in the list.
+  if (!availableLocales.includes(previewLocale) && previewLocale !== event.default_locale) {
+    setPreviewLocale(event.default_locale)
+  }
 
   // Auto-translate on language switch, like the form builder: switching the
   // editor to a non-default language fills that language's empty fields from

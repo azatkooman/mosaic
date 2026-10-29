@@ -1,17 +1,8 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextVitals from "eslint-config-next/core-web-vitals";
 import globals from "globals";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals"),
+  ...nextVitals,
   {
     // ESLint 9 lints **/*.js, .mjs and .cjs by default and nothing here added
     // .jsx, so EVERY React component in the project went unlinted — eslint

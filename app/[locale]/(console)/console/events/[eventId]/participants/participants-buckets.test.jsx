@@ -148,8 +148,8 @@ describe('participants buckets', () => {
     // on instead: names are ordinary form questions an organizer can remove.
     //
     // Only the header is asserted. react-query does not run queryFn during a
-    // server render and this project has no jsdom, so the body is always
-    // "Loading…" here and no row-level control can be exercised.
+    // server render, so the body is always "Loading…" here and no row-level
+    // control can be exercised.
     for (const perms of [{ canEdit: true, canChangeStatus: true }, { canEdit: false, canChangeStatus: false }]) {
       expect(headers(render(BUCKETS, 'individual', undefined, perms))).toContain('Actions')
     }

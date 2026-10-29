@@ -10,7 +10,7 @@ dnd-kit · exceljs.
 
 ## Local development
 
-Prerequisites: Node 20+, Docker (for the local Supabase stack).
+Prerequisites: Node 22.12+, Docker (for the local Supabase stack).
 
 ```bash
 npm install

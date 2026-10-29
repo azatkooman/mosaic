@@ -31,21 +31,29 @@
     "@tanstack/react-table": "^8.21.3",
     "exceljs": "^4.4.0",
     "jsqr": "^1.4.0",
-    "next": "^15.5.23",
+    "next": "^16.4.3",
     "next-intl": "^4.13.2",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.3.1",
     "qrcode": "^1.5.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-hook-form": "^7.81.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "eslint": "^9",
-    "eslint-config-next": "^15.5.23",
+    "eslint-config-next": "^16.4.3",
+    "jsdom": "^27.4.0",
     "supabase": "^2.109.1",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   }
 }

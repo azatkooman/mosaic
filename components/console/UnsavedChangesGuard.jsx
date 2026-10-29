@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button, Dialog } from '@/components/ui'
@@ -61,11 +61,35 @@ export function UnsavedChangesGuard({
   const [running, setRunning] = useState(false)
   const armed = Boolean(when) && (enabled ?? preferred)
 
-  // The click listener is registered once per armed/disarmed transition, but
-  // reads `armed` through a ref so a keystroke that flips `dirty` mid-session
-  // never has to tear the listener down and rebuild it.
-  const armedRef = useRef(armed)
-  armedRef.current = armed
+  // The click listener is registered once, and reads `armed` through an
+  // effect event (always the latest render's value) so a keystroke that flips
+  // `dirty` mid-session never has to tear the listener down and rebuild it.
+  const onDocumentClick = useEffectEvent((event) => {
+    if (!armed) return
+    // Anything that isn't a plain left-click opens elsewhere (new tab, new
+    // window, download) and leaves this page — and its state — untouched.
+    if (event.defaultPrevented || event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const anchor = event.target?.closest?.('a[href]')
+    if (!(anchor instanceof HTMLAnchorElement)) return
+    if (anchor.hasAttribute('download')) return
+    if (anchor.target && anchor.target !== '_self') return
+
+    const url = new URL(anchor.href, window.location.href)
+    // Off-site links unload the document, so beforeunload above already
+    // asks — intercepting here too would ask twice for one click.
+    if (url.origin !== window.location.origin) return
+    // A link to the page we are already on changes nothing to lose.
+    if (url.pathname === window.location.pathname && url.search === window.location.search) {
+      return
+    }
+
+    event.preventDefault()
+    // Deliberately no stopPropagation: the mobile menu closes on link
+    // clicks, and swallowing the event would leave it open behind the
+    // dialog. Cancelling the default is enough to hold the navigation.
+    setTarget(url.pathname + url.search + url.hash)
+  })
 
   useEffect(() => {
     if (!armed) return
@@ -79,32 +103,7 @@ export function UnsavedChangesGuard({
   }, [armed])
 
   useEffect(() => {
-    const onClick = (event) => {
-      if (!armedRef.current) return
-      // Anything that isn't a plain left-click opens elsewhere (new tab, new
-      // window, download) and leaves this page — and its state — untouched.
-      if (event.defaultPrevented || event.button !== 0) return
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-      const anchor = event.target?.closest?.('a[href]')
-      if (!(anchor instanceof HTMLAnchorElement)) return
-      if (anchor.hasAttribute('download')) return
-      if (anchor.target && anchor.target !== '_self') return
-
-      const url = new URL(anchor.href, window.location.href)
-      // Off-site links unload the document, so beforeunload above already
-      // asks — intercepting here too would ask twice for one click.
-      if (url.origin !== window.location.origin) return
-      // A link to the page we are already on changes nothing to lose.
-      if (url.pathname === window.location.pathname && url.search === window.location.search) {
-        return
-      }
-
-      event.preventDefault()
-      // Deliberately no stopPropagation: the mobile menu closes on link
-      // clicks, and swallowing the event would leave it open behind the
-      // dialog. Cancelling the default is enough to hold the navigation.
-      setTarget(url.pathname + url.search + url.hash)
-    }
+    const onClick = (event) => onDocumentClick(event)
     document.addEventListener('click', onClick, true)
     return () => document.removeEventListener('click', onClick, true)
   }, [])
