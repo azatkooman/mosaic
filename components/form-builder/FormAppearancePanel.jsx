@@ -772,7 +772,7 @@ function StyleControls({ t, style, onChange, scope = 'both' }) {
  * return the form to inheriting the event page's theme, only to a hex code that
  * happens to match today.
  */
-function ColorField({ label, value, fallback, clearLabel, onChange }) {
+export function ColorField({ label, value, fallback, clearLabel, onChange }) {
   const [pending, setPending] = useState(value ?? fallback)
   useEffect(() => {
     setPending(value ?? fallback)

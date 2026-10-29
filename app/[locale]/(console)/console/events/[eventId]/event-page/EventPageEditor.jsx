@@ -164,7 +164,7 @@ function defaultLabelsFor(locales) {
   return labels
 }
 
-function useIsDarkMode() {
+export function useIsDarkMode() {
   const [isDark, setIsDark] = useState(false)
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -183,7 +183,7 @@ function useIsDarkMode() {
 // keystroke.
 
 // The swatch stages a pending color; "Add color" applies it to the page.
-function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
+export function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
   const [pending, setPending] = useState(value ?? defaultValue)
   useEffect(() => {
     setPending(value ?? defaultValue)
