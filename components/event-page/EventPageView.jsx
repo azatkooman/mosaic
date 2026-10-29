@@ -539,7 +539,6 @@ export function EventPageView({
                   allowFullScreen
                 />
               ) : aboutVideo?.type === 'video' ? (
-                /* eslint-disable-next-line jsx-a11y/media-has-caption */
                 <video src={aboutVideo.src} controls playsInline />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
