@@ -203,11 +203,15 @@ function subscribeToNothing() {
 
 // The swatch stages a pending color; "Add color" applies it to the page.
 export function ColorField({ label, addLabel, resetLabel, value, defaultValue, onChange }) {
-  const [pending, setPending] = useState(value ?? defaultValue)
-  useEffect(() => {
-    setPending(value ?? defaultValue)
-  }, [value, defaultValue])
-  const applied = (value ?? defaultValue) === pending && value != null
+  const shown = value ?? defaultValue
+  const [pending, setPending] = useState(shown)
+  // A new applied value (Add color, Reset, undo) replaces whatever was staged.
+  const [followed, setFollowed] = useState(shown)
+  if (shown !== followed) {
+    setFollowed(shown)
+    setPending(shown)
+  }
+  const applied = shown === pending && value != null
   return (
     <div className={styles.colorField}>
       <span className="field-label">{label}</span>
@@ -445,12 +449,12 @@ export function EventPageEditor({ initialEvent }) {
   const availableLocales = eventLocales(event)
 
   // If the previewed language is no longer available (e.g. just unchecked),
-  // fall back to the default language.
-  useEffect(() => {
-    if (!availableLocales.includes(previewLocale)) {
-      setPreviewLocale(event.default_locale)
-    }
-  }, [availableLocales, previewLocale, event.default_locale])
+  // fall back to the default language, before anything renders in the
+  // language that just went away. The second condition stops a loop when the
+  // default itself is not in the list.
+  if (!availableLocales.includes(previewLocale) && previewLocale !== event.default_locale) {
+    setPreviewLocale(event.default_locale)
+  }
 
   // Auto-translate on language switch, like the form builder: switching the
   // editor to a non-default language fills that language's empty fields from

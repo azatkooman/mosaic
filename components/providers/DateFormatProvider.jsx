@@ -26,9 +26,13 @@ export function DateFormatProvider({ value, children }) {
   }, [])
 
   // Re-sync when a fresh server render supplies new cookie-derived values.
-  useEffect(() => {
+  // Compared by content, not identity: the parent passes a new object on every
+  // render, and adopting it each time would undo a live change announced above.
+  const [synced, setSynced] = useState(value)
+  if (value.dateFormat !== synced.dateFormat || value.timeFormat !== synced.timeFormat) {
+    setSynced(value)
     setPrefs(value)
-  }, [value.dateFormat, value.timeFormat])
+  }
 
   return <DateFormatContext.Provider value={prefs}>{children}</DateFormatContext.Provider>
 }

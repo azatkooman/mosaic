@@ -30,14 +30,14 @@ export function ProfileForm({ userId, initialProfile }) {
   const [error, setError] = useState(null)
   const { preference: themePreference } = useThemeState()
 
-  // Keep the Appearance dropdown in sync with the header toggle. If an
-  // explicit theme is currently applied (the cookie/attribute the toggle
-  // sets), reflect it here AND heal the saved preference so the database
-  // matches what's actually applied. Otherwise honor the saved preference.
+  // Reconcile with the header toggle on arrival. If an explicit theme is
+  // currently applied (the cookie/attribute the toggle sets), heal the saved
+  // preference so the database matches what's actually applied. Otherwise
+  // honor the saved preference. The dropdown itself is not set here: it
+  // follows the applied theme below, through useThemeState.
   useEffect(() => {
     const applied = document.documentElement.dataset.theme
     if (applied === 'light' || applied === 'dark') {
-      setTheme(applied)
       if (applied !== initialProfile.theme) {
         supabase.from('profiles').update({ theme: applied }).eq('id', userId)
       }
@@ -53,10 +53,13 @@ export function ProfileForm({ userId, initialProfile }) {
 
   // Live-follow whatever theme is actually in force, so this dropdown agrees
   // with the header toggle no matter which of them changed it. Shared with
-  // the toggle so the two can't drift apart again.
-  useEffect(() => {
+  // the toggle so the two can't drift apart again. Null until mounted, which
+  // leaves the saved preference showing for the server render.
+  const [followedPreference, setFollowedPreference] = useState(themePreference)
+  if (themePreference !== followedPreference) {
+    setFollowedPreference(themePreference)
     if (themePreference) setTheme(themePreference)
-  }, [themePreference])
+  }
 
   // Preview the theme live as the user picks it, before saving.
   function pickTheme(next) {

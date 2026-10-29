@@ -6,8 +6,8 @@ import { prefillIdentityAnswers } from '@/lib/form-engine/prefill'
  *
  * Extracted as a pure function for two reasons: a deep link has to be applied
  * in the useState initializers (applying it in an effect makes the mode step
- * flash before it is replaced), and there is no jsdom in this project, so the
- * only way to test the branching is to keep it out of the component.
+ * flash before it is replaced), and the branching is far cheaper to test here
+ * than through a rendered wizard.
  *
  * @param {object} args
  * @param {Array<{key: string, definition?: object|null}>} args.participantTypes

@@ -30,10 +30,13 @@ export function MobileNav({ label, children }) {
   }, [open])
 
   // A click on a link inside the panel closes it, but navigation can also
-  // happen without one (back button, a redirect). Close on any route change.
-  useEffect(() => {
+  // happen without one (back button, a redirect). Close on any route change,
+  // noticed during render so the panel never paints over the new page.
+  const [openedOn, setOpenedOn] = useState(pathname)
+  if (pathname !== openedOn) {
+    setOpenedOn(pathname)
     setOpen(false)
-  }, [pathname])
+  }
 
   return (
     <div className={styles.mobileNav}>
