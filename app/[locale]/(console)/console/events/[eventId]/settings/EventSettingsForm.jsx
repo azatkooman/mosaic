@@ -71,6 +71,9 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   const [publishBurst, setPublishBurst] = useState(null)
   const [slugWarnOpen, setSlugWarnOpen] = useState(false)
   const [langWarnOpen, setLangWarnOpen] = useState(false)
+  // The languages the dialog names, captured when Save asked: the saved list
+  // lives in a ref, which render must not read.
+  const [langWarnLocales, setLangWarnLocales] = useState([])
   const [publishError, setPublishError] = useState(null)
   const [copiedTypeId, setCopiedTypeId] = useState(null)
 
@@ -139,7 +142,9 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
   }
 
   function requestSave() {
-    if (droppedLocales().length) {
+    const dropped = droppedLocales()
+    if (dropped.length) {
+      setLangWarnLocales(dropped)
       setLangWarnOpen(true)
       return
     }
@@ -965,7 +970,7 @@ export function EventSettingsForm({ event, initialTypes, forms, newTypeLabels = 
       >
         <p className={styles.sectionHelp} style={{ marginBottom: 'var(--s-4)' }}>
           {t('langWarnBody', {
-            langs: droppedLocales().map((l) => localeLabel(l)).join(', '),
+            langs: langWarnLocales.map((l) => localeLabel(l)).join(', '),
           })}
         </p>
         <div className={styles.slugWarnActions}>
