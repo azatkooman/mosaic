@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocale, useTranslations, NextIntlClientProvider } from 'next-intl'
 import enMessages from '@/messages/en.json'
 import esMessages from '@/messages/es.json'
@@ -164,17 +164,36 @@ function defaultLabelsFor(locales) {
   return labels
 }
 
+const DARK_QUERY = '(prefers-color-scheme: dark)'
+
+function subscribeToColorScheme(onChange) {
+  const media = window.matchMedia(DARK_QUERY)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
+
+// Light on the server and through hydration, so the first client render
+// matches; the OS setting from then on.
 export function useIsDarkMode() {
-  const [isDark, setIsDark] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    setIsDark(media.matches)
-    const listener = (e) => setIsDark(e.matches)
-    media.addEventListener('change', listener)
-    return () => media.removeEventListener('change', listener)
-  }, [])
-  return isDark
+  return useSyncExternalStore(
+    subscribeToColorScheme,
+    () => window.matchMedia(DARK_QUERY).matches,
+    () => false
+  )
+}
+
+// The page's own origin, for the absolute public link. Empty on the server,
+// which yields a root-relative link until the client takes over.
+function useOrigin() {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => window.location.origin,
+    () => ''
+  )
+}
+
+function subscribeToNothing() {
+  return () => {}
 }
 
 // These editors are defined at module scope ON PURPOSE: declaring components
@@ -380,7 +399,6 @@ export function EventPageEditor({ initialEvent }) {
   const [panelSection, setPanelSection] = useState(null) // null = closed
   const [dirty, setDirty] = useState(false)
   const [saveState, setSaveState] = useState('idle')
-  const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(0)
   const [uploadError, setUploadError] = useState('')
@@ -400,11 +418,7 @@ export function EventPageEditor({ initialEvent }) {
   const logoInputRef = useRef(null)
   const faviconInputRef = useRef(null)
 
-
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+  const origin = useOrigin()
 
   // A custom language isn't a route — it needs ?lang=, not a path segment
   // (a path segment produced /en/th/events/slug, which 404s).

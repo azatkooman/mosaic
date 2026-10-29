@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useIsClient } from '@/lib/use-is-client'
 
 /**
  * Renders children at the end of <body>, outside the tree that opened them.
@@ -15,13 +15,11 @@ import { createPortal } from 'react-dom'
  * again, and the pair strobe at the transition's frame rate. Escaping to
  * <body> makes an overlay immune to whatever styling surrounds its trigger.
  *
- * Mount is deferred one commit because <body> does not exist during SSR.
+ * Renders nothing on the server and during hydration, because <body> does not
+ * exist during SSR.
  */
 export function Portal({ children }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
-
-  if (!mounted) return null
+  const isClient = useIsClient()
+  if (!isClient) return null
   return createPortal(children, document.body)
 }

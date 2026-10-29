@@ -1,7 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
+
+// The clock as an external store: one tick a second while anything listens.
+function subscribeToClock(onTick) {
+  const id = setInterval(onTick, 1000)
+  return () => clearInterval(id)
+}
 
 // Live countdown to an ISO instant, used inside the hero.
 // variant: 'minimal' (bare numbers) | 'boxes' (each unit in a card) |
@@ -23,16 +29,17 @@ export function Countdown({
   const t = useTranslations('event')
   // Client-only: the value derives from Date.now(), so any server-rendered
   // snapshot is already stale by hydration time and the texts can never match.
-  const [remaining, setRemaining] = useState(null)
+  // The server snapshot is null, which renders nothing.
+  //
+  // The snapshot is the whole seconds left (or -1 once the target has passed),
+  // not the breakdown object: useSyncExternalStore compares snapshots with
+  // Object.is, so it has to be a primitive that only changes when the display
+  // does.
+  const getSnapshot = useCallback(() => secondsLeft(targetIso), [targetIso])
+  const seconds = useSyncExternalStore(subscribeToClock, getSnapshot, getServerSnapshot)
 
-  useEffect(() => {
-    if (!targetIso) return
-    setRemaining(diff(targetIso))
-    const id = setInterval(() => setRemaining(diff(targetIso)), 1000)
-    return () => clearInterval(id)
-  }, [targetIso])
-
-  if (!targetIso || remaining == null || remaining.total <= 0) return null
+  if (seconds == null || seconds < 0) return null
+  const remaining = breakdown(seconds)
 
   const light = tone === 'light'
   const numColor = color || (light ? '#fff' : 'var(--ink)')
@@ -133,13 +140,21 @@ export function Countdown({
   )
 }
 
-function diff(iso) {
+function getServerSnapshot() {
+  return null
+}
+
+// Whole seconds until `iso`; -1 once it has passed (the countdown hides at the
+// target instant itself, not a second later); null for no or a bad date.
+function secondsLeft(iso) {
   if (!iso) return null
   const total = Date.parse(iso) - Date.now()
   if (Number.isNaN(total)) return null
-  const s = Math.max(0, Math.floor(total / 1000))
+  return total > 0 ? Math.floor(total / 1000) : -1
+}
+
+function breakdown(s) {
   return {
-    total,
     days: Math.floor(s / 86400),
     hours: Math.floor((s % 86400) / 3600),
     minutes: Math.floor((s % 3600) / 60),
